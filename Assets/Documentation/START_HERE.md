@@ -1,5 +1,9 @@
 # Digital Twin Project — Start Here
 
+For plain-language instructions covering navigation, telemetry cards, sensors,
+particles, responsive layouts, live data, validation, and troubleshooting, read
+`USER_GUIDE.md` in this folder.
+
 ## Project structure
 
 - `Scenes` contains the production scene and its baked lighting data.

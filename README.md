@@ -2,6 +2,9 @@
 
 An interactive Unity WebGL digital-twin prototype for industrial telemetry visualization. The project includes responsive telemetry rails, grouped sensor cards, leader lines, connection-health UI, simulated/live-data accommodation, and mobile interaction support.
 
+For a simple walkthrough of the project features, see
+[`Assets/Documentation/USER_GUIDE.md`](Assets/Documentation/USER_GUIDE.md).
+
 ## Open the project
 
 1. Install **Unity 6000.4.8f1** through Unity Hub.
@@ -23,4 +26,3 @@ Generated builds, caches, profiler captures, IDE files, recovery archives, and p
 ## WebGL
 
 Use the project’s optimized WebGL build workflow from Unity when generating a deployable build. The generated `Builds/` directory is not stored on the source branch; this keeps project clones small and prevents compiled output from being mixed with editable source files.
-
