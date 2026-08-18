@@ -1,0 +1,31 @@
+# Keep Unity YAML and project text files consistent across platforms.
+* text=auto
+*.cs text eol=lf
+*.shader text eol=lf
+*.shadergraph text eol=lf
+*.cginc text eol=lf
+*.hlsl text eol=lf
+*.compute text eol=lf
+*.unity text eol=lf
+*.prefab text eol=lf
+*.asset text eol=lf
+*.mat text eol=lf
+*.meta text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+
+# Treat binary Unity/source assets as binary.
+*.fbx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tga binary
+*.psd binary
+*.exr binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.mp3 binary
+*.wav binary
+*.mp4 binary
+

@@ -1,0 +1,123 @@
+:root {
+  color-scheme: dark;
+  font-family: "Rajdhani", "Segoe UI", sans-serif;
+  background: #071216;
+}
+
+* { box-sizing: border-box; }
+
+html,
+body,
+#unity-container,
+#unity-canvas {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #071216;
+}
+
+#unity-container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+}
+
+#unity-canvas {
+  display: block;
+  background: #071216;
+  touch-action: none;
+  outline: none;
+}
+
+#unity-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at 50% 42%, #102a32 0, #071216 55%, #03090b 100%);
+  opacity: 1;
+  transition: opacity 300ms ease;
+}
+
+#unity-loading.loaded { opacity: 0; pointer-events: none; }
+
+.loading-panel {
+  width: min(420px, 88vw);
+  padding: 24px;
+  border: 1px solid rgba(20, 230, 255, 0.35);
+  border-left: 3px solid #14e6ff;
+  background: rgba(4, 17, 21, 0.88);
+  box-shadow: 0 0 34px rgba(20, 230, 255, 0.08);
+}
+
+.loading-kicker {
+  color: #7aaab7;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+}
+
+.loading-title {
+  margin-top: 6px;
+  color: #e5fbff;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.loading-track {
+  height: 3px;
+  margin-top: 22px;
+  overflow: hidden;
+  background: rgba(122, 170, 183, 0.18);
+}
+
+#unity-progress {
+  width: 0;
+  height: 100%;
+  background: #14e6ff;
+  box-shadow: 0 0 12px #14e6ff;
+  transition: width 120ms linear;
+}
+
+#unity-progress-label {
+  margin-top: 8px;
+  color: #7aaab7;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-align: right;
+}
+
+#unity-warning {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 10;
+  width: min(560px, calc(100vw - 24px));
+  transform: translateX(-50%);
+}
+
+.banner {
+  margin-bottom: 8px;
+  padding: 10px 14px;
+  border-left: 3px solid #ffb31a;
+  background: rgba(14, 22, 25, 0.94);
+  color: #f5fbfc;
+  font-size: 13px;
+}
+
+.banner.error { border-left-color: #ff3833; }
+
+@media (prefers-reduced-motion: reduce) {
+  #unity-loading,
+  #unity-progress { transition: none; }
+}

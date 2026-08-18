@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#071216">
+    <title>{{{ PRODUCT_NAME }}}</title>
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <main id="unity-container" aria-label="{{{ PRODUCT_NAME }}} digital twin">
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
+      <section id="unity-loading" aria-live="polite">
+        <div class="loading-panel">
+          <div class="loading-kicker">DIGITAL TWIN</div>
+          <div class="loading-title">INITIALISING SYSTEM</div>
+          <div class="loading-track"><div id="unity-progress"></div></div>
+          <div id="unity-progress-label">0%</div>
+        </div>
+      </section>
+      <div id="unity-warning" role="status"></div>
+    </main>
+    <script>
+      const canvas = document.querySelector("#unity-canvas");
+      const loading = document.querySelector("#unity-loading");
+      const progress = document.querySelector("#unity-progress");
+      const progressLabel = document.querySelector("#unity-progress-label");
+      const warning = document.querySelector("#unity-warning");
+
+      function showBanner(message, type) {
+        const item = document.createElement("div");
+        item.className = "banner " + (type || "info");
+        item.textContent = message;
+        warning.appendChild(item);
+        if (type !== "error") setTimeout(() => item.remove(), 5000);
+      }
+
+      const buildUrl = "Build";
+      const loaderUrl = buildUrl + "/{{{ LOADER_FILENAME }}}";
+      const config = {
+        arguments: [],
+        dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+        frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_THREADS
+        workerUrl: buildUrl + "/{{{ WORKER_FILENAME }}}",
+#endif
+#if USE_WASM
+        codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+        symbolsUrl: buildUrl + "/{{{ SYMBOLS_FILENAME }}}",
+#endif
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+        productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+        productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+        autoSyncPersistentDataPath: true,
+        showBanner
+      };
+
+#if BACKGROUND_FILENAME
+      canvas.style.background = "url('" + buildUrl + "/{{{ BACKGROUND_FILENAME.replace(/'/g, '%27') }}}') center / cover";
+#endif
+
+      const script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, value => {
+          const percent = Math.round(value * 100);
+          progress.style.width = percent + "%";
+          progressLabel.textContent = percent + "%";
+        }).then(instance => {
+          window.unityInstance = instance;
+          loading.classList.add("loaded");
+          setTimeout(() => loading.remove(), 350);
+        }).catch(message => {
+          showBanner(message, "error");
+        });
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>

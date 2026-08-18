@@ -1,0 +1,272 @@
+using System.Collections;
+using System.Runtime.InteropServices;
+using UnityEngine;
+using UnityEngine.UI;
+
+public enum ResponsiveDeviceOverride
+{
+    Auto,
+    Desktop,
+    Mobile
+}
+
+[DefaultExecutionOrder(-90)]
+public class ResponsiveLayoutShell : MonoBehaviour
+{
+    private enum LayoutMode
+    {
+        Landscape,
+        Portrait
+    }
+
+    [Header("Layout Roots")]
+    [Tooltip("Use the existing Wide layout here. It is shared by wide and compact landscape screens.")]
+    [SerializeField] private GameObject landscapeLayout;
+
+    [SerializeField] private GameObject portraitLayout;
+
+    [Header("Canvas")]
+    [SerializeField] private CanvasScaler canvasScaler;
+
+    [Header("Breakpoints")]
+    [Tooltip("Switch to portrait below this safe-area aspect ratio.")]
+    [SerializeField] private float portraitEnterAspect = 0.95f;
+
+    [Tooltip("Remain portrait until the safe-area aspect exceeds this value.")]
+    [SerializeField] private float portraitExitAspect = 1.05f;
+
+    [Header("Device classification")]
+    [Tooltip("Auto keeps tall desktop monitors on the desktop UI while mobile devices may switch orientation layouts.")]
+    [SerializeField] private ResponsiveDeviceOverride deviceOverride = ResponsiveDeviceOverride.Auto;
+
+    [Header("Reference Resolutions")]
+    [SerializeField] private Vector2 landscapeReferenceResolution = new(1920f, 1080f);
+    [SerializeField] private Vector2 portraitReferenceResolution = new(1080f, 1920f);
+    [SerializeField, Range(0f, 1f)] private float landscapeMatch = 0.5f;
+    [SerializeField, Range(0f, 1f)] private float portraitMatch = 0f;
+
+    [Header("Vertical Desktop")]
+    [SerializeField, Min(0f)] private float verticalDesktopControlMargin = 24f;
+    [SerializeField, Min(48f)] private float verticalDesktopControlHeight = 88f;
+
+    [Header("Debug")]
+    [SerializeField] private bool showDebugLogs;
+
+    private LayoutMode currentMode;
+    private bool initialized;
+    private int previousWidth;
+    private int previousHeight;
+    private Rect previousSafeArea;
+    private Coroutine telemetryRebuildRoutine;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [DllImport("__Internal")]
+    private static extern int DigitalTwin_IsMobileBrowser();
+#endif
+
+    private void Start()
+    {
+        RefreshLayout(true);
+    }
+
+    private void Update()
+    {
+        bool screenChanged =
+            Screen.width != previousWidth ||
+            Screen.height != previousHeight ||
+            Screen.safeArea != previousSafeArea;
+
+        if (screenChanged)
+            RefreshLayout(false);
+    }
+
+    [ContextMenu("Refresh Layout")]
+    public void RefreshLayoutFromInspector()
+    {
+        RefreshLayout(true);
+    }
+
+    private void RefreshLayout(bool force)
+    {
+        bool wasInitialized = initialized;
+        previousWidth = Screen.width;
+        previousHeight = Screen.height;
+        previousSafeArea = Screen.safeArea;
+
+        if (previousSafeArea.width <= 0f || previousSafeArea.height <= 0f)
+            return;
+
+        float aspect = previousSafeArea.width / previousSafeArea.height;
+        bool mobile = IsMobileDevice();
+        LayoutMode newMode = DetermineMode(aspect, mobile);
+
+        bool modeChanged = !initialized || newMode != currentMode;
+
+        currentMode = newMode;
+        initialized = true;
+
+        if (modeChanged || force)
+        {
+            if (landscapeLayout != null)
+                landscapeLayout.SetActive(currentMode == LayoutMode.Landscape);
+
+            if (portraitLayout != null)
+                portraitLayout.SetActive(currentMode == LayoutMode.Portrait);
+        }
+
+        ApplyCanvasSettings();
+        ApplyVerticalDesktopControlSafety(!mobile && aspect < 1f);
+        Canvas.ForceUpdateCanvases();
+        if (wasInitialized)
+        {
+            if (telemetryRebuildRoutine != null)
+                StopCoroutine(telemetryRebuildRoutine);
+            telemetryRebuildRoutine = StartCoroutine(RebuildActiveTelemetryLayoutDeferred());
+        }
+
+        if (showDebugLogs)
+        {
+            Debug.Log(
+                $"Responsive layout: {currentMode}, " +
+                $"aspect: {aspect:F2}, " +
+                $"device: {(mobile ? "Mobile" : "Desktop")}, " +
+                $"screen: {Screen.width}x{Screen.height}",
+                this
+            );
+        }
+    }
+
+    private IEnumerator RebuildActiveTelemetryLayoutDeferred()
+    {
+        yield return new WaitForEndOfFrame();
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+        RebuildActiveTelemetryLayout();
+        telemetryRebuildRoutine = null;
+    }
+
+    private void OnDisable()
+    {
+        if (telemetryRebuildRoutine == null)
+            return;
+        StopCoroutine(telemetryRebuildRoutine);
+        telemetryRebuildRoutine = null;
+    }
+
+    private void RebuildActiveTelemetryLayout()
+    {
+        if (currentMode == LayoutMode.Landscape && landscapeLayout != null)
+        {
+            WideStatRailManager manager =
+                landscapeLayout.GetComponentInChildren<WideStatRailManager>(true);
+            if (manager != null && manager.isActiveAndEnabled)
+                manager.RebuildLayout();
+        }
+        else if (portraitLayout != null)
+        {
+            PortraitStatRailManager manager =
+                portraitLayout.GetComponentInChildren<PortraitStatRailManager>(true);
+            if (manager != null && manager.isActiveAndEnabled)
+                manager.RebuildLayout();
+        }
+    }
+
+    private LayoutMode DetermineMode(float aspect, bool mobile)
+    {
+        // Desktop and laptop screens always retain the wide controls and rail
+        // system, including physically portrait monitors such as 1080x1920.
+        if (!mobile)
+            return LayoutMode.Landscape;
+
+        if (!initialized)
+            return aspect < 1f ? LayoutMode.Portrait : LayoutMode.Landscape;
+
+        if (currentMode == LayoutMode.Portrait)
+        {
+            return aspect < portraitExitAspect
+                ? LayoutMode.Portrait
+                : LayoutMode.Landscape;
+        }
+
+        return aspect < portraitEnterAspect
+            ? LayoutMode.Portrait
+            : LayoutMode.Landscape;
+    }
+
+    private bool IsMobileDevice()
+    {
+        if (deviceOverride == ResponsiveDeviceOverride.Desktop)
+            return false;
+        if (deviceOverride == ResponsiveDeviceOverride.Mobile)
+            return true;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        return DigitalTwin_IsMobileBrowser() != 0;
+#else
+        return Application.isMobilePlatform || SystemInfo.deviceType == DeviceType.Handheld;
+#endif
+    }
+
+    private void ApplyCanvasSettings()
+    {
+        if (canvasScaler == null)
+            return;
+
+        bool portrait = currentMode == LayoutMode.Portrait;
+
+        canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        canvasScaler.referenceResolution = portrait
+            ? portraitReferenceResolution
+            : landscapeReferenceResolution;
+
+        canvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        canvasScaler.matchWidthOrHeight = portrait ? portraitMatch : landscapeMatch;
+    }
+
+    private void ApplyVerticalDesktopControlSafety(bool verticalDesktop)
+    {
+        if (landscapeLayout == null)
+            return;
+
+        RectTransform baseLayout = FindChildRect(landscapeLayout.transform, "Base layout");
+        RectTransform bottomControls = FindChildRect(landscapeLayout.transform, "Bottom controls");
+        if (baseLayout == null || bottomControls == null ||
+            bottomControls.parent != baseLayout)
+            return;
+
+        VerticalLayoutGroup baseGroup = baseLayout.GetComponent<VerticalLayoutGroup>();
+        LayoutElement controlsLayout = bottomControls.GetComponent<LayoutElement>();
+        if (baseGroup == null || controlsLayout == null)
+            return;
+
+        if (verticalDesktop)
+        {
+            controlsLayout.ignoreLayout = true;
+            bottomControls.anchorMin = new Vector2(0f, 0f);
+            bottomControls.anchorMax = new Vector2(1f, 0f);
+            bottomControls.pivot = new Vector2(0.5f, 0f);
+            bottomControls.anchoredPosition = new Vector2(0f, verticalDesktopControlMargin);
+            bottomControls.sizeDelta = new Vector2(0f, verticalDesktopControlHeight);
+            baseGroup.padding.bottom = Mathf.CeilToInt(
+                verticalDesktopControlHeight + verticalDesktopControlMargin);
+        }
+        else
+        {
+            controlsLayout.ignoreLayout = false;
+            controlsLayout.preferredHeight = verticalDesktopControlHeight;
+            baseGroup.padding.bottom = Mathf.RoundToInt(verticalDesktopControlMargin);
+        }
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(baseLayout);
+    }
+
+    private static RectTransform FindChildRect(Transform root, string objectName)
+    {
+        foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+        {
+            if (child.name == objectName)
+                return child as RectTransform;
+        }
+        return null;
+    }
+}

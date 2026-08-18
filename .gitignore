@@ -1,0 +1,50 @@
+# Unity-generated folders (rebuilt when the project opens)
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Pp]rofilerCaptures/
+
+# Generated builds and local deployment output
+[Bb]uild/
+[Bb]uilds/
+
+# Local archives, references, and samples that are not project dependencies
+ProjectArchive/
+ProjectReferences/
+ProjectSamples/
+
+# IDE and generated solution files
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Operating-system files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+Desktop.ini
+
+# Unity crash and temporary artifacts
+sysinfo.txt
+crashlytics-build.properties
+*.tmp
+*.bak
+*.orig
+
