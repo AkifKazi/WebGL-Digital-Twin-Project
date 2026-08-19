@@ -86878,6 +86878,7 @@ MonoBehaviour:
   portraitMatch: 0
   verticalDesktopControlMargin: 24
   verticalDesktopControlHeight: 88
+  mobileLandscapeBottomControlScale: 1.1
   showDebugLogs: 1
 --- !u!1 &2050666127
 GameObject:

@@ -83,6 +83,40 @@ public static class TelemetryLayoutStressValidator
 
         if (data.FindProperty("contentPaddingInsideBackground").floatValue < 8f)
             errors.Add("Card content padding is too small for scrolling glyph overhang.");
+
+        ValidateAccentPair(data, "leftAccentTrail", "rightAccentTrail", true, errors);
+        ValidateAccentPair(data, "topAccentTrail", "bottomAccentTrail", false, errors);
+    }
+
+    private static void ValidateAccentPair(
+        SerializedObject cardData,
+        string firstProperty,
+        string secondProperty,
+        bool compareWidth,
+        ICollection<string> errors)
+    {
+        Image first = cardData.FindProperty(firstProperty)?.objectReferenceValue as Image;
+        Image second = cardData.FindProperty(secondProperty)?.objectReferenceValue as Image;
+        if (first == null || second == null)
+        {
+            errors.Add($"Card prefab is missing '{firstProperty}' or '{secondProperty}'.");
+            return;
+        }
+
+        float firstSize = compareWidth
+            ? first.rectTransform.sizeDelta.x
+            : first.rectTransform.sizeDelta.y;
+        float secondSize = compareWidth
+            ? second.rectTransform.sizeDelta.x
+            : second.rectTransform.sizeDelta.y;
+
+        if (firstSize <= 0f || secondSize <= 0f ||
+            !Mathf.Approximately(firstSize, secondSize))
+        {
+            errors.Add(
+                $"Card accent trails '{firstProperty}' and '{secondProperty}' " +
+                "must have matching positive geometry.");
+        }
     }
 
     private static void ValidateResponsiveShell(ICollection<string> errors)
@@ -104,6 +138,14 @@ public static class TelemetryLayoutStressValidator
         }
         if (data.FindProperty("verticalDesktopControlHeight").floatValue < 48f)
             errors.Add("Vertical desktop controls are below the minimum touch/click height.");
+
+        SerializedProperty mobileScale =
+            data.FindProperty("mobileLandscapeBottomControlScale");
+        if (mobileScale == null ||
+            !Mathf.Approximately(mobileScale.floatValue, 1.1f))
+        {
+            errors.Add("Mobile landscape bottom controls must use the approved 10% scale increase.");
+        }
     }
 
     private static void ValidateRailManagers(ICollection<string> errors)

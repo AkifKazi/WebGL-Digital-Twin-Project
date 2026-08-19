@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="theme-color" content="#071216">
     <title>{{{ PRODUCT_NAME }}}</title>
     <link rel="stylesheet" href="TemplateData/style.css">
@@ -26,6 +26,56 @@
       const progress = document.querySelector("#unity-progress");
       const progressLabel = document.querySelector("#unity-progress-label");
       const warning = document.querySelector("#unity-warning");
+
+      let viewportSyncFrame = 0;
+
+      function syncVisualViewport() {
+        viewportSyncFrame = 0;
+        const viewport = window.visualViewport;
+        const left = viewport ? viewport.offsetLeft : 0;
+        const top = viewport ? viewport.offsetTop : 0;
+        const width = viewport ? viewport.width : window.innerWidth;
+        const height = viewport ? viewport.height : window.innerHeight;
+
+        document.documentElement.style.setProperty(
+          "--visual-viewport-left",
+          Math.max(0, left) + "px"
+        );
+        document.documentElement.style.setProperty(
+          "--visual-viewport-top",
+          Math.max(0, top) + "px"
+        );
+        document.documentElement.style.setProperty(
+          "--visual-viewport-width",
+          Math.max(1, width) + "px"
+        );
+        document.documentElement.style.setProperty(
+          "--visual-viewport-height",
+          Math.max(1, height) + "px"
+        );
+      }
+
+      function requestViewportSync() {
+        if (viewportSyncFrame) cancelAnimationFrame(viewportSyncFrame);
+        viewportSyncFrame = requestAnimationFrame(syncVisualViewport);
+      }
+
+      function handleOrientationChange() {
+        requestViewportSync();
+        // Mobile Safari can report the previous visual viewport for a short
+        // time after rotation. These follow-up reads settle the canvas without
+        // requiring a page refresh.
+        setTimeout(requestViewportSync, 100);
+        setTimeout(requestViewportSync, 350);
+      }
+
+      syncVisualViewport();
+      window.addEventListener("resize", requestViewportSync, { passive: true });
+      window.addEventListener("orientationchange", handleOrientationChange, { passive: true });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", requestViewportSync, { passive: true });
+        window.visualViewport.addEventListener("scroll", requestViewportSync, { passive: true });
+      }
 
       function showBanner(message, type) {
         const item = document.createElement("div");

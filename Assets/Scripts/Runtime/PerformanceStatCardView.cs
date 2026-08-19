@@ -103,6 +103,9 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     private float connectionFadeStartEmphasis;
     private float connectionEmphasis;
     private RectTransformSnapshot[] accentGeometry = Array.Empty<RectTransformSnapshot>();
+    private float nextAccentGeometryCheck;
+
+    private const float AccentGeometryCheckInterval = 0.5f;
 
     public StatRailSide RailSide => railSide;
     public StatVisualState VisualState => visualState;
@@ -142,6 +145,24 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
         SetConnectionEmphasis(IsAlarmState() ? 1f : 0f);
     }
 
+    private void OnEnable()
+    {
+        // Pooled cards may have previously been resized, reoriented, or caught
+        // mid-presentation. Reapply the prefab accent geometry before the card
+        // becomes visible in its new rail.
+        if (accentGeometry.Length == 0)
+            CaptureAccentGeometry();
+        RestoreAccentGeometry();
+        nextAccentGeometryCheck = Time.unscaledTime + AccentGeometryCheckInterval;
+    }
+
+    private void OnRectTransformDimensionsChange()
+    {
+        // Check again on the next LateUpdate after grouped-card or responsive
+        // rail sizing has finished for this frame.
+        nextAccentGeometryCheck = 0f;
+    }
+
     private void Update()
     {
         if (tapFocusUntil > 0f && Time.unscaledTime >= tapFocusUntil)
@@ -163,6 +184,23 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
             SetConnectionEmphasis(Mathf.Lerp(connectionFadeStartEmphasis, 0f, eased));
             if (progress >= 1f)
                 fadingConnectionToRest = false;
+        }
+    }
+
+    private void LateUpdate()
+    {
+        if (Time.unscaledTime < nextAccentGeometryCheck)
+            return;
+
+        nextAccentGeometryCheck = Time.unscaledTime + AccentGeometryCheckInterval;
+
+        // Layout rebuilds and interrupted presentation animations must never
+        // leave one card with a compressed accent trail. The comparison is
+        // deliberately infrequent and writes only when a transform changed.
+        foreach (RectTransformSnapshot snapshot in accentGeometry)
+        {
+            if (!snapshot.MatchesCurrentGeometry())
+                snapshot.Restore();
         }
     }
 
@@ -585,6 +623,29 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
             rect.localScale = localScale;
             rect.localRotation = localRotation;
         }
+
+        public bool MatchesCurrentGeometry()
+        {
+            if (rect == null)
+                return true;
+
+            return Approximately(rect.anchorMin, anchorMin) &&
+                   Approximately(rect.anchorMax, anchorMax) &&
+                   Approximately(rect.pivot, pivot) &&
+                   Approximately(rect.anchoredPosition, anchoredPosition) &&
+                   Approximately(rect.sizeDelta, sizeDelta) &&
+                   Approximately(rect.localScale, localScale) &&
+                   Approximately(rect.localRotation, localRotation);
+        }
+
+        private static bool Approximately(Vector2 a, Vector2 b) =>
+            (a - b).sqrMagnitude <= 0.0001f;
+
+        private static bool Approximately(Vector3 a, Vector3 b) =>
+            (a - b).sqrMagnitude <= 0.0001f;
+
+        private static bool Approximately(Quaternion a, Quaternion b) =>
+            Mathf.Abs(Quaternion.Dot(a, b)) >= 0.99999f;
     }
 
     private Color GetStateColor()

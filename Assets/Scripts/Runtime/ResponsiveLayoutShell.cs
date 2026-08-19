@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UI;
@@ -49,6 +50,10 @@ public class ResponsiveLayoutShell : MonoBehaviour
     [SerializeField, Min(0f)] private float verticalDesktopControlMargin = 24f;
     [SerializeField, Min(48f)] private float verticalDesktopControlHeight = 88f;
 
+    [Header("Mobile Landscape")]
+    [Tooltip("Visual scale applied to each bottom control group on mobile landscape only. Desktop and portrait remain unchanged.")]
+    [SerializeField, Range(1f, 1.25f)] private float mobileLandscapeBottomControlScale = 1.1f;
+
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs;
 
@@ -58,6 +63,8 @@ public class ResponsiveLayoutShell : MonoBehaviour
     private int previousHeight;
     private Rect previousSafeArea;
     private Coroutine telemetryRebuildRoutine;
+    private readonly Dictionary<Transform, Vector3> bottomControlBaseScales = new();
+    private float bottomControlsBaseHeight = -1f;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")]
@@ -116,6 +123,8 @@ public class ResponsiveLayoutShell : MonoBehaviour
 
         ApplyCanvasSettings();
         ApplyVerticalDesktopControlSafety(!mobile && aspect < 1f);
+        ApplyMobileLandscapeControlScale(
+            mobile && currentMode == LayoutMode.Landscape);
         Canvas.ForceUpdateCanvases();
         if (wasInitialized)
         {
@@ -258,6 +267,45 @@ public class ResponsiveLayoutShell : MonoBehaviour
         }
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(baseLayout);
+    }
+
+    private void ApplyMobileLandscapeControlScale(bool enlarge)
+    {
+        if (landscapeLayout == null)
+            return;
+
+        RectTransform bottomControls =
+            FindChildRect(landscapeLayout.transform, "Bottom controls");
+        if (bottomControls == null)
+            return;
+
+        LayoutElement controlsLayout = bottomControls.GetComponent<LayoutElement>();
+        if (bottomControlsBaseHeight < 0f)
+        {
+            bottomControlsBaseHeight = controlsLayout != null &&
+                                       controlsLayout.preferredHeight > 0f
+                ? controlsLayout.preferredHeight
+                : verticalDesktopControlHeight;
+        }
+
+        foreach (Transform child in bottomControls)
+        {
+            if (!bottomControlBaseScales.ContainsKey(child))
+                bottomControlBaseScales.Add(child, child.localScale);
+        }
+
+        float scale = enlarge ? mobileLandscapeBottomControlScale : 1f;
+        foreach (KeyValuePair<Transform, Vector3> entry in bottomControlBaseScales)
+        {
+            if (entry.Key != null)
+                entry.Key.localScale = entry.Value * scale;
+        }
+
+        if (controlsLayout != null && !controlsLayout.ignoreLayout)
+            controlsLayout.preferredHeight = bottomControlsBaseHeight * scale;
+
+        if (bottomControls.parent is RectTransform parent)
+            LayoutRebuilder.ForceRebuildLayoutImmediate(parent);
     }
 
     private static RectTransform FindChildRect(Transform root, string objectName)
