@@ -15,6 +15,8 @@ public class PortraitStatLeaderLineManager : MonoBehaviour
 
     private readonly List<StatLeaderLineView> generatedLines = new();
     private readonly Stack<StatLeaderLineView> linePool = new();
+    private bool restingOpacityInitialized;
+    private float previousRestingOpacity;
 
     private void OnEnable()
     {
@@ -48,6 +50,12 @@ public class PortraitStatLeaderLineManager : MonoBehaviour
         }
 
         HashSet<PerformanceStatCardView> linkedCards = new();
+        float desiredRestingOpacity = railManager.HasSecondaryRailCards
+            ? linePrefab.RestingLineOpacity
+            : linePrefab.EmptySecondaryRailsRestingOpacity;
+        float startingRestingOpacity = restingOpacityInitialized
+            ? previousRestingOpacity
+            : desiredRestingOpacity;
         foreach (KeyValuePair<PerformanceStatSource, PerformanceStatCardView> binding
                  in railManager.ActiveCards)
         {
@@ -57,10 +65,21 @@ public class PortraitStatLeaderLineManager : MonoBehaviour
                 continue;
 
             StatLeaderLineView line = AcquireLine();
+            line.SetAdaptiveRestingLineOpacity(
+                startingRestingOpacity,
+                0f,
+                true);
             StretchInsideParent(line.transform as RectTransform);
             line.Bind(binding.Key, binding.Value, worldCamera, canvas, lineLayer);
+            line.SetAdaptiveRestingLineOpacity(
+                desiredRestingOpacity,
+                linePrefab.SecondaryRailOpacityTransitionDuration,
+                !restingOpacityInitialized);
             generatedLines.Add(line);
         }
+
+        previousRestingOpacity = desiredRestingOpacity;
+        restingOpacityInitialized = true;
     }
 
     private void ClearLines()

@@ -25,8 +25,12 @@ public class StatLeaderLineView : MonoBehaviour
 
     [Header("Focus Presentation")]
     [SerializeField, Range(0f, 1f)] private float restingLineOpacity = 0.4f;
+    [Tooltip("Resting line opacity used when no secondary rail contains a card.")]
+    [SerializeField, Range(0f, 1f)] private float emptySecondaryRailsRestingOpacity = 0.8f;
     [SerializeField, Range(0f, 1f)] private float restingAnchorOpacity = 0.8f;
     [SerializeField, Min(0.05f)] private float focusToRestDuration = 1.5f;
+    [Tooltip("Fade duration when secondary-rail occupancy changes the resting line opacity.")]
+    [SerializeField, Min(0.05f)] private float secondaryRailOpacityTransitionDuration = 1f;
 
     private PerformanceStatSource source;
     private PerformanceStatCardView card;
@@ -47,8 +51,10 @@ public class StatLeaderLineView : MonoBehaviour
     private float presentationLineOpacity = 1f;
     private float presentationAnchorOpacity = 1f;
     private float fadeStartTime;
+    private float activeFadeDuration;
     private float fadeStartLineOpacity = 1f;
     private float fadeStartAnchorOpacity = 1f;
+    private float activeRestingLineOpacity;
     private bool fadingToRest;
 
     private static readonly int RevealDistanceId = Shader.PropertyToID("_RevealDistance");
@@ -61,9 +67,15 @@ public class StatLeaderLineView : MonoBehaviour
     public float RevealProgress => revealProgress;
     public float AnchorProgress => anchorProgress;
     public float TotalPathLength => totalPathLength;
+    public float RestingLineOpacity => restingLineOpacity;
+    public float EmptySecondaryRailsRestingOpacity => emptySecondaryRailsRestingOpacity;
+    public float SecondaryRailOpacityTransitionDuration =>
+        secondaryRailOpacityTransitionDuration;
 
     private void Awake()
     {
+        activeRestingLineOpacity = restingLineOpacity;
+        activeFadeDuration = focusToRestDuration;
         CacheImages();
         CreateRuntimeMaterials();
 
@@ -93,10 +105,10 @@ public class StatLeaderLineView : MonoBehaviour
             card.FocusChanged -= HandleCardFocusChanged;
             card.FocusChanged += HandleCardFocusChanged;
         }
-        if (IsAlarmState())
+        if (IsAlarmState() || (card != null && card.IsFocused))
             SetPresentationOpacityInstant(1f, 1f);
         else
-            SetPresentationOpacityInstant(restingLineOpacity, restingAnchorOpacity);
+            SetPresentationOpacityInstant(activeRestingLineOpacity, restingAnchorOpacity);
         fadingToRest = false;
         CacheImages();
         CreateRuntimeMaterials();
@@ -142,6 +154,28 @@ public class StatLeaderLineView : MonoBehaviour
         float progress = visible ? 1f : 0f;
         SetAnchorProgress(progress);
         SetRevealProgress(progress);
+    }
+
+    public void SetAdaptiveRestingLineOpacity(
+        float opacity,
+        float transitionDuration,
+        bool applyInstantly = false)
+    {
+        activeRestingLineOpacity = Mathf.Clamp01(opacity);
+
+        // Focused, warning and critical lines stay at 100%. The new resting
+        // target is retained and used when they next return to rest.
+        if (card != null && (card.IsFocused || IsAlarmState()))
+            return;
+
+        if (applyInstantly || transitionDuration <= 0.01f)
+        {
+            fadingToRest = false;
+            SetPresentationOpacityInstant(activeRestingLineOpacity, restingAnchorOpacity);
+            return;
+        }
+
+        BeginFadeToRest(transitionDuration);
     }
 
     private void UpdateLine()
@@ -449,9 +483,12 @@ public class StatLeaderLineView : MonoBehaviour
         if (!fadingToRest)
             return;
 
-        float progress = Mathf.Clamp01((Time.unscaledTime - fadeStartTime) / focusToRestDuration);
+        float progress = Mathf.Clamp01((Time.unscaledTime - fadeStartTime) / activeFadeDuration);
         float eased = Mathf.SmoothStep(0f, 1f, progress);
-        presentationLineOpacity = Mathf.Lerp(fadeStartLineOpacity, restingLineOpacity, eased);
+        presentationLineOpacity = Mathf.Lerp(
+            fadeStartLineOpacity,
+            activeRestingLineOpacity,
+            eased);
         presentationAnchorOpacity = Mathf.Lerp(fadeStartAnchorOpacity, restingAnchorOpacity, eased);
         RefreshColor();
 
@@ -461,8 +498,14 @@ public class StatLeaderLineView : MonoBehaviour
 
     private void BeginFadeToRest()
     {
+        BeginFadeToRest(focusToRestDuration);
+    }
+
+    private void BeginFadeToRest(float duration)
+    {
         fadingToRest = true;
         fadeStartTime = Time.unscaledTime;
+        activeFadeDuration = Mathf.Max(0.01f, duration);
         fadeStartLineOpacity = presentationLineOpacity;
         fadeStartAnchorOpacity = presentationAnchorOpacity;
     }

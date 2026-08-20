@@ -19,6 +19,9 @@ public class WideStatLeaderLineManager : MonoBehaviour
     private readonly Stack<StatLeaderLineView>
         linePool = new();
 
+    private bool restingOpacityInitialized;
+    private float previousRestingOpacity;
+
     private void OnEnable()
     {
         if (railManager != null)
@@ -59,6 +62,12 @@ public class WideStatLeaderLineManager : MonoBehaviour
         }
 
         HashSet<PerformanceStatCardView> linkedCards = new();
+        float desiredRestingOpacity = railManager.HasSecondaryRailCards
+            ? linePrefab.RestingLineOpacity
+            : linePrefab.EmptySecondaryRailsRestingOpacity;
+        float startingRestingOpacity = restingOpacityInitialized
+            ? previousRestingOpacity
+            : desiredRestingOpacity;
         foreach (KeyValuePair<
                      PerformanceStatSource,
                      PerformanceStatCardView
@@ -74,6 +83,11 @@ public class WideStatLeaderLineManager : MonoBehaviour
 
             StatLeaderLineView line = AcquireLine();
 
+            line.SetAdaptiveRestingLineOpacity(
+                startingRestingOpacity,
+                0f,
+                true);
+
             StretchInsideParent(
                 line.transform as RectTransform
             );
@@ -86,8 +100,16 @@ public class WideStatLeaderLineManager : MonoBehaviour
                 lineLayer
             );
 
+            line.SetAdaptiveRestingLineOpacity(
+                desiredRestingOpacity,
+                linePrefab.SecondaryRailOpacityTransitionDuration,
+                !restingOpacityInitialized);
+
             generatedLines.Add(line);
         }
+
+        previousRestingOpacity = desiredRestingOpacity;
+        restingOpacityInitialized = true;
     }
 
     private void ClearLines()

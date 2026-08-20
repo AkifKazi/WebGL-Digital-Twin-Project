@@ -224,8 +224,10 @@ MonoBehaviour:
   matchCardStateColor: 1
   defaultColor: {r: 0, g: 1, b: 1, a: 1}
   restingLineOpacity: 0.05
+  emptySecondaryRailsRestingOpacity: 0.8
   restingAnchorOpacity: 0.4
   focusToRestDuration: 0.7
+  secondaryRailOpacityTransitionDuration: 1
 --- !u!1 &7294951810797098089
 GameObject:
   m_ObjectHideFlags: 0

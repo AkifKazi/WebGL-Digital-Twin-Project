@@ -51,8 +51,8 @@ public class ResponsiveLayoutShell : MonoBehaviour
     [SerializeField, Min(48f)] private float verticalDesktopControlHeight = 88f;
 
     [Header("Mobile Landscape")]
-    [Tooltip("Visual scale applied to each bottom control group on mobile landscape only. Desktop and portrait remain unchanged.")]
-    [SerializeField, Range(1f, 1.25f)] private float mobileLandscapeBottomControlScale = 1.1f;
+    [Tooltip("Scales the mobile-landscape bottom control groups. Their layout spacing and occupied width follow this value automatically; desktop and portrait remain unchanged.")]
+    [SerializeField, Range(1f, 1.5f)] private float mobileLandscapeBottomControlScale = 1.1f;
 
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs;
@@ -65,6 +65,7 @@ public class ResponsiveLayoutShell : MonoBehaviour
     private Coroutine telemetryRebuildRoutine;
     private readonly Dictionary<Transform, Vector3> bottomControlBaseScales = new();
     private float bottomControlsBaseHeight = -1f;
+    private float bottomControlsBaseSpacing = -1f;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")]
@@ -280,6 +281,8 @@ public class ResponsiveLayoutShell : MonoBehaviour
             return;
 
         LayoutElement controlsLayout = bottomControls.GetComponent<LayoutElement>();
+        HorizontalLayoutGroup controlsGroup =
+            bottomControls.GetComponent<HorizontalLayoutGroup>();
         if (bottomControlsBaseHeight < 0f)
         {
             bottomControlsBaseHeight = controlsLayout != null &&
@@ -288,9 +291,14 @@ public class ResponsiveLayoutShell : MonoBehaviour
                 : verticalDesktopControlHeight;
         }
 
+        if (bottomControlsBaseSpacing < 0f && controlsGroup != null)
+            bottomControlsBaseSpacing = controlsGroup.spacing;
+
         foreach (Transform child in bottomControls)
         {
-            if (!bottomControlBaseScales.ContainsKey(child))
+            // Service/controller objects can also live under this hierarchy but do
+            // not participate in UI layout. Only scale direct RectTransform groups.
+            if (child is RectTransform && !bottomControlBaseScales.ContainsKey(child))
                 bottomControlBaseScales.Add(child, child.localScale);
         }
 
@@ -301,9 +309,19 @@ public class ResponsiveLayoutShell : MonoBehaviour
                 entry.Key.localScale = entry.Value * scale;
         }
 
+        if (controlsGroup != null)
+        {
+            // HorizontalLayoutGroup otherwise measures the unscaled RectTransforms,
+            // allowing enlarged controls to consume the intended visual gap.
+            controlsGroup.childScaleWidth = true;
+            controlsGroup.childScaleHeight = true;
+            controlsGroup.spacing = Mathf.Max(0f, bottomControlsBaseSpacing) * scale;
+        }
+
         if (controlsLayout != null && !controlsLayout.ignoreLayout)
             controlsLayout.preferredHeight = bottomControlsBaseHeight * scale;
 
+        LayoutRebuilder.ForceRebuildLayoutImmediate(bottomControls);
         if (bottomControls.parent is RectTransform parent)
             LayoutRebuilder.ForceRebuildLayoutImmediate(parent);
     }

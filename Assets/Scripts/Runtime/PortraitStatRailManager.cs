@@ -13,6 +13,8 @@ public class PortraitStatRailManager : MonoBehaviour
 
     public IReadOnlyDictionary<PerformanceStatSource, PerformanceStatCardView> ActiveCards => activeCards;
     public int HiddenPresentationCount { get; private set; }
+    public bool HasSecondaryRailCards =>
+        innerTopBindings.Count > 0 || innerBottomBindings.Count > 0;
 
     [Header("References")]
     [SerializeField] private Camera worldCamera;

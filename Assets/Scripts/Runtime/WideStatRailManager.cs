@@ -16,6 +16,8 @@ public class WideStatRailManager : MonoBehaviour
         PerformanceStatCardView
     > ActiveCards => activeCards;
     public int HiddenPresentationCount { get; private set; }
+    public bool HasSecondaryRailCards =>
+        innerLeftBindings.Count > 0 || innerRightBindings.Count > 0;
 
     [Header("References")]
     [SerializeField] private Camera worldCamera;
