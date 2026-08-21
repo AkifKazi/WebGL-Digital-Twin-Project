@@ -39,8 +39,12 @@ particles, responsive layouts, live data, validation, and troubleshooting, read
 
 Use an existing sensor as a structural reference, but assign a unique industrial tag,
 unit, thresholds, display priority, and world position. Add it to the Telemetry
-Registry and both responsive rail managers. The validation tool reports any missed
-assignment or duplicate ID.
+Sources hierarchy or a machine prefab. In the default Scene Discovery mode the
+Telemetry Registry and both responsive rail managers find it through the same rule.
+Use Explicit List only for a deliberately restricted scene. The validation tool
+reports duplicate IDs and invalid sensor configuration.
+
+For the complete machine-adoption workflow, see `ADDING_A_MACHINE.md`.
 
 ## Live-data boundary
 

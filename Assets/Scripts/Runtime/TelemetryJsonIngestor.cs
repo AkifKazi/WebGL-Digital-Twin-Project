@@ -3,7 +3,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(TelemetryRegistry))]
-public sealed class TelemetryJsonIngestor : MonoBehaviour
+public sealed class TelemetryJsonIngestor : MonoBehaviour, ITelemetryReadingSink
 {
     [SerializeField] private TelemetryRegistry registry;
     [SerializeField] private TelemetryOperatingModeController operatingModeController;
@@ -30,15 +30,9 @@ public sealed class TelemetryJsonIngestor : MonoBehaviour
         if (string.IsNullOrWhiteSpace(json))
             return;
 
-        TelemetryReadingDto dto;
-
-        try
+        if (!TelemetryJsonContract.TryParseReading(json, out TelemetryReadingDto dto, out string error))
         {
-            dto = JsonUtility.FromJson<TelemetryReadingDto>(json);
-        }
-        catch (Exception exception)
-        {
-            Debug.LogWarning($"Rejected telemetry JSON: {exception.Message}", this);
+            Debug.LogWarning($"Rejected telemetry JSON: {error}", this);
             return;
         }
 
@@ -50,20 +44,11 @@ public sealed class TelemetryJsonIngestor : MonoBehaviour
         if (string.IsNullOrWhiteSpace(json))
             return;
 
-        TelemetryBatchDto batch;
-
-        try
+        if (!TelemetryJsonContract.TryParseBatch(json, out TelemetryBatchDto batch, out string error))
         {
-            batch = JsonUtility.FromJson<TelemetryBatchDto>(json);
-        }
-        catch (Exception exception)
-        {
-            Debug.LogWarning($"Rejected telemetry batch JSON: {exception.Message}", this);
+            Debug.LogWarning($"Rejected telemetry batch JSON: {error}", this);
             return;
         }
-
-        if (batch?.readings == null)
-            return;
 
         foreach (TelemetryReadingDto reading in batch.readings)
             Apply(reading);
@@ -71,7 +56,7 @@ public sealed class TelemetryJsonIngestor : MonoBehaviour
 
     private void Apply(TelemetryReadingDto dto)
     {
-        if (dto == null || string.IsNullOrWhiteSpace(dto.sensorId) || registry == null)
+        if (dto == null || string.IsNullOrWhiteSpace(dto.sensorId))
             return;
 
         long receiveTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -83,7 +68,7 @@ public sealed class TelemetryJsonIngestor : MonoBehaviour
             ? (TelemetryDataQuality)dto.quality
             : TelemetryDataQuality.Bad;
 
-        TelemetryReading reading = new(
+        SubmitReading(new TelemetryReading(
             dto.sensorId,
             dto.value,
             quality,
@@ -91,14 +76,17 @@ public sealed class TelemetryJsonIngestor : MonoBehaviour
             receiveTimestamp,
             dto.statusCode,
             dto.sequenceNumber,
-            string.IsNullOrWhiteSpace(dto.providerId) ? providerId : dto.providerId);
+            string.IsNullOrWhiteSpace(dto.providerId) ? providerId : dto.providerId));
+    }
 
-        if (!registry.TryGetSource(dto.sensorId, out _))
+    public TelemetryIngestionResult SubmitReading(in TelemetryReading reading)
+    {
+        if (registry == null || !registry.TryGetSource(reading.SensorId, out _))
         {
             if (logRejectedReadings)
-                Debug.LogWarning($"Unknown telemetry sensor ID '{dto.sensorId}'.", this);
+                Debug.LogWarning($"Unknown telemetry sensor ID '{reading.SensorId}'.", this);
 
-            return;
+            return TelemetryIngestionResult.UnknownSensor;
         }
 
         if (!registry.ApplyReading(reading))
@@ -106,33 +94,19 @@ public sealed class TelemetryJsonIngestor : MonoBehaviour
             if (logRejectedReadings)
             {
                 Debug.LogWarning(
-                    $"Rejected invalid, duplicate, or out-of-order reading for '{dto.sensorId}'.",
+                    $"Rejected invalid, duplicate, or out-of-order reading for '{reading.SensorId}'.",
                     this);
             }
-            return;
+
+            return double.IsNaN(reading.Value) || double.IsInfinity(reading.Value)
+                ? TelemetryIngestionResult.InvalidValue
+                : TelemetryIngestionResult.DuplicateOrOutOfOrder;
         }
 
         if (operatingModeController != null)
             operatingModeController.UseLiveData();
 
         connectionHealthMonitor?.ReportReading(reading.ProviderId);
-    }
-
-    [Serializable]
-    private sealed class TelemetryBatchDto
-    {
-        public TelemetryReadingDto[] readings;
-    }
-
-    [Serializable]
-    private sealed class TelemetryReadingDto
-    {
-        public string sensorId;
-        public double value;
-        public int quality;
-        public long sourceTimestampUnixMs;
-        public uint statusCode;
-        public ulong sequenceNumber;
-        public string providerId;
+        return TelemetryIngestionResult.Accepted;
     }
 }

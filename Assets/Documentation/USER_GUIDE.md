@@ -102,7 +102,7 @@ The safest beginner workflow is:
 3. Give it a unique **Stat Id**.
 4. Change its metric name, unit, value format, thresholds, and display priority.
 5. Position it at the real measurement location on the machine.
-6. Add it to the Telemetry Registry and responsive rail source lists if it is not already discovered.
+6. Keep the registry and responsive layouts on **Scene Discovery** so the source is included automatically.
 7. Run **Tools > Digital Twin > Validate Project**.
 
 Only group sensors when they describe the same physical equipment and their anchors are close together.
@@ -177,4 +177,3 @@ For Git, keep `Assets`, `Packages`, and `ProjectSettings`. Do not upload `Librar
 - **Mobile runs hot:** confirm the Mobile quality preset and 30 FPS lock are still enabled.
 
 When making large changes, create a Git commit first. This makes it easy to return to the last working version.
-

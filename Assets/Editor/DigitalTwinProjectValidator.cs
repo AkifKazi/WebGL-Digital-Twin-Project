@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using TMPro;
 using UnityEditor;
@@ -46,7 +47,10 @@ public static class DigitalTwinProjectValidator
             FindObjectsSortMode.None);
 
         ValidateSensors(sources, result);
+        ValidateMachineConfiguration(sources, result);
+        ValidateEnvironmentModelSize(result);
         ValidateRegistry(sources, result);
+        ValidateTelemetryArchitecture(sources, result);
         ValidateManagerSources<WideStatRailManager>(sources, result);
         ValidateManagerSources<PortraitStatRailManager>(sources, result);
         ValidateOverflowRails(result);
@@ -200,6 +204,103 @@ public static class DigitalTwinProjectValidator
         }
     }
 
+    private static void ValidateMachineConfiguration(
+        PerformanceStatSource[] sources,
+        ValidationResult result)
+    {
+        DigitalTwinMachineConfiguration configuration;
+        try
+        {
+            configuration = DigitalTwinMachineConfigurationLoader.LoadDefault();
+        }
+        catch (Exception exception)
+        {
+            result.Errors.Add(exception.Message);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(configuration.machineId))
+            result.Errors.Add("The default machine configuration has no stable machine ID.");
+        if (configuration.sensors == null || configuration.sensors.Count == 0)
+        {
+            result.Errors.Add(
+                $"Machine configuration '{configuration.machineId}' has no sensors.");
+            return;
+        }
+
+        HashSet<string> configuredIds = new(StringComparer.OrdinalIgnoreCase);
+        foreach (MachineSensorDefinition sensor in configuration.sensors)
+        {
+            if (string.IsNullOrWhiteSpace(sensor.id))
+                result.Errors.Add("A configured machine sensor has no stable ID.");
+            else if (!configuredIds.Add(sensor.id))
+                result.Errors.Add($"Machine configuration duplicates sensor ID '{sensor.id}'.");
+            if (string.IsNullOrWhiteSpace(sensor.category))
+                result.Errors.Add($"Configured sensor '{sensor.id}' has no hierarchy category.");
+            if (sensor.staleAfterSeconds <= 0f)
+                result.Errors.Add($"Configured sensor '{sensor.id}' has an invalid stale timeout.");
+        }
+
+        HashSet<string> sceneIds = new(
+            sources.Where(source => !string.IsNullOrWhiteSpace(source.StatId))
+                .Select(source => source.StatId),
+            StringComparer.OrdinalIgnoreCase);
+        if (!configuredIds.SetEquals(sceneIds))
+        {
+            result.Errors.Add(
+                $"Scene sensors do not match default machine configuration " +
+                $"'{configuration.machineId}'.");
+        }
+
+        HashSet<string> groupIds = new(StringComparer.OrdinalIgnoreCase);
+        foreach (MachineEquipmentGroupDefinition group in configuration.equipmentGroups)
+        {
+            if (string.IsNullOrWhiteSpace(group.groupId) || !groupIds.Add(group.groupId))
+                result.Errors.Add("Machine equipment groups require unique stable IDs.");
+            foreach (string memberId in group.memberSensorIds)
+            {
+                if (!configuredIds.Contains(memberId))
+                {
+                    result.Errors.Add(
+                        $"Equipment group '{group.groupId}' references unknown sensor '{memberId}'.");
+                }
+            }
+        }
+
+        try
+        {
+            DigitalTwinMachineConfigurationLoader.CreateSceneConfigurator(configuration);
+        }
+        catch (Exception exception)
+        {
+            result.Errors.Add(exception.Message);
+        }
+    }
+
+    private static void ValidateEnvironmentModelSize(ValidationResult result)
+    {
+        const long maximumBytes = 10L * 1024L * 1024L;
+        string[] candidates =
+        {
+            "Assets/Models/Construction Site.fbx",
+            "Assets/Models/Site Environment.fbx"
+        };
+        string assetPath = candidates.FirstOrDefault(File.Exists);
+        if (assetPath == null)
+        {
+            result.Warnings.Add("No site-environment FBX was found at the expected model paths.");
+            return;
+        }
+
+        long bytes = new FileInfo(assetPath).Length;
+        if (bytes > maximumBytes)
+        {
+            result.Errors.Add(
+                $"Site environment model is {bytes / (1024f * 1024f):0.0} MB; " +
+                "the project limit is 10 MB.");
+        }
+    }
+
     private static void ValidateRegistry(
         PerformanceStatSource[] sources,
         ValidationResult result)
@@ -212,6 +313,7 @@ public static class DigitalTwinProjectValidator
             return;
         }
 
+        registry.RebuildIndex();
         HashSet<PerformanceStatSource> registered = new(registry.Sources.Where(source => source != null));
         if (registered.Count != sources.Length || sources.Any(source => !registered.Contains(source)))
             result.Errors.Add("Telemetry Registry does not contain every scene sensor exactly once.");
@@ -225,7 +327,15 @@ public static class DigitalTwinProjectValidator
                      FindObjectsInactive.Include,
                      FindObjectsSortMode.None))
         {
-            SerializedProperty array = new SerializedObject(manager).FindProperty("sources");
+            SerializedObject serializedManager = new(manager);
+            SerializedProperty selectionMode = serializedManager.FindProperty("sourceSelectionMode");
+            if (selectionMode != null &&
+                selectionMode.enumValueIndex == (int)TelemetrySourceSelectionMode.SceneDiscovery)
+            {
+                continue;
+            }
+
+            SerializedProperty array = serializedManager.FindProperty("sources");
             HashSet<PerformanceStatSource> assigned = new();
             for (int i = 0; i < array.arraySize; i++)
             {
@@ -236,6 +346,38 @@ public static class DigitalTwinProjectValidator
             if (assigned.Count != sources.Length || sources.Any(source => !assigned.Contains(source)))
                 result.Errors.Add($"'{manager.name}' does not reference every sensor exactly once.");
         }
+    }
+
+    private static void ValidateTelemetryArchitecture(
+        PerformanceStatSource[] sources,
+        ValidationResult result)
+    {
+        TelemetryJsonIngestor ingestor =
+            UnityEngine.Object.FindFirstObjectByType<TelemetryJsonIngestor>(
+                FindObjectsInactive.Include);
+        if (ingestor == null)
+            result.Errors.Add("The generic telemetry JSON ingestor is missing.");
+
+        TelemetryOperatingModeController modeController =
+            UnityEngine.Object.FindFirstObjectByType<TelemetryOperatingModeController>(
+                FindObjectsInactive.Include);
+        if (modeController == null)
+        {
+            result.Errors.Add("Telemetry Operating Mode Controller is missing.");
+        }
+        else
+        {
+            SerializedProperty provider = new SerializedObject(modeController)
+                .FindProperty("simulator");
+            if (provider?.objectReferenceValue is MonoBehaviour behaviour &&
+                behaviour is not ITelemetrySimulationProvider)
+            {
+                result.Errors.Add(
+                    $"Simulation provider '{behaviour.name}' does not implement " +
+                    "ITelemetrySimulationProvider.");
+            }
+        }
+
     }
 
     private static void ValidateParticleController(ValidationResult result)

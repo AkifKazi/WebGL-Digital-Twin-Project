@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEngine;
 
 public enum TelemetryOperatingMode
@@ -16,7 +17,8 @@ public sealed class TelemetryOperatingModeController : MonoBehaviour
     [SerializeField] private TelemetryOperatingMode operatingMode =
         TelemetryOperatingMode.Simulation;
     [SerializeField] private TelemetryRegistry registry;
-    [SerializeField] private HopperProcessSimulator simulator;
+    [Tooltip("Optional machine-specific component implementing ITelemetrySimulationProvider.")]
+    [SerializeField] private MonoBehaviour simulator;
 
     public TelemetryOperatingMode OperatingMode => operatingMode;
     public bool IsLive => operatingMode == TelemetryOperatingMode.Live;
@@ -27,7 +29,8 @@ public sealed class TelemetryOperatingModeController : MonoBehaviour
             registry = GetComponent<TelemetryRegistry>();
 
         if (simulator == null)
-            simulator = GetComponent<HopperProcessSimulator>();
+            simulator = GetComponents<MonoBehaviour>()
+                .FirstOrDefault(component => component is ITelemetrySimulationProvider);
 
         ApplyMode(false);
     }
@@ -57,8 +60,8 @@ public sealed class TelemetryOperatingModeController : MonoBehaviour
 
         if (operatingMode == TelemetryOperatingMode.Simulation)
         {
-            if (reset && simulator != null)
-                simulator.ResetModel();
+            if (reset && simulator is ITelemetrySimulationProvider simulationProvider)
+                simulationProvider.ResetSimulation();
 
             OperatingModeChanged?.Invoke(operatingMode);
             return;

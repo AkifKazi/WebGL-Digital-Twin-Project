@@ -1,0 +1,504 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6409f86c4044dc9b770aa88033bca3e, type: 3}
+  m_Name: Vibratory Feeder
+  m_EditorClassIdentifier: Assembly-CSharp::DigitalTwinMachineConfiguration
+  machineId: VIBRATORY-FEEDER-01
+  displayName: Vibratory Feeder and Hopper
+  isDefault: 1
+  editorConfiguratorType: VibratoryFeederSceneConfigurator
+  sensors:
+  - id: FEED-01.FLOW.IN
+    legacyId: STAT-01
+    objectName: Inlet Rate
+    category: Material Feed
+    label: INLET RATE
+    unit: kg/s
+    valueFormat: 0.0
+    initialValue: 12.5
+    limitMode: 2
+    warningBelow: 8
+    criticalBelow: 0.5
+    warningAbove: 17
+    criticalAbove: 20
+    staleAfterSeconds: 5
+    localPosition: {x: 0, y: 2.571, z: 0}
+    wideRail: 1
+    portraitRail: 0
+    displayPriority: 40
+  - id: FEED-01.FLOW.OUT
+    legacyId: STAT-02
+    objectName: Discharge Rate
+    category: Material Feed
+    label: DISCHARGE RATE
+    unit: kg/s
+    valueFormat: 0.0
+    initialValue: 12.3
+    limitMode: 2
+    warningBelow: 8
+    criticalBelow: 0.5
+    warningAbove: 17
+    criticalAbove: 20
+    staleAfterSeconds: 5
+    localPosition: {x: 0, y: 1.278, z: 1.963}
+    wideRail: 0
+    portraitRail: 0
+    displayPriority: 30
+  - id: VIB-01.MOTOR.TEMP
+    legacyId: STAT-03
+    objectName: Motor Temperature
+    category: Vibratory Drive
+    label: MOTOR TEMPERATURE
+    unit: "\xB0C"
+    valueFormat: 0.0
+    initialValue: 65
+    limitMode: 0
+    warningBelow: 0
+    criticalBelow: 0
+    warningAbove: 80
+    criticalAbove: 95
+    staleAfterSeconds: 5
+    localPosition: {x: 0, y: 0.697, z: 0}
+    wideRail: 2
+    portraitRail: 0
+    displayPriority: 80
+  - id: VIB-01.MOTOR.SPEED
+    legacyId: STAT-04
+    objectName: Motor Speed
+    category: Vibratory Drive
+    label: MOTOR SPEED
+    unit: rpm
+    valueFormat: 0.0
+    initialValue: 1480
+    limitMode: 2
+    warningBelow: 1350
+    criticalBelow: 1200
+    warningAbove: 1550
+    criticalAbove: 1650
+    staleAfterSeconds: 5
+    localPosition: {x: 0, y: 0.697, z: 0}
+    wideRail: 1
+    portraitRail: 0
+    displayPriority: 70
+  - id: VIB-01.BEARING.VEL_RMS
+    legacyId: STAT-05
+    objectName: Bearing Vibration
+    category: Vibratory Drive
+    label: BEARING VIBRATION
+    unit: mm/s RMS
+    valueFormat: 0.0
+    initialValue: 4.2
+    limitMode: 0
+    warningBelow: 0
+    criticalBelow: 0
+    warningAbove: 7.1
+    criticalAbove: 11
+    staleAfterSeconds: 5
+    localPosition: {x: 0.16, y: 0.82, z: 0.08}
+    wideRail: 2
+    portraitRail: 2
+    displayPriority: 100
+  - id: VIB-01.MOTOR.POWER
+    legacyId: STAT-06
+    objectName: Motor Power
+    category: Vibratory Drive
+    label: MOTOR POWER
+    unit: kW
+    valueFormat: 0.0
+    initialValue: 18.6
+    limitMode: 2
+    warningBelow: 8
+    criticalBelow: 4
+    warningAbove: 21
+    criticalAbove: 23
+    staleAfterSeconds: 5
+    localPosition: {x: -0.16, y: 0.61, z: 0.08}
+    wideRail: 1
+    portraitRail: 2
+    displayPriority: 60
+  - id: VIB-01.MOTOR.CURRENT
+    legacyId: STAT-07
+    objectName: Motor Current
+    category: Vibratory Drive
+    label: MOTOR CURRENT
+    unit: A
+    valueFormat: 0.0
+    initialValue: 36.4
+    limitMode: 0
+    warningBelow: 0
+    criticalBelow: 0
+    warningAbove: 42
+    criticalAbove: 48
+    staleAfterSeconds: 5
+    localPosition: {x: 0.18, y: 0.58, z: -0.08}
+    wideRail: 2
+    portraitRail: 2
+    displayPriority: 50
+  - id: HOP-01.LEVEL
+    legacyId: STAT-08
+    objectName: Fill Level
+    category: Hopper
+    label: FILL LEVEL
+    unit: '%'
+    valueFormat: 0.0
+    initialValue: 68
+    limitMode: 2
+    warningBelow: 20
+    criticalBelow: 10
+    warningAbove: 85
+    criticalAbove: 95
+    staleAfterSeconds: 5
+    localPosition: {x: -0.2, y: 2.05, z: 0.25}
+    wideRail: 1
+    portraitRail: 1
+    displayPriority: 90
+  - id: VIB-01.BEARING.TEMP
+    legacyId: 
+    objectName: Bearing Temperature
+    category: Vibratory Drive
+    label: BEARING TEMPERATURE
+    unit: "\xB0C"
+    valueFormat: 0.0
+    initialValue: 57
+    limitMode: 0
+    warningBelow: 0
+    criticalBelow: 0
+    warningAbove: 75
+    criticalAbove: 90
+    staleAfterSeconds: 5
+    localPosition: {x: 0.14, y: 0.79, z: 0.06}
+    wideRail: 2
+    portraitRail: 2
+    displayPriority: 85
+  - id: VIB-01.DRIVE.FREQUENCY
+    legacyId: 
+    objectName: Drive Frequency
+    category: Vibratory Drive
+    label: DRIVE FREQUENCY
+    unit: Hz
+    valueFormat: 0.0
+    initialValue: 50
+    limitMode: 2
+    warningBelow: 47
+    criticalBelow: 45
+    warningAbove: 51
+    criticalAbove: 53
+    staleAfterSeconds: 5
+    localPosition: {x: -0.1, y: 0.65, z: 0.04}
+    wideRail: 1
+    portraitRail: 2
+    displayPriority: 45
+  - id: VIB-01.MOTOR.LOAD
+    legacyId: 
+    objectName: Motor Load
+    category: Vibratory Drive
+    label: MOTOR LOAD
+    unit: '%'
+    valueFormat: 0.0
+    initialValue: 84
+    limitMode: 0
+    warningBelow: 0
+    criticalBelow: 0
+    warningAbove: 90
+    criticalAbove: 100
+    staleAfterSeconds: 5
+    localPosition: {x: 0.08, y: 0.63, z: -0.05}
+    wideRail: 2
+    portraitRail: 2
+    displayPriority: 65
+  - id: FEED-01.BELT.SPEED
+    legacyId: 
+    objectName: Belt Speed
+    category: Material Feed
+    label: BELT SPEED
+    unit: m/s
+    valueFormat: 0.0
+    initialValue: 0.8
+    limitMode: 2
+    warningBelow: 0.55
+    criticalBelow: 0.35
+    warningAbove: 1
+    criticalAbove: 1.15
+    staleAfterSeconds: 5
+    localPosition: {x: 0, y: 0.38, z: 1.72}
+    wideRail: 1
+    portraitRail: 0
+    displayPriority: 35
+  - id: HOP-01.MASS
+    legacyId: 
+    objectName: Material Mass
+    category: Hopper
+    label: MATERIAL MASS
+    unit: t
+    valueFormat: 0.0
+    initialValue: 87
+    limitMode: 2
+    warningBelow: 25.6
+    criticalBelow: 12.8
+    warningAbove: 108.8
+    criticalAbove: 121.6
+    staleAfterSeconds: 5
+    localPosition: {x: 0.2, y: 2.04, z: 0.2}
+    wideRail: 2
+    portraitRail: 1
+    displayPriority: 75
+  - id: HOP-01.MATERIAL.MOISTURE
+    legacyId: 
+    objectName: Material Moisture
+    category: Hopper
+    label: MATERIAL MOISTURE
+    unit: '%'
+    valueFormat: 0.0
+    initialValue: 6.8
+    limitMode: 2
+    warningBelow: 2
+    criticalBelow: 1
+    warningAbove: 10
+    criticalAbove: 14
+    staleAfterSeconds: 5
+    localPosition: {x: -0.34, y: 2.18, z: 0.38}
+    wideRail: 1
+    portraitRail: 1
+    displayPriority: 58
+  - id: HOP-01.MATERIAL.TEMP
+    legacyId: 
+    objectName: Material Temperature
+    category: Hopper
+    label: MATERIAL TEMPERATURE
+    unit: "\xB0C"
+    valueFormat: 0.0
+    initialValue: 31.4
+    limitMode: 2
+    warningBelow: -5
+    criticalBelow: -15
+    warningAbove: 45
+    criticalAbove: 55
+    staleAfterSeconds: 5
+    localPosition: {x: 0.34, y: 2.2, z: 0.34}
+    wideRail: 2
+    portraitRail: 1
+    displayPriority: 52
+  - id: HOP-01.LOADCELL.IMBALANCE
+    legacyId: 
+    objectName: Load Imbalance
+    category: Hopper
+    label: LOAD IMBALANCE
+    unit: '%'
+    valueFormat: 0.0
+    initialValue: 2.1
+    limitMode: 0
+    warningBelow: 0
+    criticalBelow: 0
+    warningAbove: 8
+    criticalAbove: 15
+    staleAfterSeconds: 5
+    localPosition: {x: -0.52, y: 1.45, z: 0.1}
+    wideRail: 1
+    portraitRail: 1
+    displayPriority: 82
+  - id: HOP-01.OUTLET.GATE.POSITION
+    legacyId: 
+    objectName: Gate Position
+    category: Hopper
+    label: GATE POSITION
+    unit: '%'
+    valueFormat: 0.0
+    initialValue: 74
+    limitMode: 2
+    warningBelow: 25
+    criticalBelow: 10
+    warningAbove: 95
+    criticalAbove: 99
+    staleAfterSeconds: 5
+    localPosition: {x: 0, y: 1.22, z: 0.18}
+    wideRail: 2
+    portraitRail: 1
+    displayPriority: 68
+  - id: FEED-01.BELT.TENSION
+    legacyId: 
+    objectName: Belt Tension
+    category: Material Feed
+    label: BELT TENSION
+    unit: kN
+    valueFormat: 0.0
+    initialValue: 18.2
+    limitMode: 2
+    warningBelow: 14
+    criticalBelow: 11
+    warningAbove: 22
+    criticalAbove: 25
+    staleAfterSeconds: 5
+    localPosition: {x: -0.38, y: 0.42, z: 1.46}
+    wideRail: 1
+    portraitRail: 2
+    displayPriority: 73
+  - id: FEED-01.BEARING.TEMP
+    legacyId: 
+    objectName: Conveyor Bearing Temperature
+    category: Material Feed
+    label: CONVEYOR BEARING TEMP
+    unit: "\xB0C"
+    valueFormat: 0.0
+    initialValue: 49
+    limitMode: 0
+    warningBelow: 0
+    criticalBelow: 0
+    warningAbove: 70
+    criticalAbove: 85
+    staleAfterSeconds: 5
+    localPosition: {x: 0.34, y: 0.43, z: 1.58}
+    wideRail: 2
+    portraitRail: 2
+    displayPriority: 78
+  - id: FEED-01.DRIVE.CURRENT
+    legacyId: 
+    objectName: Conveyor Drive Current
+    category: Material Feed
+    label: CONVEYOR CURRENT
+    unit: A
+    valueFormat: 0.0
+    initialValue: 14.8
+    limitMode: 2
+    warningBelow: 3
+    criticalBelow: 1
+    warningAbove: 19
+    criticalAbove: 23
+    staleAfterSeconds: 5
+    localPosition: {x: 0.42, y: 0.48, z: 1.28}
+    wideRail: 2
+    portraitRail: 2
+    displayPriority: 62
+  - id: FEED-01.SLIP
+    legacyId: 
+    objectName: Belt Slip
+    category: Material Feed
+    label: BELT SLIP
+    unit: '%'
+    valueFormat: 0.0
+    initialValue: 1.2
+    limitMode: 0
+    warningBelow: 0
+    criticalBelow: 0
+    warningAbove: 4
+    criticalAbove: 7
+    staleAfterSeconds: 5
+    localPosition: {x: -0.18, y: 0.38, z: 1.9}
+    wideRail: 1
+    portraitRail: 2
+    displayPriority: 88
+  - id: STRUCT-01.FRAME.VIBRATION
+    legacyId: 
+    objectName: Frame Vibration
+    category: Structure
+    label: FRAME VIBRATION
+    unit: mm/s RMS
+    valueFormat: 0.0
+    initialValue: 1.8
+    limitMode: 0
+    warningBelow: 0
+    criticalBelow: 0
+    warningAbove: 4.5
+    criticalAbove: 7.1
+    staleAfterSeconds: 5
+    localPosition: {x: -0.72, y: 0.55, z: 0.05}
+    wideRail: 1
+    portraitRail: 2
+    displayPriority: 76
+  - id: ENV-01.AMBIENT.TEMP
+    legacyId: 
+    objectName: Ambient Temperature
+    category: Environment
+    label: AMBIENT TEMPERATURE
+    unit: "\xB0C"
+    valueFormat: 0.0
+    initialValue: 25
+    limitMode: 2
+    warningBelow: -5
+    criticalBelow: -15
+    warningAbove: 40
+    criticalAbove: 48
+    staleAfterSeconds: 5
+    localPosition: {x: -1.05, y: 1.75, z: -0.3}
+    wideRail: 1
+    portraitRail: 1
+    displayPriority: 20
+  - id: ENV-01.RELATIVE.HUMIDITY
+    legacyId: 
+    objectName: Ambient Humidity
+    category: Environment
+    label: AMBIENT HUMIDITY
+    unit: '% RH'
+    valueFormat: 0.0
+    initialValue: 48
+    limitMode: 2
+    warningBelow: 15
+    criticalBelow: 5
+    warningAbove: 75
+    criticalAbove: 90
+    staleAfterSeconds: 5
+    localPosition: {x: 1.05, y: 1.75, z: -0.3}
+    wideRail: 2
+    portraitRail: 1
+    displayPriority: 18
+  - id: POWER-01.SUPPLY.VOLTAGE
+    legacyId: 
+    objectName: Supply Voltage
+    category: Electrical Supply
+    label: SUPPLY VOLTAGE
+    unit: V
+    valueFormat: 0.0
+    initialValue: 400
+    limitMode: 2
+    warningBelow: 380
+    criticalBelow: 360
+    warningAbove: 420
+    criticalAbove: 440
+    staleAfterSeconds: 5
+    localPosition: {x: 0.58, y: 0.66, z: -0.42}
+    wideRail: 2
+    portraitRail: 2
+    displayPriority: 66
+  - id: POWER-01.POWER.FACTOR
+    legacyId: 
+    objectName: Power Factor
+    category: Electrical Supply
+    label: POWER FACTOR
+    unit: PF
+    valueFormat: 0.0
+    initialValue: 0.82
+    limitMode: 1
+    warningBelow: 0.75
+    criticalBelow: 0.65
+    warningAbove: 1
+    criticalAbove: 1
+    staleAfterSeconds: 5
+    localPosition: {x: 0.62, y: 0.72, z: -0.38}
+    wideRail: 2
+    portraitRail: 2
+    displayPriority: 54
+  equipmentGroups:
+  - groupId: VIB-01.DRIVE
+    objectName: Drive Motor
+    displayName: DRIVE MOTOR
+    localPosition: {x: 0, y: 0.7, z: 0}
+    memberSensorIds:
+    - VIB-01.MOTOR.TEMP
+    - VIB-01.MOTOR.SPEED
+    - VIB-01.BEARING.VEL_RMS
+    - VIB-01.MOTOR.POWER
+    - VIB-01.MOTOR.CURRENT
+    - VIB-01.BEARING.TEMP
+    - VIB-01.DRIVE.FREQUENCY
+    - VIB-01.MOTOR.LOAD
+    maximumMemberDistance: 0.75
+    maximumVisibleMetrics: 3
+    regroupStableSeconds: 12

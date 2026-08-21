@@ -26,7 +26,13 @@ public sealed class TelemetryValueFitter : MonoBehaviour
     [SerializeField, Min(0.01f), Tooltip("Time used to smoothly animate meaningful size and position changes.")]
     private float smoothTime = 0.2f;
     [SerializeField, Min(0f), Tooltip("How long spare value width is retained before it may contract.")]
-    private float widthReleaseDelay = 8f;
+    private float widthReleaseDelay = 4f;
+    [SerializeField, Min(1f), Tooltip("A larger empty gap closes sooner than a small, less distracting gap.")]
+    private float largeGapThreshold = 28f;
+    [SerializeField, Range(0.2f, 1f), Tooltip("Release-delay multiplier used for a large value/unit gap.")]
+    private float largeGapDelayMultiplier = 0.4f;
+    [SerializeField, Range(0.2f, 1f), Tooltip("Motion-time multiplier used while closing a large value/unit gap.")]
+    private float largeGapSmoothMultiplier = 0.5f;
     [SerializeField, Min(0f), Tooltip("How long a smaller font remains stable before returning toward its full size.")]
     private float fontRecoveryDelay = 3f;
 
@@ -128,8 +134,14 @@ public sealed class TelemetryValueFitter : MonoBehaviour
             ref valueSizeVelocity, smoothTime, Mathf.Infinity, deltaTime);
         unitText.fontSize = Mathf.SmoothDamp(unitText.fontSize, targetUnitSize,
             ref unitSizeVelocity, smoothTime, Mathf.Infinity, deltaTime);
+        float closingDistance = Mathf.Max(0f, reservedValueWidth - targetReservedValueWidth);
+        float closingBlend = Mathf.InverseLerp(widthDeadZone, largeGapThreshold, closingDistance);
+        float adaptiveSmoothTime = smoothTime * Mathf.Lerp(
+            1f,
+            largeGapSmoothMultiplier,
+            closingBlend);
         reservedValueWidth = Mathf.SmoothDamp(reservedValueWidth, targetReservedValueWidth,
-            ref reservedWidthVelocity, smoothTime, Mathf.Infinity, deltaTime);
+            ref reservedWidthVelocity, adaptiveSmoothTime, Mathf.Infinity, deltaTime);
         valueLayout.preferredWidth = reservedValueWidth;
     }
 
@@ -185,10 +197,16 @@ public sealed class TelemetryValueFitter : MonoBehaviour
             targetReservedValueWidth = requiredWidth;
             lastWidthIncreaseTime = Time.unscaledTime;
         }
-        else if (requiredWidth < targetReservedValueWidth - widthDeadZone &&
-                 Time.unscaledTime - lastWidthIncreaseTime >= widthReleaseDelay)
+        else if (requiredWidth < targetReservedValueWidth - widthDeadZone)
         {
-            targetReservedValueWidth = requiredWidth;
+            float excessWidth = targetReservedValueWidth - requiredWidth;
+            float gapBlend = Mathf.InverseLerp(widthDeadZone, largeGapThreshold, excessWidth);
+            float adaptiveDelay = widthReleaseDelay * Mathf.Lerp(
+                1f,
+                largeGapDelayMultiplier,
+                gapBlend);
+            if (Time.unscaledTime - lastWidthIncreaseTime >= adaptiveDelay)
+                targetReservedValueWidth = requiredWidth;
         }
     }
 

@@ -43,8 +43,8 @@ Desktop.ini
 
 # Unity crash and temporary artifacts
 sysinfo.txt
+mono_crash.*.json
 crashlytics-build.properties
 *.tmp
 *.bak
 *.orig
-

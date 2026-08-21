@@ -85,14 +85,8 @@ public static class DigitalTwinSceneOrganization
         Parent("Belt 2", conveyorAssembly);
         Parent("conveyor", conveyorAssembly);
 
-        foreach (PerformanceStatSource source in UnityEngine.Object.FindObjectsByType<PerformanceStatSource>(
-                     FindObjectsInactive.Include))
-        {
-            source.transform.SetParent(
-                GetOrCreateChild(sensors, GetTelemetryGroupName(source.StatId)),
-                true);
-
-        }
+        // Sensor categories and anchors are owned by the selected machine
+        // configuration. Hierarchy cleanup must preserve that machine-defined layout.
 
         AdaptiveQualityController quality = UnityEngine.Object.FindAnyObjectByType<AdaptiveQualityController>(
             FindObjectsInactive.Include);
@@ -255,24 +249,6 @@ public static class DigitalTwinSceneOrganization
         existing = new GameObject(name).transform;
         existing.SetParent(parent, false);
         return existing;
-    }
-
-    private static string GetTelemetryGroupName(string statId)
-    {
-        if (string.IsNullOrWhiteSpace(statId))
-            return "Environment";
-
-        if (statId.StartsWith("HOP-", StringComparison.OrdinalIgnoreCase))
-            return "Hopper";
-        if (statId.StartsWith("VIB-", StringComparison.OrdinalIgnoreCase))
-            return "Vibratory Drive";
-        if (statId.StartsWith("FEED-", StringComparison.OrdinalIgnoreCase))
-            return "Material Feed";
-        if (statId.StartsWith("STRUCT-", StringComparison.OrdinalIgnoreCase))
-            return "Structure";
-        if (statId.StartsWith("POWER-", StringComparison.OrdinalIgnoreCase))
-            return "Electrical Supply";
-        return "Environment";
     }
 
     private static void RenameAll(string oldName, string newName)

@@ -5,6 +5,11 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class TelemetryRegistry : MonoBehaviour
 {
+    [Header("Source Selection")]
+    [Tooltip("Scene Discovery is recommended: sensors packaged with a new machine " +
+             "are registered automatically. Explicit List is available for controlled scenes.")]
+    [SerializeField] private TelemetrySourceSelectionMode sourceSelectionMode =
+        TelemetrySourceSelectionMode.SceneDiscovery;
     [SerializeField] private PerformanceStatSource[] sources = Array.Empty<PerformanceStatSource>();
 
     private readonly Dictionary<string, PerformanceStatSource> sourcesById =
@@ -14,6 +19,7 @@ public sealed class TelemetryRegistry : MonoBehaviour
     private float nextStaleCheckTime;
 
     public IReadOnlyList<PerformanceStatSource> Sources => sources;
+    public TelemetrySourceSelectionMode SourceSelectionMode => sourceSelectionMode;
 
     private void Awake()
     {
@@ -66,6 +72,7 @@ public sealed class TelemetryRegistry : MonoBehaviour
     [ContextMenu("Rebuild Sensor Index")]
     public void RebuildIndex()
     {
+        sources = TelemetrySourceResolver.Resolve(sourceSelectionMode, sources);
         sourcesById.Clear();
 
         foreach (PerformanceStatSource source in sources)

@@ -68,6 +68,7 @@ Single sample:
 
 ```json
 {
+  "schemaVersion": 1,
   "sensorId": "VIB-01.MOTOR.TEMP",
   "value": 66.4,
   "quality": 0,
@@ -79,6 +80,8 @@ Single sample:
 ```
 
 Quality values are `0 = Good`, `1 = Uncertain`, `2 = Bad`, and `3 = Stale`.
+Schema version `1` is the current contract. A missing version is treated as
+legacy version `0` for compatibility; any other version is rejected.
 
 For a JavaScript WebGL host:
 
@@ -90,10 +93,79 @@ unityInstance.SendMessage(
 );
 ```
 
-Batch messages use `{ "readings": [ ... ] }` and call `PushBatchJson`.
+Batch messages use `{ "schemaVersion": 1, "readings": [ ... ] }` and call
+`PushBatchJson`.
 The first valid live sample automatically changes the runtime from Simulation
 to Live mode. All remaining sensors show stale until their live samples arrive,
 preventing simulation values from being mistaken for plant values.
+
+## Provider boundary
+
+All external and test providers terminate at the same generic runtime boundary:
+
+- `ITelemetryReadingSink` accepts normalized `TelemetryReading` values.
+- `TelemetryJsonIngestor` adapts browser/API JSON into that boundary.
+- `ITelemetrySimulationProvider` allows the operating-mode controller to start
+  or reset a machine simulator without depending on the hopper implementation.
+
+Providers do not manipulate cards or leader lines directly. The registry updates
+the matching `PerformanceStatSource`, and the presentation reacts to that state.
+
+## Browser API adapter
+
+The WebGL hosting page should own network connections. A minimal WebSocket adapter
+can normalize gateway messages and forward them to the Unity instance:
+
+```javascript
+function connectTelemetry(unityInstance, socketUrl, accessToken) {
+  const socket = new WebSocket(socketUrl, ["telemetry.v1"]);
+
+  socket.addEventListener("open", () => {
+    unityInstance.SendMessage(
+      "Digital Twin Runtime",
+      "ReportGatewayConnected",
+      "site-a-edge-01"
+    );
+    socket.send(JSON.stringify({ type: "authenticate", token: accessToken }));
+  });
+
+  socket.addEventListener("message", event => {
+    const message = JSON.parse(event.data);
+    const method = Array.isArray(message.readings) ? "PushBatchJson" : "PushJson";
+    unityInstance.SendMessage("Digital Twin Runtime", method, JSON.stringify(message));
+  });
+
+  socket.addEventListener("close", () => {
+    unityInstance.SendMessage(
+      "Digital Twin Runtime",
+      "ReportGatewayDisconnected",
+      "socket-closed"
+    );
+  });
+
+  return socket;
+}
+```
+
+This is a host-page example, not an authentication prescription. Prefer secure,
+short-lived browser credentials such as an HttpOnly session or approved token
+exchange. Do not hard-code credentials in JavaScript or the Unity build.
+
+For REST polling, retrieve the current versioned batch over HTTPS and pass the
+response body to `PushBatchJson`. Use WebSockets for ongoing state where low
+latency matters. Keep history and high-frequency waveforms in the backend; send
+Unity only the current or aggregated values required for visualization.
+
+## Acceptance rules
+
+- Unknown sensor IDs are rejected and cannot switch the player into Live mode.
+- `NaN` and infinite numeric values are rejected.
+- Non-zero duplicate or older sequence numbers from the same provider are rejected.
+- Missing source timestamps use the browser receive time.
+- Invalid quality integers are converted to Bad quality.
+- Accepted Good or Uncertain readings update the visible numeric value.
+- Bad and Stale readings retain the last usable number but show Unavailable state.
+- The first accepted live reading switches from Simulation to Live mode.
 
 ## Connection-health contract
 

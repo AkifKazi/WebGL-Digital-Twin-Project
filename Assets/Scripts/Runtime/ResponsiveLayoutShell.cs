@@ -48,6 +48,7 @@ public class ResponsiveLayoutShell : MonoBehaviour
 
     [Header("Vertical Desktop")]
     [SerializeField, Min(0f)] private float verticalDesktopControlMargin = 24f;
+    [SerializeField, Min(0f)] private float verticalDesktopHorizontalControlMargin = 40f;
     [SerializeField, Min(48f)] private float verticalDesktopControlHeight = 88f;
 
     [Header("Mobile Landscape")]
@@ -66,6 +67,9 @@ public class ResponsiveLayoutShell : MonoBehaviour
     private readonly Dictionary<Transform, Vector3> bottomControlBaseScales = new();
     private float bottomControlsBaseHeight = -1f;
     private float bottomControlsBaseSpacing = -1f;
+    private bool bottomControlsBasePaddingCaptured;
+    private int bottomControlsBasePaddingLeft;
+    private int bottomControlsBasePaddingRight;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")]
@@ -246,8 +250,16 @@ public class ResponsiveLayoutShell : MonoBehaviour
 
         VerticalLayoutGroup baseGroup = baseLayout.GetComponent<VerticalLayoutGroup>();
         LayoutElement controlsLayout = bottomControls.GetComponent<LayoutElement>();
-        if (baseGroup == null || controlsLayout == null)
+        HorizontalLayoutGroup controlsGroup = bottomControls.GetComponent<HorizontalLayoutGroup>();
+        if (baseGroup == null || controlsLayout == null || controlsGroup == null)
             return;
+
+        if (!bottomControlsBasePaddingCaptured)
+        {
+            bottomControlsBasePaddingLeft = controlsGroup.padding.left;
+            bottomControlsBasePaddingRight = controlsGroup.padding.right;
+            bottomControlsBasePaddingCaptured = true;
+        }
 
         if (verticalDesktop)
         {
@@ -257,6 +269,9 @@ public class ResponsiveLayoutShell : MonoBehaviour
             bottomControls.pivot = new Vector2(0.5f, 0f);
             bottomControls.anchoredPosition = new Vector2(0f, verticalDesktopControlMargin);
             bottomControls.sizeDelta = new Vector2(0f, verticalDesktopControlHeight);
+            int horizontalMargin = Mathf.RoundToInt(verticalDesktopHorizontalControlMargin);
+            controlsGroup.padding.left = horizontalMargin;
+            controlsGroup.padding.right = horizontalMargin;
             baseGroup.padding.bottom = Mathf.CeilToInt(
                 verticalDesktopControlHeight + verticalDesktopControlMargin);
         }
@@ -264,6 +279,8 @@ public class ResponsiveLayoutShell : MonoBehaviour
         {
             controlsLayout.ignoreLayout = false;
             controlsLayout.preferredHeight = verticalDesktopControlHeight;
+            controlsGroup.padding.left = bottomControlsBasePaddingLeft;
+            controlsGroup.padding.right = bottomControlsBasePaddingRight;
             baseGroup.padding.bottom = Mathf.RoundToInt(verticalDesktopControlMargin);
         }
 

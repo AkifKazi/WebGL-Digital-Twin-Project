@@ -3,7 +3,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(TelemetryRegistry))]
-public sealed class HopperProcessSimulator : MonoBehaviour
+public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulationProvider
 {
     [Header("Connections")]
     [SerializeField] private TelemetryRegistry registry;
@@ -29,6 +29,7 @@ public sealed class HopperProcessSimulator : MonoBehaviour
     [SerializeField, Min(0.1f)] private float updateInterval = 0.5f;
     [SerializeField, Min(0.01f)] private float processTimeScale = 1f;
     [SerializeField, Min(0f)] private float noiseAmount = 0.015f;
+    [SerializeField, Min(0.05f)] private float visibleVariationFrequency = 0.65f;
     [SerializeField] private int deterministicSeed = 1731;
 
     private PerformanceStatSource inletFlow;
@@ -77,7 +78,9 @@ public sealed class HopperProcessSimulator : MonoBehaviour
 
     private void Update()
     {
-        accumulatedTime += Time.deltaTime;
+        // Keep simulation publishing independent of Time.timeScale and stable on
+        // slower desktop/WebGL machines.
+        accumulatedTime += Time.unscaledDeltaTime;
 
         if (accumulatedTime < updateInterval)
             return;
@@ -99,17 +102,26 @@ public sealed class HopperProcessSimulator : MonoBehaviour
         Publish(nominalInletKgPerSecond, nominalDischargeKgPerSecond);
     }
 
+    public void ResetSimulation()
+    {
+        ResetModel();
+    }
+
     private void StepModel(float deltaTime)
     {
         float time = Time.unscaledTime + deterministicSeed;
         float slowNoise = SignedPerlin(time * 0.07f, deterministicSeed * 0.013f);
         float fastNoise = SignedPerlin(time * 0.31f, deterministicSeed * 0.029f);
+        float visibleNoise = SignedPerlin(
+            time * visibleVariationFrequency,
+            deterministicSeed * 0.047f);
 
         float inletKgPerSecond = nominalInletKgPerSecond *
-            (1f + slowNoise * noiseAmount);
+            (1f + (slowNoise + visibleNoise * 0.8f) * noiseAmount);
 
         float fillFactor = Mathf.Sqrt(Mathf.Max(0.05f, fillPercent / initialFillPercent));
-        float targetSpeed = nominalSpeedRpm * (1f + fastNoise * noiseAmount * 0.25f);
+        float targetSpeed = nominalSpeedRpm *
+            (1f + (fastNoise * 0.35f + visibleNoise * 0.2f) * noiseAmount);
         speedRpm = FirstOrder(speedRpm, targetSpeed, 1.5f, deltaTime);
 
         float speedFraction = speedRpm / nominalSpeedRpm;
@@ -130,7 +142,8 @@ public sealed class HopperProcessSimulator : MonoBehaviour
         float targetTemperatureC = ambientTemperatureC + 48f * loadFraction;
         temperatureC = FirstOrder(temperatureC, targetTemperatureC, 120f, deltaTime);
 
-        float targetVibration = 2.8f + 1.6f * loadFraction + fastNoise * 0.15f;
+        float targetVibration = 2.8f + 1.6f * loadFraction +
+            fastNoise * 0.15f + visibleNoise * 0.18f;
         vibrationMmPerSecond = FirstOrder(vibrationMmPerSecond, targetVibration, 1f, deltaTime);
 
         Publish(inletKgPerSecond, dischargeKgPerSecond);

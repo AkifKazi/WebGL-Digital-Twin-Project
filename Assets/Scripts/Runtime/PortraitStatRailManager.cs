@@ -26,7 +26,12 @@ public class PortraitStatRailManager : MonoBehaviour
     [SerializeField] private RectTransform innerBottomCardContainer;
 
     [Header("Sources")]
+    [SerializeField] private TelemetryRegistry telemetryRegistry;
+    [SerializeField] private TelemetrySourceSelectionMode sourceSelectionMode =
+        TelemetrySourceSelectionMode.SceneDiscovery;
     [SerializeField] private PerformanceStatSource[] sources;
+
+    public TelemetrySourceSelectionMode SourceSelectionMode => sourceSelectionMode;
 
     [Header("Card Placement")]
     [SerializeField, Min(1f)] private float cardWidth = 280f;
@@ -83,6 +88,8 @@ public class PortraitStatRailManager : MonoBehaviour
     {
         ClearGeneratedCards();
         UnsubscribeFromSources();
+
+        ResolveSources();
 
         if (worldCamera == null || canvas == null || cardPrefab == null ||
             topCardContainer == null || bottomCardContainer == null)
@@ -144,6 +151,30 @@ public class PortraitStatRailManager : MonoBehaviour
         InitialiseRailPositions(innerTopBindings, innerTopCardContainer);
         InitialiseRailPositions(innerBottomBindings, innerBottomCardContainer);
         LayoutRebuilt?.Invoke();
+    }
+
+    private void ResolveSources()
+    {
+        if (sourceSelectionMode == TelemetrySourceSelectionMode.ExplicitList)
+        {
+            sources = TelemetrySourceResolver.Resolve(sourceSelectionMode, sources);
+            return;
+        }
+
+        if (telemetryRegistry == null)
+        {
+            telemetryRegistry = UnityEngine.Object.FindFirstObjectByType<TelemetryRegistry>(
+                FindObjectsInactive.Include);
+        }
+
+        if (telemetryRegistry != null)
+        {
+            telemetryRegistry.RebuildIndex();
+            sources = telemetryRegistry.Sources.ToArray();
+            return;
+        }
+
+        sources = TelemetrySourceResolver.Resolve(sourceSelectionMode, sources);
     }
 
     private void ConfigureDeterministicRailGeometry()
