@@ -28,11 +28,6 @@ public static class DigitalTwinSceneOrganization
             "Telemetry Sources",
             "Digital Twin Sensors");
         Transform runtime = GetOrCreate("Digital Twin Runtime", digitalTwin);
-        GetOrCreateRenamedChild(
-            digitalTwin,
-            "Presentation Groups",
-            "Telemetry Presentation Groups");
-
         Parent("Main Camera", cameras);
         RenameAndParent("Veiwer", "Camera Focus Target", cameras);
         Parent("Directional Light", lighting);

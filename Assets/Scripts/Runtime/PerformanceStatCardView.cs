@@ -23,6 +23,12 @@ public enum StatVisualState
     Unavailable
 }
 
+public enum MetricLabelLayoutMode
+{
+    Sliding,
+    AdaptiveWrap
+}
+
 [DisallowMultipleComponent]
 public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
@@ -84,17 +90,25 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
 
     [Header("Metric Fitting")]
     [SerializeField] private TextOverflowMotion labelOverflowMotion = TextOverflowMotion.PingPong;
+    [SerializeField] private MetricLabelLayoutMode labelLayoutMode =
+        MetricLabelLayoutMode.AdaptiveWrap;
+    [SerializeField, Tooltip("Use the single-line sliding treatment for overflowing labels on the portrait top and bottom rails, while keeping the selected layout mode for wide rails.")]
+    private bool useSlidingLabelsInPortrait = true;
+    [SerializeField, Range(2, 4)] private int maximumWrappedLabelLines = 4;
+    [SerializeField, Min(28f)] private float singleLineHeaderHeight = 31f;
+    [SerializeField, Min(20f)] private float wrappedLineHeight = 30f;
+    [SerializeField, Min(0f)] private float metricContentGap = 8f;
+    [SerializeField, Min(32f)] private float valueRowHeight = 48f;
     [SerializeField, Tooltip("Preserve case-sensitive engineering unit symbols such as mm/s, kN, kW and MPa. Disable for an all-uppercase visual style.")]
     private bool useAccurateUnitCasing;
-    [SerializeField, Range(1, 6)] private int maximumVisibleMetrics = 3;
     [SerializeField, Min(0f)] private float mobileTapFocusSeconds = 4f;
     [SerializeField, Min(0.05f)] private float focusToRestDuration = 1.5f;
-    [SerializeField, Min(0f)] private float contentPaddingInsideBackground = 12f;
+    [SerializeField, Min(0f)] private float contentPaddingInsideBackground = 32f;
+    [SerializeField, Min(0f)] private float verticalContentPadding = 16f;
 
     private readonly List<MetricSlot> metricSlots = new();
-    private readonly List<PerformanceStatSource> boundSources = new();
+    private PerformanceStatSource boundSource;
     private RectTransform metricTemplateRoot;
-    private TMP_Text overflowBadge;
     private bool focused;
     private float tapFocusUntil;
     private Transform presentationAnchor;
@@ -110,15 +124,11 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     public StatRailSide RailSide => railSide;
     public StatVisualState VisualState => visualState;
     public Color StateColor => GetStateColor();
-    public IReadOnlyList<PerformanceStatSource> BoundSources => boundSources;
+    public PerformanceStatSource BoundSource => boundSource;
     public Transform WorldAnchor => presentationAnchor != null
         ? presentationAnchor
-        : boundSources.Count > 0 ? boundSources[0].WorldAnchor : null;
+        : boundSource != null ? boundSource.WorldAnchor : null;
     public bool IsFocused => focused;
-    public float RequestedCardExpansion => metricSlots.Count == 0
-        ? 1f
-        : metricSlots.Max(slot => slot.RequestedCardExpansion);
-
     public RectTransform ActiveConnectionPoint
     {
         get
@@ -153,12 +163,33 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
         if (accentGeometry.Length == 0)
             CaptureAccentGeometry();
         RestoreAccentGeometry();
+        SetConnectionEmphasis(IsAlarmState() ? 1f : 0f);
         nextAccentGeometryCheck = Time.unscaledTime + AccentGeometryCheckInterval;
+    }
+
+    private void OnDisable()
+    {
+        bool wasFocused = focused;
+        focused = false;
+        tapFocusUntil = 0f;
+        fadingConnectionToRest = false;
+        connectionFadeStartEmphasis = 0f;
+        SetConnectionEmphasis(0f);
+        if (wasFocused)
+            FocusChanged?.Invoke(this, false);
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        // Browsers do not always deliver a pointer-exit event when the tab or
+        // window loses focus. Never leave a normal card permanently focused.
+        if (!hasFocus && focused && !IsAlarmState())
+            SetFocused(false);
     }
 
     private void OnRectTransformDimensionsChange()
     {
-        // Check again on the next LateUpdate after grouped-card or responsive
+        // Check again on the next LateUpdate after card-content or responsive
         // rail sizing has finished for this frame.
         nextAccentGeometryCheck = 0f;
     }
@@ -222,43 +253,40 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
             return;
 
         presentationAnchor = presentation.WorldAnchor;
-        maximumVisibleMetrics = presentation.MaximumVisibleMetrics;
         SetSide(side);
         SetState(presentation.VisualState);
-        BindSources(presentation.Sources);
+        BindSource(presentation.Source);
     }
 
-    public void BindSources(IReadOnlyList<PerformanceStatSource> sources)
+    public void BindSource(PerformanceStatSource source)
     {
-        boundSources.Clear();
-        if (sources != null)
-            boundSources.AddRange(sources.Where(source => source != null));
+        boundSource = source;
 
-        int visibleCount = Mathf.Min(maximumVisibleMetrics, boundSources.Count);
-        EnsureMetricSlots(Mathf.Max(1, visibleCount));
-        ConfigureSlotLayout(Mathf.Max(1, visibleCount));
+        ConfigureSlotLayout();
 
         for (int i = 0; i < metricSlots.Count; i++)
         {
-            bool visible = i < visibleCount;
+            bool visible = i == 0 && source != null;
             metricSlots[i].Root.gameObject.SetActive(visible);
             if (visible)
                 metricSlots[i].Render(
-                    boundSources[i],
+                    source,
                     labelOverflowMotion,
+                    ResolveLabelLayoutMode(),
+                    maximumWrappedLabelLines,
+                    singleLineHeaderHeight,
+                    wrappedLineHeight,
                     useAccurateUnitCasing,
                     GetStateColor());
         }
-
-        UpdateOverflowBadge(boundSources.Count - visibleCount);
     }
 
     public void RefreshBoundSources()
     {
-        if (boundSources.Count == 0)
+        if (boundSource == null)
             return;
-        SetState(boundSources[0].VisualState);
-        BindSources(boundSources.ToArray());
+        SetState(boundSource.VisualState);
+        BindSource(boundSource);
     }
 
     public void SetValue(float value, string format = "0.0")
@@ -283,8 +311,8 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     {
         railSide = side;
         ApplySide();
-        if (boundSources.Count > 0)
-            BindSources(boundSources.ToArray());
+        if (boundSource != null)
+            BindSource(boundSource);
     }
 
     public void SetState(StatVisualState state)
@@ -398,6 +426,9 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     {
         emphasis = Mathf.Clamp01(emphasis);
         connectionEmphasis = emphasis;
+        // Opacity belongs to the focused/relaxed state machine. Geometry is
+        // guarded independently by the captured RectTransform snapshots, so
+        // fading can never resize or rescale the gradient trail.
         SetTrailAlpha(leftAccentTrail, emphasis);
         SetTrailAlpha(rightAccentTrail, emphasis);
         SetTrailAlpha(topAccentTrail, emphasis);
@@ -473,56 +504,22 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
             backgroundImage.raycastTarget = true;
     }
 
-    private void EnsureMetricSlots(int count)
+    private void ConfigureSlotLayout()
     {
-        if (metricTemplateRoot == null)
-            InitialiseMetricTemplate();
-        if (metricTemplateRoot == null)
+        if (metricSlots.Count == 0)
             return;
 
-        while (metricSlots.Count < count)
-        {
-            RectTransform clone = Instantiate(metricTemplateRoot, metricTemplateRoot.parent);
-            clone.name = $"Metric slot {metricSlots.Count + 1}";
-            TMP_Text label = clone.GetComponentsInChildren<TMP_Text>(true)
-                .FirstOrDefault(text => text.name == metricName.name);
-            TMP_Text value = clone.GetComponentsInChildren<TMP_Text>(true)
-                .FirstOrDefault(text => text.name == valueText.name);
-            TMP_Text unit = clone.GetComponentsInChildren<TMP_Text>(true)
-                .FirstOrDefault(text => text.name == unitText.name);
-            MetricSlot slot = new(clone, label, value, unit);
-            slot.EnsureHelpers(labelOverflowMotion);
-            metricSlots.Add(slot);
-        }
-        DisableDecorativeRaycasts();
-    }
-
-    private void ConfigureSlotLayout(int count)
-    {
-        bool horizontal = railSide == StatRailSide.Top || railSide == StatRailSide.Bottom;
-        for (int i = 0; i < count && i < metricSlots.Count; i++)
+        for (int i = 0; i < metricSlots.Count; i++)
         {
             RectTransform root = metricSlots[i].Root;
-            if (horizontal)
-            {
-                float min = i / (float)count;
-                float max = (i + 1f) / count;
-                root.anchorMin = new Vector2(min, 0f);
-                root.anchorMax = new Vector2(max, 1f);
-            }
-            else
-            {
-                float max = 1f - i / (float)count;
-                float min = 1f - (i + 1f) / count;
-                root.anchorMin = new Vector2(0f, min);
-                root.anchorMax = new Vector2(1f, max);
-            }
+            root.anchorMin = Vector2.zero;
+            root.anchorMax = Vector2.one;
 
             GetVisibleBackgroundInsets(out float backgroundLeft, out float backgroundRight);
             float leftInset = backgroundLeft + contentPaddingInsideBackground;
             float rightInset = backgroundRight + contentPaddingInsideBackground;
-            root.offsetMin = new Vector2(leftInset, 8f);
-            root.offsetMax = new Vector2(-rightInset, -8f);
+            root.offsetMin = new Vector2(leftInset, verticalContentPadding);
+            root.offsetMax = new Vector2(-rightInset, -verticalContentPadding);
         }
     }
 
@@ -545,37 +542,90 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
         }
     }
 
-    private void UpdateOverflowBadge(int hiddenCount)
+    public float EstimateRequestedCardHeight(
+        TelemetryCardPresentation presentation,
+        StatRailSide side,
+        float baseMetricHeight,
+        float cardWidth)
     {
-        if (hiddenCount <= 0)
+        float stableMetricHeight = Mathf.Max(
+            baseMetricHeight,
+            verticalContentPadding * 2f + singleLineHeaderHeight +
+            metricContentGap + valueRowHeight);
+        if (presentation?.Source == null ||
+            ResolveLabelLayoutMode(side) == MetricLabelLayoutMode.Sliding || metricName == null)
         {
-            if (overflowBadge != null)
-                overflowBadge.gameObject.SetActive(false);
-            return;
+            return stableMetricHeight;
         }
 
-        if (overflowBadge == null && metricName != null)
+        GetVisibleBackgroundInsets(out float backgroundLeft, out float backgroundRight);
+        float availableLabelWidth = Mathf.Max(
+            32f,
+            cardWidth - backgroundLeft - backgroundRight -
+            contentPaddingInsideBackground * 2f);
+
+        string label = presentation.Source.MetricName.ToUpperInvariant();
+        int lines = EstimateWrappedLineCount(label, availableLabelWidth);
+        float extra = lines <= maximumWrappedLabelLines
+            ? Mathf.Max(0, lines - 1) * wrappedLineHeight
+            : 0f;
+        return stableMetricHeight + extra;
+    }
+
+    private int EstimateWrappedLineCount(string text, float width)
+    {
+        if (metricName == null || string.IsNullOrEmpty(text) || width <= 1f)
+            return 1;
+
+        return CalculateWrappedLineCount(metricName, text, width);
+    }
+
+    private MetricLabelLayoutMode ResolveLabelLayoutMode()
+    {
+        return ResolveLabelLayoutMode(railSide);
+    }
+
+    private MetricLabelLayoutMode ResolveLabelLayoutMode(StatRailSide side)
+    {
+        bool portraitRail = side == StatRailSide.Top || side == StatRailSide.Bottom;
+        return useSlidingLabelsInPortrait && portraitRail
+            ? MetricLabelLayoutMode.Sliding
+            : labelLayoutMode;
+    }
+
+    private static int CalculateWrappedLineCount(
+        TMP_Text textComponent,
+        string text,
+        float width)
+    {
+        if (textComponent == null || string.IsNullOrEmpty(text) || width <= 1f)
+            return 1;
+
+        TextWrappingModes previousWrapping = textComponent.textWrappingMode;
+        textComponent.textWrappingMode = TextWrappingModes.NoWrap;
+
+        Vector2 unwrappedSize = textComponent.GetPreferredValues(
+            text,
+            100000f,
+            1000f);
+        if (unwrappedSize.x <= width + 0.5f)
         {
-            overflowBadge = Instantiate(metricName, transform);
-            overflowBadge.name = "Hidden metric count";
-            TMPOverflowScroller inheritedScroller = overflowBadge.GetComponent<TMPOverflowScroller>();
-            if (inheritedScroller != null)
-                inheritedScroller.enabled = false;
-            overflowBadge.fontSize = Mathf.Max(12f, metricName.fontSize * 0.62f);
-            overflowBadge.alignment = TextAlignmentOptions.BottomRight;
-            RectTransform rect = overflowBadge.rectTransform;
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = new Vector2(10f, 5f);
-            rect.offsetMax = new Vector2(-10f, -5f);
+            textComponent.textWrappingMode = previousWrapping;
+            return 1;
         }
 
-        if (overflowBadge != null)
-        {
-            overflowBadge.gameObject.SetActive(true);
-            overflowBadge.text = $"+{hiddenCount} MORE";
-            overflowBadge.color = GetStateColor();
-        }
+        textComponent.textWrappingMode = TextWrappingModes.Normal;
+
+        // Measure the same glyphs in both cases. Using a different baseline
+        // string (previously "AG") made ascender differences look like a
+        // fractional second line, which CeilToInt promoted to a full line.
+        float singleLineHeight = Mathf.Max(
+            1f,
+            unwrappedSize.y);
+        float wrappedHeight = textComponent.GetPreferredValues(text, width, 1000f).y;
+        textComponent.textWrappingMode = previousWrapping;
+
+        return Mathf.Max(1, Mathf.RoundToInt(wrappedHeight / singleLineHeight));
     }
 
     private static void SetTrailAlpha(Image image, float alpha)
@@ -743,6 +793,7 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
                 scroller = label.GetComponent<TMPOverflowScroller>();
                 if (scroller == null)
                     scroller = label.gameObject.AddComponent<TMPOverflowScroller>();
+                scroller.enabled = false;
                 scroller.SetMotion(motion);
                 scroller.CaptureRestingPosition();
             }
@@ -759,6 +810,10 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
         public void Render(
             PerformanceStatSource source,
             TextOverflowMotion motion,
+            MetricLabelLayoutMode layoutMode,
+            int maximumWrappedLines,
+            float baseHeaderHeight,
+            float lineHeight,
             bool accurateUnitCasing,
             Color stateColor)
         {
@@ -766,8 +821,15 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
             {
                 label.text = source.MetricName.ToUpperInvariant();
                 label.color = stateColor;
+                ConfigureLabel(
+                    layoutMode,
+                    maximumWrappedLines,
+                    baseHeaderHeight,
+                    lineHeight,
+                    motion);
             }
-            scroller?.SetMotion(motion);
+            if (scroller != null && scroller.enabled)
+                scroller.SetMotion(motion);
             fitter?.Fit(source, accurateUnitCasing);
         }
 
@@ -777,9 +839,57 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
                 label.color = color;
         }
 
-        public float RequestedCardExpansion => fitter != null
-            ? fitter.RequestedCardExpansion
-            : 1f;
+        private void ConfigureLabel(
+            MetricLabelLayoutMode layoutMode,
+            int maximumWrappedLines,
+            float baseHeaderHeight,
+            float lineHeight,
+            TextOverflowMotion motion)
+        {
+            if (label == null || labelViewport == null)
+                return;
+
+            bool sliding = layoutMode == MetricLabelLayoutMode.Sliding;
+            if (!sliding)
+            {
+                label.textWrappingMode = TextWrappingModes.Normal;
+                label.overflowMode = TextOverflowModes.Overflow;
+                label.maxVisibleLines = 0;
+                float width = labelViewport.rect.width;
+                if (width <= 1f && Root != null)
+                    width = Root.rect.width;
+                width = Mathf.Max(32f, width);
+                int lines = CalculateWrappedLineCount(label, label.text, width);
+                sliding = lines > maximumWrappedLines;
+                if (!sliding)
+                {
+                    RectTransform header = labelViewport.parent as RectTransform;
+                    if (header != null)
+                    {
+                        header.sizeDelta = new Vector2(
+                            header.sizeDelta.x,
+                            baseHeaderHeight + Mathf.Max(0, lines - 1) * lineHeight);
+                    }
+                    label.maxVisibleLines = maximumWrappedLines;
+                    scroller.enabled = false;
+                    scroller.ResetMotion();
+                    return;
+                }
+            }
+
+            RectTransform slidingHeader = labelViewport.parent as RectTransform;
+            if (slidingHeader != null)
+                slidingHeader.sizeDelta = new Vector2(
+                    slidingHeader.sizeDelta.x,
+                    baseHeaderHeight);
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Overflow;
+            label.maxVisibleLines = 1;
+            scroller.enabled = true;
+            scroller.SetMotion(motion);
+            scroller.CaptureRestingPosition();
+            scroller.ResetMotion();
+        }
 
         private void PrepareHeaderViewport()
         {
@@ -819,12 +929,13 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
             labelViewport.anchorMin = Vector2.zero;
             labelViewport.anchorMax = Vector2.one;
             labelViewport.pivot = new Vector2(0.5f, 0.5f);
-            labelViewport.offsetMin = new Vector2(20f, 0f);
-            labelViewport.offsetMax = new Vector2(-20f, 0f);
+            labelViewport.offsetMin = Vector2.zero;
+            labelViewport.offsetMax = Vector2.zero;
 
             labelRect.SetParent(labelViewport, false);
             label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Overflow;
+            label.maxVisibleLines = 1;
             label.alignment = TextAlignmentOptions.MidlineLeft;
             labelRect.anchorMin = Vector2.zero;
             labelRect.anchorMax = Vector2.one;
@@ -838,8 +949,8 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
                 : null;
             if (valueRow != null)
             {
-                valueRow.offsetMin = new Vector2(20f, valueRow.offsetMin.y);
-                valueRow.offsetMax = new Vector2(-20f, valueRow.offsetMax.y);
+                valueRow.offsetMin = new Vector2(0f, valueRow.offsetMin.y);
+                valueRow.offsetMax = new Vector2(0f, valueRow.offsetMax.y);
             }
 
             foreach (RectTransform child in header)

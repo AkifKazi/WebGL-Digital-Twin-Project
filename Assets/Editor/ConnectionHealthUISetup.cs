@@ -84,7 +84,7 @@ public static class ConnectionHealthUISetup
     {
         LayoutElement topBarLayout = topBar.GetComponent<LayoutElement>();
         if (portrait && topBarLayout != null)
-            topBarLayout.preferredHeight = 168f;
+            topBarLayout.preferredHeight = 112f;
 
         Transform existing = topBar.Find("Connection Health");
         if (existing != null)
@@ -103,38 +103,62 @@ public static class ConnectionHealthUISetup
         Image gatewayDot;
 
         HorizontalLayoutGroup row = rootObject.AddComponent<HorizontalLayoutGroup>();
-        row.padding = portrait ? new RectOffset(12, 12, 7, 7) : new RectOffset(24, 24, 4, 4);
-        row.spacing = portrait ? 6f : 10f;
+        row.padding = portrait ? new RectOffset(16, 16, 10, 10) : new RectOffset(24, 24, 4, 4);
+        row.spacing = 10f;
         row.childAlignment = TextAnchor.MiddleCenter;
         row.childControlWidth = true;
         row.childControlHeight = true;
         row.childForceExpandWidth = true;
         row.childForceExpandHeight = true;
 
-        CreateCombinedCell(
-            root,
-            "Connection",
-            "MODE",
-            "GATEWAY",
-            portrait,
-            true,
-            accents,
-            values,
-            out modeValue,
-            out gatewayValue,
-            out gatewayDot);
-        CreateCombinedCell(
-            root,
-            "Data freshness",
-            "LAST UPDATE",
-            "DATA QUALITY",
-            portrait,
-            false,
-            accents,
-            values,
-            out lastUpdateValue,
-            out qualityValue,
-            out _);
+        if (portrait)
+        {
+            modeValue = null;
+            qualityValue = null;
+            gatewayValue = CreateCell(
+                root,
+                "GATEWAY",
+                true,
+                true,
+                accents,
+                values,
+                out gatewayDot);
+            lastUpdateValue = CreateCell(
+                root,
+                "LAST UPDATE",
+                false,
+                true,
+                accents,
+                values,
+                out _);
+        }
+        else
+        {
+            CreateCombinedCell(
+                root,
+                "Connection",
+                "MODE",
+                "GATEWAY",
+                false,
+                true,
+                accents,
+                values,
+                out modeValue,
+                out gatewayValue,
+                out gatewayDot);
+            CreateCombinedCell(
+                root,
+                "Data freshness",
+                "LAST UPDATE",
+                "DATA QUALITY",
+                false,
+                false,
+                accents,
+                values,
+                out lastUpdateValue,
+                out qualityValue,
+                out _);
+        }
 
         ConnectionHealthView view = rootObject.AddComponent<ConnectionHealthView>();
         SerializedObject viewData = new(view);
@@ -175,15 +199,6 @@ public static class ConnectionHealthUISetup
         background.raycastTarget = false;
 
         RectTransform cell = cellObject.GetComponent<RectTransform>();
-        Image accent = CreateImage("State accent", cell, null, Cyan);
-        RectTransform accentRect = accent.rectTransform;
-        accentRect.anchorMin = new Vector2(0f, 0f);
-        accentRect.anchorMax = new Vector2(0f, 1f);
-        accentRect.pivot = new Vector2(0f, 0.5f);
-        accentRect.anchoredPosition = Vector2.zero;
-        accentRect.sizeDelta = new Vector2(3f, -8f);
-        accents.Add(accent);
-
         GameObject contentObject = CreateUIObject("Content", cell);
         RectTransform content = contentObject.GetComponent<RectTransform>();
         content.anchorMin = Vector2.zero;
@@ -295,16 +310,7 @@ public static class ConnectionHealthUISetup
 
         RectTransform cell = cellObject.GetComponent<RectTransform>();
 
-        Image accent = CreateImage("State accent", cell, null, Cyan);
-        RectTransform accentRect = accent.rectTransform;
-        accentRect.anchorMin = new Vector2(0f, 0f);
-        accentRect.anchorMax = new Vector2(0f, 1f);
-        accentRect.pivot = new Vector2(0f, 0.5f);
-        accentRect.anchoredPosition = Vector2.zero;
-        accentRect.sizeDelta = new Vector2(3f, -8f);
-        accents.Add(accent);
-
-        float left = compact ? 14f : 16f;
+        float left = 16f;
         float labelSize = compact ? 18f : 12f;
         float valueSize = compact ? 24f : 18f;
 
@@ -313,14 +319,16 @@ public static class ConnectionHealthUISetup
         labelRect.anchorMin = new Vector2(0f, 0.52f);
         labelRect.anchorMax = new Vector2(1f, 1f);
         labelRect.offsetMin = new Vector2(left, 0f);
-        labelRect.offsetMax = new Vector2(-10f, -4f);
+        labelRect.offsetMax = new Vector2(compact ? -16f : -10f, -4f);
 
         TMP_Text valueText = CreateText("Value", cell, "—", valueSize, Cyan, true);
         RectTransform valueRect = valueText.rectTransform;
         valueRect.anchorMin = new Vector2(0f, 0f);
         valueRect.anchorMax = new Vector2(1f, 0.58f);
         valueRect.offsetMin = new Vector2(left, 3f);
-        valueRect.offsetMax = new Vector2(showDot ? -34f : -8f, 0f);
+        valueRect.offsetMax = new Vector2(
+            showDot ? (compact ? -44f : -34f) : (compact ? -16f : -8f),
+            0f);
         values.Add(valueText);
 
         dot = null;
@@ -335,7 +343,7 @@ public static class ConnectionHealthUISetup
             dotRect.anchorMin = new Vector2(1f, 0.5f);
             dotRect.anchorMax = new Vector2(1f, 0.5f);
             dotRect.pivot = new Vector2(1f, 0.5f);
-            dotRect.anchoredPosition = new Vector2(-10f, -4f);
+            dotRect.anchoredPosition = new Vector2(compact ? -16f : -10f, -4f);
             float size = compact ? 24f : 22f;
             dotRect.sizeDelta = new Vector2(size, size);
         }

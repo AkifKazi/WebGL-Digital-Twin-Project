@@ -124,36 +124,6 @@ public sealed class PerformanceStatSourceEditor : DigitalTwinComponentEditor
     }
 }
 
-[CustomEditor(typeof(TelemetryEquipmentGroup))]
-public sealed class TelemetryEquipmentGroupEditor : DigitalTwinComponentEditor
-{
-    public override void OnInspectorGUI()
-    {
-        serializedObject.Update();
-        DrawScriptReference();
-        EditorGUILayout.HelpBox(
-            "Groups combine nearby measurements from the same physical equipment. Stable telemetry " +
-            "IDs and incoming values remain independent.",
-            MessageType.Info);
-
-        EditorGUILayout.LabelField("Identity", EditorStyles.boldLabel);
-        Draw("groupId", "Group ID");
-        Draw("displayName", "Display Name");
-
-        EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Physical Mapping", EditorStyles.boldLabel);
-        Draw("worldAnchor", "Shared World Anchor");
-        Draw("members", "Telemetry Members");
-        Draw("maximumMemberDistance", "Maximum Member Distance");
-
-        EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Card Behaviour", EditorStyles.boldLabel);
-        Draw("maximumVisibleMetrics", "Metrics Per Card");
-        Draw("regroupStableSeconds", "Regroup Delay", "Seconds of matching state before split cards combine again.");
-        serializedObject.ApplyModifiedProperties();
-    }
-}
-
 [CustomEditor(typeof(AdaptiveQualityController))]
 public sealed class AdaptiveQualityControllerEditor : DigitalTwinComponentEditor
 {

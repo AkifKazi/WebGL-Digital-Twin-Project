@@ -8,7 +8,9 @@ public static class WebGLBuildAudit
 {
     public static void BuildOptimizedRelease()
     {
-        WebGLLoadOptimization.Apply();
+        // Asset optimisation is an explicit authoring step. A release build
+        // validates and packages the checked-in state without silently
+        // rewriting texture importers or project assets.
         DigitalTwinProjectValidator.Validate();
         BuildRelease();
     }

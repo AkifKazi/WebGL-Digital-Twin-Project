@@ -46,14 +46,19 @@ public sealed class TelemetryOperatingModeController : MonoBehaviour
 
     public void UseLiveData()
     {
+        UseLiveData(null);
+    }
+
+    public void UseLiveData(PerformanceStatSource acceptedSource)
+    {
         if (operatingMode == TelemetryOperatingMode.Live)
             return;
 
         operatingMode = TelemetryOperatingMode.Live;
-        ApplyMode(true);
+        ApplyMode(true, acceptedSource);
     }
 
-    private void ApplyMode(bool reset)
+    private void ApplyMode(bool reset, PerformanceStatSource acceptedSource = null)
     {
         if (simulator != null)
             simulator.enabled = operatingMode == TelemetryOperatingMode.Simulation;
@@ -76,7 +81,7 @@ public sealed class TelemetryOperatingModeController : MonoBehaviour
         // Do not present the last simulation sample as live plant data.
         foreach (PerformanceStatSource source in registry.Sources)
         {
-            if (source != null)
+            if (source != null && source != acceptedSource)
                 source.SetDataQuality(TelemetryDataQuality.Stale);
         }
 

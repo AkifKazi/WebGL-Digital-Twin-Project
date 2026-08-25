@@ -25,19 +25,6 @@ public sealed class MachineSensorDefinition
     public int displayPriority;
 }
 
-[Serializable]
-public sealed class MachineEquipmentGroupDefinition
-{
-    public string groupId;
-    public string objectName;
-    public string displayName;
-    public Vector3 localPosition;
-    public List<string> memberSensorIds = new();
-    [Min(0.01f)] public float maximumMemberDistance = 0.75f;
-    [Range(1, 6)] public int maximumVisibleMetrics = 3;
-    [Min(0f)] public float regroupStableSeconds = 12f;
-}
-
 [CreateAssetMenu(
     fileName = "Machine Configuration",
     menuName = "Digital Twin/Machine Configuration")]
@@ -53,7 +40,6 @@ public sealed class DigitalTwinMachineConfiguration : ScriptableObject
     [Tooltip("Optional editor configurator type implementing IDigitalTwinMachineSceneConfigurator.")]
     public string editorConfiguratorType;
 
-    [Header("Telemetry presentation")]
+    [Header("Telemetry sensors")]
     public List<MachineSensorDefinition> sensors = new();
-    public List<MachineEquipmentGroupDefinition> equipmentGroups = new();
 }

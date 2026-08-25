@@ -2,7 +2,6 @@ using System;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-[RequireComponent(typeof(TelemetryRegistry))]
 public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulationProvider
 {
     [Header("Connections")]

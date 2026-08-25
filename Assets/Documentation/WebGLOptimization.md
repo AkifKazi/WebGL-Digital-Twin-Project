@@ -71,7 +71,9 @@ its total size, duration, warning count, and error count. Run Unity in batch mod
 ```
 
 The audit throws an error when the build is unsuccessful, so it can also be used in
-continuous integration.
+continuous integration. The release build no longer applies texture optimisation or
+rewrites source assets. Run the separate `WebGLLoadOptimization.Apply` authoring action
+only when intentionally changing import settings, review those changes, and then build.
 
 ## Next visual-risk optimization tier
 

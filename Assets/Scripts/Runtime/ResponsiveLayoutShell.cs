@@ -55,6 +55,10 @@ public class ResponsiveLayoutShell : MonoBehaviour
     [Tooltip("Scales the mobile-landscape bottom control groups. Their layout spacing and occupied width follow this value automatically; desktop and portrait remain unchanged.")]
     [SerializeField, Range(1f, 1.5f)] private float mobileLandscapeBottomControlScale = 1.1f;
 
+    [Header("Resize resilience")]
+    [SerializeField, Range(0.05f, 0.5f), Tooltip("Wait for browser and orientation resizing to settle before rebuilding telemetry cards.")]
+    private float resizeSettleSeconds = 0.15f;
+
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs;
 
@@ -64,6 +68,7 @@ public class ResponsiveLayoutShell : MonoBehaviour
     private int previousHeight;
     private Rect previousSafeArea;
     private Coroutine telemetryRebuildRoutine;
+    private Coroutine resizeRefreshRoutine;
     private readonly Dictionary<Transform, Vector3> bottomControlBaseScales = new();
     private float bottomControlsBaseHeight = -1f;
     private float bottomControlsBaseSpacing = -1f;
@@ -88,8 +93,8 @@ public class ResponsiveLayoutShell : MonoBehaviour
             Screen.height != previousHeight ||
             Screen.safeArea != previousSafeArea;
 
-        if (screenChanged)
-            RefreshLayout(false);
+        if (screenChanged && resizeRefreshRoutine == null)
+            resizeRefreshRoutine = StartCoroutine(RefreshAfterResizeSettles());
     }
 
     [ContextMenu("Refresh Layout")]
@@ -159,12 +164,44 @@ public class ResponsiveLayoutShell : MonoBehaviour
         telemetryRebuildRoutine = null;
     }
 
+    private IEnumerator RefreshAfterResizeSettles()
+    {
+        int observedWidth;
+        int observedHeight;
+        Rect observedSafeArea;
+        do
+        {
+            observedWidth = Screen.width;
+            observedHeight = Screen.height;
+            observedSafeArea = Screen.safeArea;
+            yield return new WaitForSecondsRealtime(resizeSettleSeconds);
+        }
+        while (observedWidth != Screen.width ||
+               observedHeight != Screen.height ||
+               !ApproximatelySameRect(observedSafeArea, Screen.safeArea));
+
+        RefreshLayout(false);
+        resizeRefreshRoutine = null;
+    }
+
+    private static bool ApproximatelySameRect(Rect first, Rect second) =>
+        Mathf.Abs(first.x - second.x) <= 0.5f &&
+        Mathf.Abs(first.y - second.y) <= 0.5f &&
+        Mathf.Abs(first.width - second.width) <= 0.5f &&
+        Mathf.Abs(first.height - second.height) <= 0.5f;
+
     private void OnDisable()
     {
-        if (telemetryRebuildRoutine == null)
-            return;
-        StopCoroutine(telemetryRebuildRoutine);
-        telemetryRebuildRoutine = null;
+        if (telemetryRebuildRoutine != null)
+        {
+            StopCoroutine(telemetryRebuildRoutine);
+            telemetryRebuildRoutine = null;
+        }
+        if (resizeRefreshRoutine != null)
+        {
+            StopCoroutine(resizeRefreshRoutine);
+            resizeRefreshRoutine = null;
+        }
     }
 
     private void RebuildActiveTelemetryLayout()

@@ -10,6 +10,10 @@ This document describes the intended demo and production-authoring workflow. It 
 - Separate only the parts that must move, highlight, hide, or receive different materials.
 - Create a root prefab for the complete machine.
 
+Place the new root prefab under the machine/model area in `SampleScene`. The responsive
+canvas, rails, camera controls, and telemetry runtime must stay outside the model prefab;
+this is what keeps the UI stable when the model is replaced.
+
 ## 2. Create a machine configuration
 
 Create **Assets > Create > Digital Twin > Machine Configuration**. Give it a stable
@@ -37,15 +41,27 @@ Prefer an identity scheme that separates site, asset, component, and measurement
 
 Do not change an ID merely because the visible label changes. The ID is an integration contract; the label is presentation.
 
-## 4. Configure presentation groups
+## 4. Connect the model views and anchors
 
-Add an equipment-group definition to the machine configuration only when readings:
+Every sensor produces one independent card; no backend or UI grouping is used. After
+setup, move each generated sensor GameObject to its measurement location. Its Transform
+is the leader-line anchor and may require manual placement for each machine.
 
-- belong to the same physical component;
-- have nearby anchors;
-- make sense together on one card.
+Select `Shared Machine View Controller` and assign:
 
-Do not group unrelated values simply to reduce card count. Alarm-state splitting and delayed regrouping are presentation behaviors and do not alter sensor identity.
+- **Full Hopper** to the complete machine model;
+- **Cut Hopper** to the prepared cross-section/cutaway model;
+- compatible full-model renderers when the clip animation is used.
+
+The wide and portrait controls share this one controller, so Full Body and Cross Section
+cannot drift into different states. Cross-section geometry and clip values are necessarily
+machine-specific. Orbit and zoom remain reusable as long as the camera target and distance
+limits are adjusted for the new model's bounds.
+
+For small edits you may work directly on a sensor's `Performance Stat Source` Inspector:
+ID, label, unit, format, thresholds, stale timeout, display priority, rail preference, and
+visibility are all authoring fields. Put durable metadata in the machine configuration if
+the setup tool must reproduce it later.
 
 ## 5. Select sensor discovery
 
@@ -90,8 +106,8 @@ simulation and live modes separately so simulated readings cannot be mistaken fo
 machine data.
 
 Validation also checks that exactly one configuration is default, configured sensor IDs
-match the scene, equipment-group members exist, and the site-environment FBX stays below
-the 10 MB project limit.
+match the scene, portrait pagination is reachable, both layouts share one machine-view
+controller, and the site-environment FBX stays below the 10 MB project limit.
 
 ## Current add-machine demo
 

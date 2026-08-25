@@ -35,9 +35,20 @@ public class SafeAreaFitter : MonoBehaviour
         previousHeight = Screen.height;
         previousSafeArea = Screen.safeArea;
 
-        Vector2 anchorMin = previousSafeArea.position;
-        Vector2 anchorMax =
-            previousSafeArea.position + previousSafeArea.size;
+        // Some mobile browsers briefly report an empty or out-of-bounds safe
+        // area while rotating. Falling back to the full viewport is safer than
+        // collapsing the entire UI for a frame.
+        Rect effectiveSafeArea = previousSafeArea;
+        if (effectiveSafeArea.width <= 1f || effectiveSafeArea.height <= 1f)
+            effectiveSafeArea = new Rect(0f, 0f, Screen.width, Screen.height);
+
+        float xMin = Mathf.Clamp(effectiveSafeArea.xMin, 0f, Screen.width);
+        float yMin = Mathf.Clamp(effectiveSafeArea.yMin, 0f, Screen.height);
+        float xMax = Mathf.Clamp(effectiveSafeArea.xMax, xMin, Screen.width);
+        float yMax = Mathf.Clamp(effectiveSafeArea.yMax, yMin, Screen.height);
+
+        Vector2 anchorMin = new(xMin, yMin);
+        Vector2 anchorMax = new(xMax, yMax);
 
         anchorMin.x /= Screen.width;
         anchorMin.y /= Screen.height;

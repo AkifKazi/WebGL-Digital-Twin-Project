@@ -26,6 +26,7 @@ The first opening can take several minutes because Unity rebuilds the local `Lib
 - Drag with one finger to rotate around the machine.
 - Pinch with two fingers to zoom in or out.
 - The interface changes automatically for portrait and landscape screens.
+- Use the left and right arrows beside the zoom controls to visit every portrait telemetry page. An unavailable direction fades out.
 - Keep important controls and cards away from the browser bars and screen notch.
 
 ## 3. Understanding telemetry cards
@@ -37,9 +38,9 @@ Each telemetry card contains:
 - A unit, such as `rpm` or `°C`.
 - A leader line showing where the measurement belongs on the machine.
 
-Related measurements may share one card when they belong to the same equipment and their sensor positions are close together. If their warning states become different, the readings can separate into different cards automatically.
+Every sensor has its own card. Cards do not combine or split when values change.
 
-The layout fills the outside rails first. Extra inside rails appear only when more space is required. If every rail is full, higher-priority and alarmed readings are kept visible first.
+The layout fills the outside rails first. Extra inside rails appear only when more space is required. On a phone, additional readings are placed on reachable pages; warning and critical readings are ordered onto the first page automatically.
 
 ## 4. Card interaction and alarm states
 
@@ -49,16 +50,18 @@ The layout fills the outside rails first. Extra inside rails appear only when mo
 - Warning and critical cards remain fully visible so important conditions are not missed.
 - Unavailable or stale data uses the unavailable presentation instead of pretending that an old value is current.
 
-Long parameter names remain still when they fit. When they do not fit, they move automatically using either **Ping Pong** or **Continuous** scrolling. Values and units also fit themselves by reducing text size or decimal places before asking the card for more width.
+Long parameter names use the Inspector-selected adaptive wrapping or sliding mode in the wide layout. Mobile portrait cards default to a single-line sliding label when the name overflows. No mode truncates with an ellipsis. Values and units use one shared baseline and can reduce text size or decimal places, but cards remain fixed-width and complete units must stay visible.
 
 ## 5. Connection-health information
 
-The top area shows four useful items:
+The wide top area shows four useful items:
 
 - **MODE** — `SIMULATION` or `LIVE DATA`.
 - **GATEWAY** — whether the data connection is healthy.
 - **LAST UPDATE** — how recently data arrived.
 - **DATA QUALITY** — how many readings are currently good.
+
+Mobile portrait keeps only **GATEWAY** and **LAST UPDATE**, with larger type and dedicated padding so the two connection essentials stay legible without crowding the machine view.
 
 In simulation mode, Unity generates realistic-looking connected values for demonstrations. In live mode, values are expected from an external digital-twin gateway.
 
@@ -105,7 +108,7 @@ The safest beginner workflow is:
 6. Keep the registry and responsive layouts on **Scene Discovery** so the source is included automatically.
 7. Run **Tools > Digital Twin > Validate Project**.
 
-Only group sensors when they describe the same physical equipment and their anchors are close together.
+Each duplicated sensor automatically receives its own card; there is no grouping step.
 
 ## 9. Change unit letter casing
 
@@ -139,6 +142,7 @@ Do not connect a public browser directly to a PLC. See `DigitalTwinIntegration.m
 - Mobile WebGL is locked to the Mobile quality preset and 30 FPS to reduce heat and battery use.
 - A vertical desktop monitor remains a desktop interface instead of being mistaken for a phone.
 - Phones can switch between portrait and landscape layouts.
+- Portrait telemetry uses paged rails so readings are never permanently inaccessible because of screen capacity.
 - Safe-area information is used to reduce overlap with notches and rounded screen areas.
 
 For layout testing, select the object containing **Responsive Layout Shell**. Its **Device Override** can temporarily force Desktop or Mobile behavior. Return it to `Auto` before building.
@@ -170,7 +174,7 @@ For Git, keep `Assets`, `Packages`, and `ProjectSettings`. Do not upload `Librar
 
 - **Pink material:** allow shader importing to finish and confirm the correct render-pipeline settings are present.
 - **Missing font:** run **Standardize UI Fonts** and confirm the Rajdhani font assets exist in `Assets/UI/Fonts`.
-- **Missing card:** check `Visible`, display priority, registry assignment, and available rail space.
+- **Missing card:** check `Visible`, the registry, and the other portrait pages; alarm state and display priority affect page order.
 - **Wrong warning state:** check the sensor threshold mode and warning/critical limits.
 - **No leader line:** check that the sensor has a card presentation and is positioned near the machine.
 - **Live values are stale:** check the gateway connection, sensor ID, timestamps, quality, and update interval.

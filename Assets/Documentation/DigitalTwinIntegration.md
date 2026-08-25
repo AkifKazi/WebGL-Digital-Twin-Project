@@ -42,6 +42,9 @@ numbers from the same provider are rejected before the UI enters Live mode.
 
 ## Stable tag IDs
 
+The following are representative mappings, not an exhaustive tag schedule. The machine
+configuration and gateway mapping remain authoritative for the complete sensor set.
+
 | Tag | Meaning | Unit |
 |---|---|---|
 | `FEED-01.FLOW.IN` | Inlet mass-flow rate | kg/s |
@@ -210,32 +213,33 @@ development. It is intentionally separate from the live ingestion path.
 
 ## Card presentation rules
 
-`TelemetryEquipmentGroup` is a presentation layer only; it does not alter tag
-identity or incoming readings. The configured drive group combines telemetry
-only because its member tags refer to the same physical drive and their anchors
-are spatially close. Unrelated feed and hopper tags remain independent.
+Every visible `PerformanceStatSource` maps to one `TelemetryCardPresentation` and one
+card. The API, registry, and UI do not group readings. This keeps identity, spacing,
+alarm behavior, and future gateway mapping deterministic.
 
-Members with different visual states split into state-specific cards in the
-same frame. Members that later converge to the same state regroup only after a
-12-second stable buffer. A grouped card shows its three highest-ranked metrics
-and reports the hidden count. Long labels remain static when they fit, otherwise
-they use the Inspector-selected Ping Pong or Continuous motion. Numeric fitting
-reduces unit size, then value size, then decimal precision; the underlying
-telemetry value is never changed.
+Long labels use the Inspector-selected adaptive wrapping or sliding mode on wide rails.
+Portrait top and bottom rails default to one-line sliding when a label overflows.
+Adaptive wrapping grows to at most four lines and then falls back to sliding; neither
+mode adds an ellipsis. Value and unit are composed in one text object on one baseline. The fitter may
+reduce decimal precision and type size to retain the complete unit, while rail/card width
+remains fixed. **Use Accurate Unit Casing** is available on the card prefab for SI-aware
+symbols such as `kW`, `kN`, and `mm/s`; the approved default remains uppercase.
 
-Normal leader lines relax to 40% opacity, anchors to 80%, and accent trails to
-0% after startup. Hover/tap focus is instant; losing focus begins the 1.5-second
-return immediately. Warning and critical presentations remain at 100%.
+The current leader-line prefab intentionally uses the approved thin, low-opacity visual
+tuning. With secondary rails occupied, normal lines use the lower resting opacity. When
+secondary rails are empty they transition to the higher resting opacity. Hover/tap focus
+is immediate, while warning and critical presentations remain fully emphasized.
 
 ## Responsive rail allocation
 
 The outer rails are always evaluated first. A presentation that does not fit
 its preferred outer rail is offered to the opposite outer rail before either
-inner overflow rail is enabled. Allocation order is preferred outer, opposite
-outer, preferred inner, opposite inner, then hidden if none has physical
-capacity. Alarm severity and display priority determine which presentations
-are offered first. Inner rails remain inactive when the outer rails hold all
-content, preserving the maximum stage area.
+inner overflow rail is enabled. Allocation order is preferred outer, opposite outer,
+preferred inner, opposite inner, then the next portrait page when none has physical
+capacity. Alarm severity and display priority determine page order, with alarms on page
+one. The arrow beside the zoom controls fades out over 0.3 seconds when its direction has
+no page. Inner rails remain inactive when the outer rails hold all content, preserving
+the maximum stage area.
 
 Layout selection uses device class as well as orientation. Desktop/laptop WebGL
 keeps the wide interface on a portrait monitor, including 1080x1920 displays.
@@ -246,6 +250,10 @@ The initial equipment values are plausible placeholders for a 22 kW, 400 V,
 approximately 1480 rpm drive and an 80 m³ hopper. Replace nameplate values,
 bulk density, operating limits, and alarm thresholds with approved engineering
 data before presenting the UI as an operational twin.
+
+The sample scene intentionally includes warning/critical demonstration values so reviewers
+can see alarm styling and priority. These are a failure scenario, not approved operational
+limits. Replace values and thresholds with engineering-approved data before live use.
 
 ## Standards basis
 

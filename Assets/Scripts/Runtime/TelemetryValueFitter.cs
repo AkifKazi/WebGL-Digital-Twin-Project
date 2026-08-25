@@ -5,123 +5,82 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class TelemetryValueFitter : MonoBehaviour
 {
-    [Header("Strategies — evaluated in this order")]
-    [SerializeField] private bool reduceUnitSize = true;
-    [SerializeField] private bool reduceValueSize = true;
-    [SerializeField] private bool requestCardExpansion = true;
+    [Header("Single stable reading")]
+    [SerializeField, Min(0f)] private float valueUnitSpacing = 6f;
+    [SerializeField, Min(0f), Tooltip("Reserved after the final glyph so animation and font padding can never clip the unit.")]
+    private float trailingSafetyBuffer = 10f;
+    [SerializeField, Range(0.4f, 1f)] private float preferredMinimumScale = 0.72f;
     [SerializeField] private bool reduceDecimalPlaces = true;
+    [SerializeField, Min(0.01f)] private float recoverySmoothTime = 0.08f;
+    [SerializeField, Min(0.1f)] private float widthChangeThreshold = 0.5f;
 
-    [Header("Limits")]
-    [SerializeField, Range(0.5f, 1f)] private float minimumUnitScale = 0.5f;
-    [SerializeField, Range(0.8f, 1f)] private float minimumValueScale = 0.8f;
-    [SerializeField, Min(0f), Tooltip("Clear gap maintained between the value and its unit.")]
-    private float spacing = 10f;
-    [SerializeField, Range(1f, 1.2f)] private float maximumCardExpansion = 1.2f;
-
-    [Header("Motion stability")]
-    [SerializeField, Min(0f), Tooltip("Width changes smaller than this are absorbed instead of moving the unit.")]
-    private float widthDeadZone = 3f;
-    [SerializeField, Min(0f), Tooltip("Extra reserved width that prevents tiny value changes from shifting the unit.")]
-    private float valueWidthBuffer = 2f;
-    [SerializeField, Min(0.01f), Tooltip("Time used to smoothly animate meaningful size and position changes.")]
-    private float smoothTime = 0.2f;
-    [SerializeField, Min(0f), Tooltip("How long spare value width is retained before it may contract.")]
-    private float widthReleaseDelay = 4f;
-    [SerializeField, Min(1f), Tooltip("A larger empty gap closes sooner than a small, less distracting gap.")]
-    private float largeGapThreshold = 28f;
-    [SerializeField, Range(0.2f, 1f), Tooltip("Release-delay multiplier used for a large value/unit gap.")]
-    private float largeGapDelayMultiplier = 0.4f;
-    [SerializeField, Range(0.2f, 1f), Tooltip("Motion-time multiplier used while closing a large value/unit gap.")]
-    private float largeGapSmoothMultiplier = 0.5f;
-    [SerializeField, Min(0f), Tooltip("How long a smaller font remains stable before returning toward its full size.")]
-    private float fontRecoveryDelay = 3f;
-
-    private TMP_Text valueText;
-    private TMP_Text unitText;
+    private TMP_Text readingText;
+    private TMP_Text legacyUnitText;
     private RectTransform availableArea;
-    private HorizontalLayoutGroup rowLayout;
-    private LayoutElement valueLayout;
-    private float baseValueSize;
-    private float baseUnitSize;
-    private float baseAvailableWidth;
-    private float targetValueSize;
-    private float targetUnitSize;
-    private float valueSizeVelocity;
-    private float unitSizeVelocity;
-    private float reservedValueWidth;
-    private float targetReservedValueWidth;
-    private float reservedWidthVelocity;
-    private float lastWidthIncreaseTime;
-    private float lastFontConstraintTime;
+    private RectTransform readingRect;
+    private PerformanceStatSource source;
+    private bool accurateUnitCasing;
+    private float baseFontSize;
+    private float targetScale = 1f;
+    private float displayedScale = 1f;
+    private float appliedScale = -1f;
+    private float scaleVelocity;
+    private float lastMeasuredWidth = -1f;
+    private string displayText = string.Empty;
+    private bool layoutDirty;
     private bool bound;
-
-    public float RequestedCardExpansion { get; private set; } = 1f;
 
     public void Bind(TMP_Text value, TMP_Text unit, RectTransform area)
     {
-        valueText = value;
-        unitText = unit;
+        readingText = value;
+        legacyUnitText = unit;
         availableArea = area;
-        if (valueText == null || unitText == null || availableArea == null)
+        if (readingText == null || availableArea == null)
             return;
 
-        baseValueSize = valueText.fontSize;
-        baseUnitSize = unitText.fontSize;
-        targetValueSize = baseValueSize;
-        targetUnitSize = baseUnitSize;
-        baseAvailableWidth = availableArea.rect.width > 1f ? availableArea.rect.width : 0f;
+        baseFontSize = readingText.fontSize;
+        readingRect = readingText.rectTransform;
+        displayText = ComposeReading(
+            readingText.text,
+            legacyUnitText != null ? legacyUnitText.text : string.Empty);
 
-        rowLayout = availableArea.GetComponent<HorizontalLayoutGroup>();
-        if (rowLayout != null)
-            rowLayout.spacing = spacing;
+        // A single TMP object is the robust baseline primitive. Two separately
+        // measured layout children can drift or clip their final glyph.
+        HorizontalLayoutGroup obsoleteLayout = availableArea.GetComponent<HorizontalLayoutGroup>();
+        if (obsoleteLayout != null)
+            obsoleteLayout.enabled = false;
+        if (legacyUnitText != null)
+            legacyUnitText.gameObject.SetActive(false);
 
-        valueLayout = valueText.GetComponent<LayoutElement>();
-        if (valueLayout == null)
-            valueLayout = valueText.gameObject.AddComponent<LayoutElement>();
+        readingText.textWrappingMode = TextWrappingModes.NoWrap;
+        readingText.overflowMode = TextOverflowModes.Overflow;
+        readingText.alignment = TextAlignmentOptions.MidlineLeft;
+        readingText.richText = true;
 
-        valueText.ForceMeshUpdate();
-        reservedValueWidth = Mathf.Max(0f, valueText.preferredWidth + valueWidthBuffer);
-        targetReservedValueWidth = reservedValueWidth;
-        valueLayout.preferredWidth = reservedValueWidth;
-        lastWidthIncreaseTime = Time.unscaledTime;
+        readingRect.anchorMin = new Vector2(0f, 0.5f);
+        readingRect.anchorMax = new Vector2(1f, 0.5f);
+        readingRect.pivot = new Vector2(0f, 0.5f);
+        readingRect.anchoredPosition = Vector2.zero;
+        readingRect.sizeDelta = new Vector2(0f, 48f);
+
+        LayoutElement obsoleteValueLayout = readingText.GetComponent<LayoutElement>();
+        if (obsoleteValueLayout != null)
+            obsoleteValueLayout.enabled = false;
+
+        displayedScale = 1f;
+        targetScale = 1f;
         bound = true;
+        ApplyScale(1f);
     }
 
-    public void Fit(PerformanceStatSource source, bool accurateUnitCasing)
+    public void Fit(PerformanceStatSource newSource, bool preserveUnitCasing)
     {
-        if (!bound || source == null)
+        if (!bound || newSource == null)
             return;
 
-        valueText.text = source.FormattedValue;
-        unitText.text = accurateUnitCasing ? source.Unit : source.Unit.ToUpperInvariant();
-
-        float currentValueSize = valueText.fontSize;
-        float currentUnitSize = unitText.fontSize;
-        CalculateTargets(source, out float calculatedValueSize, out float calculatedUnitSize,
-            out float calculatedExpansion);
-
-        // Calculation temporarily changes TMP properties. Restore the visible state so
-        // the user only sees the smoothed transition performed in LateUpdate.
-        valueText.fontSize = currentValueSize;
-        unitText.fontSize = currentUnitSize;
-        ForceLayout();
-
-        bool needsMoreRoom = calculatedValueSize < targetValueSize - 0.01f ||
-                             calculatedUnitSize < targetUnitSize - 0.01f;
-        if (needsMoreRoom)
-        {
-            targetValueSize = calculatedValueSize;
-            targetUnitSize = calculatedUnitSize;
-            lastFontConstraintTime = Time.unscaledTime;
-        }
-        else if (Time.unscaledTime - lastFontConstraintTime >= fontRecoveryDelay)
-        {
-            targetValueSize = calculatedValueSize;
-            targetUnitSize = calculatedUnitSize;
-        }
-
-        RequestedCardExpansion = calculatedExpansion;
-        UpdateReservedValueWidth(calculatedValueSize);
+        source = newSource;
+        accurateUnitCasing = preserveUnitCasing;
+        RecalculateTarget();
     }
 
     private void LateUpdate()
@@ -129,116 +88,120 @@ public sealed class TelemetryValueFitter : MonoBehaviour
         if (!bound)
             return;
 
-        float deltaTime = Time.unscaledDeltaTime;
-        valueText.fontSize = Mathf.SmoothDamp(valueText.fontSize, targetValueSize,
-            ref valueSizeVelocity, smoothTime, Mathf.Infinity, deltaTime);
-        unitText.fontSize = Mathf.SmoothDamp(unitText.fontSize, targetUnitSize,
-            ref unitSizeVelocity, smoothTime, Mathf.Infinity, deltaTime);
-        float closingDistance = Mathf.Max(0f, reservedValueWidth - targetReservedValueWidth);
-        float closingBlend = Mathf.InverseLerp(widthDeadZone, largeGapThreshold, closingDistance);
-        float adaptiveSmoothTime = smoothTime * Mathf.Lerp(
-            1f,
-            largeGapSmoothMultiplier,
-            closingBlend);
-        reservedValueWidth = Mathf.SmoothDamp(reservedValueWidth, targetReservedValueWidth,
-            ref reservedWidthVelocity, adaptiveSmoothTime, Mathf.Infinity, deltaTime);
-        valueLayout.preferredWidth = reservedValueWidth;
+        float width = availableArea.rect.width;
+        if (width > 1f && Mathf.Abs(width - lastMeasuredWidth) >= widthChangeThreshold)
+            RecalculateTarget();
+
+        // Shrinking is immediate: an animated oversize intermediate must never
+        // clip. Recovery can be brief and smooth once more width is available.
+        if (targetScale < displayedScale)
+        {
+            displayedScale = targetScale;
+            scaleVelocity = 0f;
+        }
+        else
+        {
+            displayedScale = Mathf.SmoothDamp(
+                displayedScale,
+                targetScale,
+                ref scaleVelocity,
+                recoverySmoothTime,
+                Mathf.Infinity,
+                Time.unscaledDeltaTime);
+        }
+
+        if (layoutDirty || Mathf.Abs(displayedScale - appliedScale) >= 0.001f)
+        {
+            ApplyScale(displayedScale);
+            layoutDirty = false;
+        }
     }
 
-    private void CalculateTargets(
-        PerformanceStatSource source,
-        out float calculatedValueSize,
-        out float calculatedUnitSize,
-        out float calculatedExpansion)
+    private void RecalculateTarget()
     {
-        valueText.fontSize = baseValueSize;
-        unitText.fontSize = baseUnitSize;
-        valueText.text = source.FormattedValue;
-        calculatedExpansion = 1f;
-        ForceLayout();
-        CaptureBaseWidth();
+        if (source == null)
+            return;
 
-        if (!Fits() && reduceUnitSize)
-            ShrinkUntilFit(unitText, baseUnitSize * minimumUnitScale);
-        if (!Fits() && reduceValueSize)
-            ShrinkUntilFit(valueText, baseValueSize * minimumValueScale);
+        float rowWidth = availableArea.rect.width;
+        lastMeasuredWidth = rowWidth;
+        displayText = ComposeReading(source.FormattedValue, FormatUnit(source.Unit));
 
-        if (!Fits() && requestCardExpansion && baseAvailableWidth > 1f)
-            calculatedExpansion = RequiredExpansion();
+        // Width zero is only a transient first-frame layout state. Do not make
+        // a permanent typography decision from it.
+        if (rowWidth <= 1f)
+        {
+            targetScale = 1f;
+            readingText.text = displayText;
+            layoutDirty = true;
+            return;
+        }
 
-        if (!FitsAtExpansion(calculatedExpansion) && reduceDecimalPlaces)
+        float safeWidth = Mathf.Max(1f, rowWidth - trailingSafetyBuffer);
+        float requiredWidth = MeasureAtBaseSize(displayText);
+
+        if (reduceDecimalPlaces && requiredWidth > safeWidth / preferredMinimumScale)
         {
             for (int decimals = source.PreferredDecimalPlaces - 1; decimals >= 0; decimals--)
             {
-                valueText.text = source.FormatValue(decimals);
-                ForceLayout();
-                if (requestCardExpansion && baseAvailableWidth > 1f)
-                    calculatedExpansion = RequiredExpansion();
-                if (FitsAtExpansion(calculatedExpansion))
+                string candidate = ComposeReading(
+                    source.FormatValue(decimals),
+                    FormatUnit(source.Unit));
+                float candidateWidth = MeasureAtBaseSize(candidate);
+                displayText = candidate;
+                requiredWidth = candidateWidth;
+                if (candidateWidth <= safeWidth / preferredMinimumScale)
                     break;
             }
         }
 
-        calculatedValueSize = valueText.fontSize;
-        calculatedUnitSize = unitText.fontSize;
-    }
+        readingText.text = displayText;
+        // No lower clamp is intentional. Readability is preferred, but the
+        // non-negotiable invariant is that the complete engineering unit is
+        // always visible at every intermediate responsive width.
+        targetScale = Mathf.Min(1f, safeWidth / Mathf.Max(1f, requiredWidth));
+        layoutDirty = true;
 
-    private void UpdateReservedValueWidth(float calculatedValueSize)
-    {
-        float previousSize = valueText.fontSize;
-        valueText.fontSize = calculatedValueSize;
-        valueText.ForceMeshUpdate();
-        float requiredWidth = valueText.preferredWidth + valueWidthBuffer;
-        valueText.fontSize = previousSize;
-        valueText.ForceMeshUpdate();
-
-        if (requiredWidth > targetReservedValueWidth + widthDeadZone)
+        if (targetScale < displayedScale)
         {
-            targetReservedValueWidth = requiredWidth;
-            lastWidthIncreaseTime = Time.unscaledTime;
-        }
-        else if (requiredWidth < targetReservedValueWidth - widthDeadZone)
-        {
-            float excessWidth = targetReservedValueWidth - requiredWidth;
-            float gapBlend = Mathf.InverseLerp(widthDeadZone, largeGapThreshold, excessWidth);
-            float adaptiveDelay = widthReleaseDelay * Mathf.Lerp(
-                1f,
-                largeGapDelayMultiplier,
-                gapBlend);
-            if (Time.unscaledTime - lastWidthIncreaseTime >= adaptiveDelay)
-                targetReservedValueWidth = requiredWidth;
+            displayedScale = targetScale;
+            scaleVelocity = 0f;
+            ApplyScale(displayedScale);
+            layoutDirty = false;
         }
     }
 
-    private void ShrinkUntilFit(TMP_Text target, float minimum)
+    private float MeasureAtBaseSize(string text)
     {
-        while (!Fits() && target.fontSize > minimum + 0.1f)
-        {
-            target.fontSize = Mathf.Max(minimum, target.fontSize - 0.5f);
-            ForceLayout();
-        }
+        float previousSize = readingText.fontSize;
+        string previousText = readingText.text;
+        readingText.fontSize = baseFontSize;
+        readingText.text = text;
+        readingText.ForceMeshUpdate();
+        float width = readingText.preferredWidth;
+        readingText.fontSize = previousSize;
+        readingText.text = previousText;
+        return Mathf.Max(1f, width);
     }
 
-    private bool Fits() => ContentWidth() <= availableArea.rect.width;
-
-    private bool FitsAtExpansion(float expansion) => baseAvailableWidth > 1f
-        ? ContentWidth() <= baseAvailableWidth * expansion
-        : Fits();
-
-    private float RequiredExpansion() => Mathf.Clamp(
-        ContentWidth() / baseAvailableWidth, 1f, maximumCardExpansion);
-
-    private float ContentWidth() => valueText.preferredWidth + unitText.preferredWidth + spacing;
-
-    private void CaptureBaseWidth()
+    private void ApplyScale(float scale)
     {
-        if (baseAvailableWidth <= 1f && availableArea.rect.width > 1f)
-            baseAvailableWidth = availableArea.rect.width;
+        readingText.fontSize = baseFontSize * Mathf.Max(0.01f, scale);
+        readingText.text = displayText;
+        readingText.ForceMeshUpdate();
+        appliedScale = scale;
     }
 
-    private void ForceLayout()
+    private string FormatUnit(string unit)
     {
-        valueText.ForceMeshUpdate();
-        unitText.ForceMeshUpdate();
+        if (string.IsNullOrEmpty(unit))
+            return string.Empty;
+        return accurateUnitCasing ? unit : unit.ToUpperInvariant();
+    }
+
+    private string ComposeReading(string value, string unit)
+    {
+        if (string.IsNullOrEmpty(unit))
+            return value ?? string.Empty;
+        return $"{value}<space={valueUnitSpacing}>{unit}";
     }
 }

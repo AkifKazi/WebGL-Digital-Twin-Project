@@ -15,7 +15,7 @@ The following classes are machine-independent and should not contain hopper tag 
 - `TelemetryRegistry` — stable sensor-ID lookup and stale-data monitoring.
 - `TelemetrySourceResolver` — shared automatic or explicit source selection.
 - `PerformanceStatSource` — sensor definition, latest state, alarm evaluation, and world anchor.
-- `TelemetryEquipmentGroup` — presentation grouping for related physical measurements.
+- `TelemetryCardPresentation` — a strict one-sensor/one-card presentation boundary.
 - `ConnectionHealthMonitor` — provider and aggregate data-health state.
 - `WideStatRailManager` and `PortraitStatRailManager` — responsive presentation.
 - Card, leader-line, responsive-shell, camera, and text-fitting components.
@@ -35,7 +35,7 @@ These components may use the reusable telemetry contracts, but generic component
 
 The current machine is represented by `Vibratory Feeder.asset`, a
 `DigitalTwinMachineConfiguration`. It owns sensor identity, presentation metadata,
-anchor positions, hierarchy categories, engineering limits, and equipment groups.
+anchor positions, hierarchy categories, and engineering limits.
 `VibratoryFeederSceneConfigurator` owns the feeder-only process simulator and particle-flow setup.
 The reference installer creates the asset automatically on the first Unity script reload;
 its separate provider also keeps automated setup deterministic before that delayed creation runs.
@@ -58,10 +58,16 @@ which owns the latest runtime state and world-space anchor. Configured metadata 
 - display priority and rail preference;
 - current state and world-space anchor.
 
-The registry and both responsive rail managers use `TelemetrySourceSelectionMode`:
+The registry and both responsive rail managers use `TelemetrySourceSelectionMode`.
+Cards remain fixed-width and every visible sensor owns a separate card. Portrait
+overflow is handled by explicit pagination rather than silently dropping readings:
 
 - **SceneDiscovery** is the default for modular machine prefabs.
 - **ExplicitList** supports deliberately restricted scenes.
+
+Alarm state and display priority determine page order, so warning and critical readings
+move to the first portrait page. Page navigation belongs only to the presentation layer;
+it never changes the registry, sensor state, or machine model.
 
 All three consumers use `TelemetrySourceResolver`, preventing different discovery rules from drifting apart.
 
@@ -99,7 +105,7 @@ The browser receives only authorized, normalized state through HTTPS or secure W
 ## Extension rules
 
 - Do not add machine tag names to generic runtime classes.
-- Do not add machine sensor IDs, groups, categories, or simulator types to `DigitalTwinSceneSetup`.
+- Do not add machine sensor IDs, categories, or simulator types to `DigitalTwinSceneSetup`.
 - Do not let cards or layouts parse API payloads.
 - Do not let providers manipulate UI elements directly.
 - Keep simulation visibly separate from live data.

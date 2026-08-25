@@ -81,7 +81,7 @@ public sealed class TelemetryJsonIngestor : MonoBehaviour, ITelemetryReadingSink
 
     public TelemetryIngestionResult SubmitReading(in TelemetryReading reading)
     {
-        if (registry == null || !registry.TryGetSource(reading.SensorId, out _))
+        if (registry == null || !registry.TryGetSource(reading.SensorId, out PerformanceStatSource source))
         {
             if (logRejectedReadings)
                 Debug.LogWarning($"Unknown telemetry sensor ID '{reading.SensorId}'.", this);
@@ -104,7 +104,7 @@ public sealed class TelemetryJsonIngestor : MonoBehaviour, ITelemetryReadingSink
         }
 
         if (operatingModeController != null)
-            operatingModeController.UseLiveData();
+            operatingModeController.UseLiveData(source);
 
         connectionHealthMonitor?.ReportReading(reading.ProviderId);
         return TelemetryIngestionResult.Accepted;

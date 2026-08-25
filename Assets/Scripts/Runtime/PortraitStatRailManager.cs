@@ -10,9 +10,14 @@ public class PortraitStatRailManager : MonoBehaviour
 {
     public event Action LayoutRebuilt;
     public event Action<int> HiddenPresentationCountChanged;
+    public event Action<int, int> PaginationChanged;
 
     public IReadOnlyDictionary<PerformanceStatSource, PerformanceStatCardView> ActiveCards => activeCards;
     public int HiddenPresentationCount { get; private set; }
+    public int CurrentPageIndex { get; private set; }
+    public int PageCount { get; private set; } = 1;
+    public bool CanShowPreviousPage => CurrentPageIndex > 0;
+    public bool CanShowNextPage => CurrentPageIndex + 1 < PageCount;
     public bool HasSecondaryRailCards =>
         innerTopBindings.Count > 0 || innerBottomBindings.Count > 0;
 
@@ -35,7 +40,8 @@ public class PortraitStatRailManager : MonoBehaviour
 
     [Header("Card Placement")]
     [SerializeField, Min(1f)] private float cardWidth = 280f;
-    [SerializeField, Min(1f)] private float cardHeight = 116f;
+    [SerializeField, Min(1f)] private float cardHeight = 119f;
+    [SerializeField, Min(100f)] private float minimumRailHeight = 150f;
     [SerializeField, Min(0f)] private float minimumGap = 20f;
     [SerializeField, Min(0f)] private float leftPadding = 20f;
     [SerializeField, Min(0f)] private float rightPadding = 20f;
@@ -43,7 +49,7 @@ public class PortraitStatRailManager : MonoBehaviour
     [SerializeField, Min(1f)] private float maximumSpeed = 1500f;
 
     [Header("Capacity")]
-    [SerializeField, Min(1)] private int maximumCardsPerRail = 3;
+    [SerializeField, Min(1)] private int maximumCardsPerRail = 32;
 
     [Header("Behaviour")]
     [SerializeField] private bool preserveCardOrder = true;
@@ -60,7 +66,6 @@ public class PortraitStatRailManager : MonoBehaviour
     private readonly List<SourcePosition> bottomSources = new();
     private readonly List<SourcePosition> innerTopSources = new();
     private readonly List<SourcePosition> innerBottomSources = new();
-    private TelemetryEquipmentGroup[] equipmentGroups = Array.Empty<TelemetryEquipmentGroup>();
 
     private IEnumerator Start()
     {
@@ -110,7 +115,6 @@ public class PortraitStatRailManager : MonoBehaviour
         bottomSources.Clear();
         innerTopSources.Clear();
         innerBottomSources.Clear();
-        SetHiddenPresentationCount(0);
 
         if (sources == null)
             sources = Array.Empty<PerformanceStatSource>();
@@ -129,10 +133,31 @@ public class PortraitStatRailManager : MonoBehaviour
             candidates.Add(new SourcePosition(presentation, viewport.x, viewport.y));
         }
 
-        AllocateAcrossRails(candidates);
+        candidates.Sort((a, b) =>
+        {
+            int rankComparison = b.Presentation.DisplayRank.CompareTo(a.Presentation.DisplayRank);
+            return rankComparison != 0
+                ? rankComparison
+                : string.CompareOrdinal(a.Presentation.Key, b.Presentation.Key);
+        });
+
+        int pageCapacity = CalculatePageCapacity();
+        PageCount = Mathf.Max(1, Mathf.CeilToInt(candidates.Count / (float)pageCapacity));
+        CurrentPageIndex = Mathf.Clamp(CurrentPageIndex, 0, PageCount - 1);
+
+        List<SourcePosition> pageCandidates = candidates
+            .Skip(CurrentPageIndex * pageCapacity)
+            .Take(pageCapacity)
+            .ToList();
+
+        AllocateAcrossRails(pageCandidates);
+        int visibleOnPage = topSources.Count + bottomSources.Count +
+                            innerTopSources.Count + innerBottomSources.Count;
+        SetHiddenPresentationCount(candidates.Count - visibleOnPage);
 
         Debug.Log(
             $"TELEMETRY_PORTRAIT_LAYOUT candidates={candidates.Count} " +
+            $"page={CurrentPageIndex + 1}/{PageCount} capacity={pageCapacity} " +
             $"outerTop={topSources.Count} outerBottom={bottomSources.Count} " +
             $"innerTop={innerTopSources.Count} innerBottom={innerBottomSources.Count} " +
             $"widths={GetAvailableRailWidth(topCardContainer):F1}/" +
@@ -143,6 +168,7 @@ public class PortraitStatRailManager : MonoBehaviour
         BuildRail(bottomSources, bottomCardContainer, StatRailSide.Bottom, bottomBindings);
         BuildRail(innerTopSources, innerTopCardContainer, StatRailSide.Top, innerTopBindings);
         BuildRail(innerBottomSources, innerBottomCardContainer, StatRailSide.Bottom, innerBottomBindings);
+        ApplyAdaptiveRailHeights();
         SetSecondaryRailActive(innerTopCardContainer, innerTopBindings.Count > 0);
         SetSecondaryRailActive(innerBottomCardContainer, innerBottomBindings.Count > 0);
         SubscribeToSources();
@@ -151,6 +177,7 @@ public class PortraitStatRailManager : MonoBehaviour
         InitialiseRailPositions(innerTopBindings, innerTopCardContainer);
         InitialiseRailPositions(innerBottomBindings, innerBottomCardContainer);
         LayoutRebuilt?.Invoke();
+        PaginationChanged?.Invoke(CurrentPageIndex, PageCount);
     }
 
     private void ResolveSources()
@@ -219,7 +246,6 @@ public class PortraitStatRailManager : MonoBehaviour
 
     private void AllocateAcrossRails(List<SourcePosition> candidates)
     {
-        candidates.Sort((a, b) => b.Presentation.DisplayRank.CompareTo(a.Presentation.DisplayRank));
         foreach (SourcePosition candidate in candidates)
         {
             StatRailSide preferred = DetermineSide(
@@ -242,8 +268,32 @@ public class PortraitStatRailManager : MonoBehaviour
 
             if (showDebugLogs)
                 Debug.Log($"Telemetry presentation '{candidate.Presentation.Key}' hidden: all four rails are full.", this);
-            SetHiddenPresentationCount(HiddenPresentationCount + 1);
         }
+    }
+
+    public void ShowPreviousPage()
+    {
+        ShowPage(CurrentPageIndex - 1);
+    }
+
+    public void ShowNextPage()
+    {
+        ShowPage(CurrentPageIndex + 1);
+    }
+
+    public void ShowFirstPage()
+    {
+        ShowPage(0);
+    }
+
+    public void ShowPage(int pageIndex)
+    {
+        int clamped = Mathf.Clamp(pageIndex, 0, Mathf.Max(0, PageCount - 1));
+        if (clamped == CurrentPageIndex)
+            return;
+
+        CurrentPageIndex = clamped;
+        RebuildLayout();
     }
 
     private void SetHiddenPresentationCount(int value)
@@ -334,19 +384,23 @@ public class PortraitStatRailManager : MonoBehaviour
             RectTransform cardRect = card.transform as RectTransform;
 
             float resolvedWidth = GetCardWidth(presentation);
-            ConfigureGeneratedCard(cardRect, resolvedWidth);
+            ConfigureGeneratedCard(cardRect, resolvedWidth, cardHeight);
             card.SetPresentation(presentation, side);
+            float resolvedHeight = card.EstimateRequestedCardHeight(
+                presentation,
+                side,
+                cardHeight,
+                resolvedWidth);
+            ConfigureGeneratedCard(cardRect, resolvedWidth, resolvedHeight);
 
             RailCardBinding binding = new(presentation, card, cardRect, resolvedWidth);
             bindings.Add(binding);
-            foreach (PerformanceStatSource source in presentation.Sources)
-                activeCards[source] = card;
+            activeCards[presentation.Source] = card;
             generatedCards.Add(card);
         }
     }
 
-    private float GetCardWidth(TelemetryCardPresentation presentation) =>
-        cardWidth * Mathf.Min(presentation.MaximumVisibleMetrics, presentation.Sources.Count);
+    private float GetCardWidth(TelemetryCardPresentation presentation) => cardWidth;
 
     private float GetAvailableRailWidth(RectTransform container)
     {
@@ -366,17 +420,30 @@ public class PortraitStatRailManager : MonoBehaviour
 
     private int CalculatePhysicalCapacity(RectTransform container)
     {
-        float availableWidth = container.rect.width - leftPadding - rightPadding;
+        float availableWidth = GetAvailableRailWidth(container);
 
-        if (availableWidth <= 0f)
-            return 1;
+        if (availableWidth < cardWidth)
+            return 0;
 
-        return Mathf.Max(1, Mathf.FloorToInt(
-            (availableWidth + minimumGap) / (cardWidth + minimumGap)
-        ));
+        return Mathf.Clamp(
+            Mathf.FloorToInt((availableWidth + minimumGap) / (cardWidth + minimumGap)),
+            0,
+            maximumCardsPerRail);
     }
 
-    private void ConfigureGeneratedCard(RectTransform cardRect, float resolvedWidth)
+    private int CalculatePageCapacity()
+    {
+        int capacity = CalculatePhysicalCapacity(topCardContainer) +
+                       CalculatePhysicalCapacity(bottomCardContainer) +
+                       CalculatePhysicalCapacity(innerTopCardContainer) +
+                       CalculatePhysicalCapacity(innerBottomCardContainer);
+        return Mathf.Max(1, capacity);
+    }
+
+    private void ConfigureGeneratedCard(
+        RectTransform cardRect,
+        float resolvedWidth,
+        float resolvedHeight)
     {
         if (cardRect == null)
             return;
@@ -384,10 +451,61 @@ public class PortraitStatRailManager : MonoBehaviour
         cardRect.anchorMin = new Vector2(0.5f, 0.5f);
         cardRect.anchorMax = new Vector2(0.5f, 0.5f);
         cardRect.pivot = new Vector2(0.5f, 0.5f);
-        cardRect.sizeDelta = new Vector2(resolvedWidth, cardHeight);
+        cardRect.sizeDelta = new Vector2(resolvedWidth, resolvedHeight);
         cardRect.anchoredPosition = Vector2.zero;
         cardRect.localScale = Vector3.one;
         cardRect.localRotation = Quaternion.identity;
+    }
+
+    private void ApplyAdaptiveRailHeights()
+    {
+        if (topCardContainer?.parent?.parent is not RectTransform content)
+            return;
+
+        float topHeight = GetRequiredRailHeight(topBindings);
+        float bottomHeight = GetRequiredRailHeight(bottomBindings);
+        float innerTopHeight = GetRequiredRailHeight(innerTopBindings);
+        float innerBottomHeight = GetRequiredRailHeight(innerBottomBindings);
+
+        ConfigureHorizontalRail(
+            topCardContainer.parent as RectTransform,
+            0f,
+            topHeight,
+            true);
+        ConfigureHorizontalRail(
+            innerTopCardContainer?.parent as RectTransform,
+            topHeight,
+            innerTopHeight,
+            true);
+        ConfigureHorizontalRail(
+            bottomCardContainer.parent as RectTransform,
+            0f,
+            bottomHeight,
+            false);
+        ConfigureHorizontalRail(
+            innerBottomCardContainer?.parent as RectTransform,
+            bottomHeight,
+            innerBottomHeight,
+            false);
+
+        RectTransform stage = content.Cast<Transform>()
+            .FirstOrDefault(child => child.name == "Stage area") as RectTransform;
+        if (stage != null)
+        {
+            stage.offsetMin = new Vector2(stage.offsetMin.x, bottomHeight);
+            stage.offsetMax = new Vector2(stage.offsetMax.x, -topHeight);
+        }
+    }
+
+    private float GetRequiredRailHeight(IReadOnlyCollection<RailCardBinding> bindings)
+    {
+        float required = minimumRailHeight;
+        foreach (RailCardBinding binding in bindings)
+        {
+            if (binding?.RectTransform != null)
+                required = Mathf.Max(required, binding.RectTransform.sizeDelta.y);
+        }
+        return required;
     }
 
     private void InitialiseRailPositions(List<RailCardBinding> bindings, RectTransform container)
@@ -572,8 +690,8 @@ public class PortraitStatRailManager : MonoBehaviour
 
     private void HandleLayoutPriorityChanged(PerformanceStatSource source)
     {
-        if (equipmentGroups.Any(group => group != null && group.Contains(source)))
-            return;
+        // A newly raised alarm must never remain on a later page.
+        CurrentPageIndex = 0;
         RebuildLayout();
     }
 
@@ -588,13 +706,6 @@ public class PortraitStatRailManager : MonoBehaviour
             }
         }
 
-        equipmentGroups = UnityEngine.Object.FindObjectsByType<TelemetryEquipmentGroup>(
-            FindObjectsInactive.Exclude);
-        foreach (TelemetryEquipmentGroup group in equipmentGroups)
-        {
-            group.PresentationChanged -= RebuildLayout;
-            group.PresentationChanged += RebuildLayout;
-        }
     }
 
     private void UnsubscribeFromSources()
@@ -611,12 +722,6 @@ public class PortraitStatRailManager : MonoBehaviour
             }
         }
 
-        foreach (TelemetryEquipmentGroup group in equipmentGroups)
-        {
-            if (group != null)
-                group.PresentationChanged -= RebuildLayout;
-        }
-        equipmentGroups = Array.Empty<TelemetryEquipmentGroup>();
     }
 
     private void ClearGeneratedCards()

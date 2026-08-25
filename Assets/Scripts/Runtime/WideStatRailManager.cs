@@ -40,10 +40,10 @@ public class WideStatRailManager : MonoBehaviour
 
     [Header("Card Placement")]
     [SerializeField, Min(1f)]
-    private float cardHeight = 116f;
+    private float cardHeight = 119f;
 
     [SerializeField, Min(0f)]
-    private float minimumGap = 12f;
+    private float minimumGap = 8f;
 
     [SerializeField, Min(0f)]
     private float topPadding = 0f;
@@ -59,17 +59,12 @@ public class WideStatRailManager : MonoBehaviour
 
     [Header("Capacity")]
     [SerializeField, Min(1)]
-    private int maximumCardsPerRail = 6;
+    private int maximumCardsPerRail = 32;
 
     [Header("Responsive Rail Geometry")]
     [SerializeField, Min(120f)] private float minimumRailWidth = 180f;
     [SerializeField, Min(120f)] private float maximumRailWidth = 280f;
     [SerializeField, Range(0.1f, 0.3f)] private float railWidthFraction = 0.18f;
-
-    [Header("Stable content fitting")]
-    [SerializeField, Range(1f, 1.2f)] private float maximumRailWidthExpansion = 1.2f;
-    [SerializeField, Min(1f)] private float railWidthDecreaseDelay = 30f;
-    [SerializeField, Min(0.05f)] private float railWidthSmoothTime = 0.35f;
 
     [Header("Behaviour")]
     [Tooltip(
@@ -110,12 +105,6 @@ public class WideStatRailManager : MonoBehaviour
     private readonly List<PresentationPosition> innerLeftSources = new();
     private readonly List<PresentationPosition> innerRightSources = new();
 
-    private TelemetryEquipmentGroup[] equipmentGroups = Array.Empty<TelemetryEquipmentGroup>();
-    private readonly RailWidthState leftWidthState = new();
-    private readonly RailWidthState rightWidthState = new();
-    private readonly RailWidthState innerLeftWidthState = new();
-    private readonly RailWidthState innerRightWidthState = new();
-
     private IEnumerator Start()
     {
         // The responsive shell and parent layout groups must resolve before
@@ -128,61 +117,47 @@ public class WideStatRailManager : MonoBehaviour
 
     private void LateUpdate()
     {
-        UpdateRail(
-            leftBindings,
-            leftCardContainer
-        );
-
-        UpdateRail(
-            rightBindings,
-            rightCardContainer
-        );
+        ReconcileCardHeights(leftBindings, leftCardContainer);
+        ReconcileCardHeights(rightBindings, rightCardContainer);
+        ReconcileCardHeights(innerLeftBindings, innerLeftCardContainer);
+        ReconcileCardHeights(innerRightBindings, innerRightCardContainer);
+        UpdateRail(leftBindings, leftCardContainer);
+        UpdateRail(rightBindings, rightCardContainer);
         UpdateRail(innerLeftBindings, innerLeftCardContainer);
         UpdateRail(innerRightBindings, innerRightCardContainer);
-        UpdateRailWidth(leftBindings, leftCardContainer, leftWidthState);
-        UpdateRailWidth(rightBindings, rightCardContainer, rightWidthState);
-        UpdateRailWidth(innerLeftBindings, innerLeftCardContainer, innerLeftWidthState);
-        UpdateRailWidth(innerRightBindings, innerRightCardContainer, innerRightWidthState);
     }
 
-    private void UpdateRailWidth(
+    private void ReconcileCardHeights(
         List<RailCardBinding> bindings,
-        RectTransform container,
-        RailWidthState state)
+        RectTransform container)
     {
-        if (container == null || container.parent == null)
-            return;
-        LayoutElement layout = container.parent.GetComponent<LayoutElement>();
-        if (layout == null || layout.preferredWidth <= 0f)
+        if (container == null || bindings.Count == 0)
             return;
 
-        state.Initialise(layout.preferredWidth);
-        float requested = bindings.Count == 0
-            ? 1f
-            : Mathf.Clamp(
-                bindings.Max(binding => binding.Card.RequestedCardExpansion),
-                1f,
-                maximumRailWidthExpansion);
+        float width = container.rect.width;
+        if (width <= 1f && container.parent is RectTransform rail)
+            width = rail.rect.width;
+        if (width <= 1f)
+            return;
 
-        if (requested > state.TargetScale + 0.001f)
+        foreach (RailCardBinding binding in bindings)
         {
-            state.TargetScale = requested;
-            state.LastExpansionRequestTime = Time.unscaledTime;
-        }
-        else if (requested < state.TargetScale - 0.001f &&
-                 Time.unscaledTime - state.LastExpansionRequestTime >= railWidthDecreaseDelay)
-        {
-            state.TargetScale = requested;
-        }
+            if (binding?.Card == null || binding.RectTransform == null)
+                continue;
 
-        state.CurrentScale = Mathf.SmoothDamp(
-            state.CurrentScale,
-            state.TargetScale,
-            ref state.Velocity,
-            railWidthSmoothTime,
-            Mathf.Infinity,
-            Time.unscaledDeltaTime);
-        layout.preferredWidth = state.BaseWidth * state.CurrentScale;
+            float resolvedHeight = binding.Card.EstimateRequestedCardHeight(
+                binding.Presentation,
+                binding.Card.RailSide,
+                cardHeight,
+                width);
+            if (Mathf.Abs(resolvedHeight - binding.Height) < 0.5f)
+                continue;
+
+            binding.Height = resolvedHeight;
+            binding.RectTransform.SetSizeWithCurrentAnchors(
+                RectTransform.Axis.Vertical,
+                resolvedHeight);
+        }
     }
 
     private void OnDestroy()
@@ -420,9 +395,10 @@ public class WideStatRailManager : MonoBehaviour
     {
         if (container == null || target.Count >= maximumCardsPerRail)
             return false;
-        float used = target.Sum(item => GetCardHeight(item.Presentation)) +
+        float used = target.Sum(item => GetCardHeight(item.Presentation, container)) +
                      Mathf.Max(0, target.Count - 1) * minimumGap;
-        float required = GetCardHeight(candidate.Presentation) + (target.Count > 0 ? minimumGap : 0f);
+        float required = GetCardHeight(candidate.Presentation, container) +
+                         (target.Count > 0 ? minimumGap : 0f);
         float available = GetAvailableRailHeight(container);
         if (used + required > available)
             return false;
@@ -494,7 +470,7 @@ public class WideStatRailManager : MonoBehaviour
         int allowedCount = 0;
         for (int i = 0; i < railSources.Count && allowedCount < maximumCardsPerRail; i++)
         {
-            float height = GetCardHeight(railSources[i].Presentation);
+            float height = GetCardHeight(railSources[i].Presentation, container);
             float required = height + (allowedCount > 0 ? minimumGap : 0f);
             if (usedHeight + required > availableHeight)
                 continue;
@@ -520,7 +496,7 @@ public class WideStatRailManager : MonoBehaviour
             RectTransform cardRect =
                 card.transform as RectTransform;
 
-            float resolvedHeight = GetCardHeight(presentation);
+            float resolvedHeight = GetCardHeight(presentation, container);
             ConfigureGeneratedCard(cardRect, resolvedHeight);
             card.SetPresentation(presentation, side);
 
@@ -533,14 +509,28 @@ public class WideStatRailManager : MonoBehaviour
                 );
 
             bindings.Add(binding);
-            foreach (PerformanceStatSource source in presentation.Sources)
-                activeCards[source] = card;
+            activeCards[presentation.Source] = card;
             generatedCards.Add(card);
         }
     }
 
-    private float GetCardHeight(TelemetryCardPresentation presentation) =>
-        cardHeight * Mathf.Min(presentation.MaximumVisibleMetrics, presentation.Sources.Count);
+    private float GetCardHeight(
+        TelemetryCardPresentation presentation,
+        RectTransform container)
+    {
+        float width = container != null ? container.rect.width : 0f;
+        if (width <= 1f && container?.parent is RectTransform rail)
+            width = rail.rect.width;
+        if (width <= 1f)
+            width = maximumRailWidth;
+        return cardPrefab != null
+            ? cardPrefab.EstimateRequestedCardHeight(
+                presentation,
+                StatRailSide.Left,
+                cardHeight,
+                width)
+            : cardHeight;
+    }
 
     private float GetAvailableRailHeight(RectTransform container)
     {
@@ -906,8 +896,6 @@ public class WideStatRailManager : MonoBehaviour
 
     private void HandleLayoutPriorityChanged(PerformanceStatSource source)
     {
-        if (equipmentGroups.Any(group => group != null && group.Contains(source)))
-            return;
         RebuildLayout();
     }
 
@@ -925,13 +913,6 @@ public class WideStatRailManager : MonoBehaviour
             }
         }
 
-        equipmentGroups = UnityEngine.Object.FindObjectsByType<TelemetryEquipmentGroup>(
-            FindObjectsInactive.Exclude);
-        foreach (TelemetryEquipmentGroup group in equipmentGroups)
-        {
-            group.PresentationChanged -= RebuildLayout;
-            group.PresentationChanged += RebuildLayout;
-        }
     }
 
     private void UnsubscribeFromSources()
@@ -948,12 +929,6 @@ public class WideStatRailManager : MonoBehaviour
             }
         }
 
-        foreach (TelemetryEquipmentGroup group in equipmentGroups)
-        {
-            if (group != null)
-                group.PresentationChanged -= RebuildLayout;
-        }
-        equipmentGroups = Array.Empty<TelemetryEquipmentGroup>();
     }
 
     private void ClearGeneratedCards()
@@ -999,7 +974,7 @@ public class WideStatRailManager : MonoBehaviour
         public readonly TelemetryCardPresentation Presentation;
         public readonly PerformanceStatCardView Card;
         public readonly RectTransform RectTransform;
-        public readonly float Height;
+        public float Height;
 
         public float TargetY;
         public float CurrentVelocity;
@@ -1037,20 +1012,4 @@ public class WideStatRailManager : MonoBehaviour
         }
     }
 
-    private sealed class RailWidthState
-    {
-        public float BaseWidth;
-        public float CurrentScale = 1f;
-        public float TargetScale = 1f;
-        public float Velocity;
-        public float LastExpansionRequestTime;
-
-        public void Initialise(float width)
-        {
-            if (BaseWidth > 0f)
-                return;
-            BaseWidth = width;
-            LastExpansionRequestTime = Time.unscaledTime;
-        }
-    }
 }

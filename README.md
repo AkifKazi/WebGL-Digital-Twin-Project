@@ -5,7 +5,7 @@ An interactive Unity WebGL digital-twin prototype for industrial and constructio
 The project supports:
 
 - responsive wide and portrait telemetry rails;
-- grouped sensor cards and world-space leader lines;
+- one sensor per card with world-space leader lines;
 - Good, Uncertain, Bad, and Stale data states;
 - automatic warning and critical thresholds;
 - simulation and live JSON input;
@@ -36,14 +36,14 @@ Use **FULL BODY** and **CROSS SECTION** to change views. Drag to orbit and scrol
 The runtime is split conceptually into three areas:
 
 - **Reusable platform:** telemetry contracts, source discovery, registry, data quality, alarms, cards, leader lines, responsive layouts, connection health, camera interaction, and JSON ingestion.
-- **Machine definition:** model prefab, sensor anchors, IDs, labels, units, thresholds, display priorities, and equipment groups.
+- **Machine definition:** model prefab, sensor anchors, IDs, labels, units, thresholds, and display priorities.
 - **Machine-specific behavior:** the hopper simulator, material flow, conveyor behavior, separator vibration, and cross-section implementation.
 
 `TelemetryOperatingModeController` depends on the generic `ITelemetrySimulationProvider` contract rather than the hopper class. `HopperProcessSimulator` is one implementation and can be replaced by a simulator for another type of equipment.
 
 `DigitalTwinSceneSetup` is machine-agnostic. It reads the single
 `DigitalTwinMachineConfiguration` marked **Default** and materializes that machine's
-sensors, hierarchy categories, engineering limits, anchor positions, and equipment groups.
+sensors, hierarchy categories, engineering limits, and anchor positions.
 The current feeder-specific simulator and particle setup live in
 `VibratoryFeederSceneConfigurator`, outside the central setup script.
 
@@ -58,9 +58,9 @@ This is the intended authoring demonstration; it does not add a second productio
 1. Import an optimized construction-machine model and create a root prefab.
 2. Create a `DigitalTwinMachineConfiguration` asset.
 3. Add sensor IDs, labels, units, formats, alarm limits, categories, anchor positions, priorities, and stale timeouts to that asset.
-4. Add equipment-group definitions only for nearby measurements belonging to the same physical component.
-5. Mark exactly one machine configuration as **Default**.
-6. Run **Tools > Digital Twin > Set Up Sensors And Flow Controls** to materialize the configured anchors.
+4. Mark exactly one machine configuration as **Default**.
+5. Run **Tools > Digital Twin > Set Up Sensors And Flow Controls** to materialize the configured anchors.
+6. Place the model and sensor anchors, then assign the full/cross-section model references manually.
 7. Leave source selection on **Scene Discovery** so the registry and both layouts use the generated sensors automatically.
 8. Add an optional machine-specific editor configurator and simulator only for genuine physical behavior.
 9. Send test readings using the canonical JSON contract.

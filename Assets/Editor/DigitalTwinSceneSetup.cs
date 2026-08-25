@@ -59,7 +59,7 @@ public static class DigitalTwinSceneSetup
 
         AssignSourcesToAll<WideStatRailManager>(orderedSources);
         AssignSourcesToAll<PortraitStatRailManager>(orderedSources);
-        ConfigurePresentationGroups(configuration, orderedSources);
+        RemoveLegacyPresentationGroups();
         ConfigureRegistry(orderedSources);
         ConfigureLiveDataAndMachineBehavior(configuration);
 
@@ -77,7 +77,9 @@ public static class DigitalTwinSceneSetup
     public static void ApplyCurrentPhase()
     {
         SetUpScene();
+        MachineViewRuntimeSetup.Apply();
         ConnectionHealthUISetup.Apply();
+        PortraitPaginationUISetup.Apply();
         DigitalTwinSceneOrganization.Apply();
         DigitalTwinProjectValidator.Validate();
     }
@@ -198,59 +200,16 @@ public static class DigitalTwinSceneSetup
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
-    private static void ConfigurePresentationGroups(
-        DigitalTwinMachineConfiguration configuration,
-        IReadOnlyList<PerformanceStatSource> sources)
+    private static void RemoveLegacyPresentationGroups()
     {
-        Transform digitalTwin = UnityEngine.Object
-            .FindObjectsByType<Transform>(FindObjectsInactive.Include)
-            .FirstOrDefault(candidate => candidate.name == "Digital Twin");
-        GameObject groupRootObject = GetOrCreateRenamedRoot(
-            "Presentation Groups",
-            "Telemetry Presentation Groups");
-        if (digitalTwin != null)
-            groupRootObject.transform.SetParent(digitalTwin, true);
-
-        Dictionary<string, PerformanceStatSource> sourcesById = sources.ToDictionary(
-            source => source.StatId,
-            StringComparer.OrdinalIgnoreCase);
-        HashSet<GameObject> configuredGroups = new();
-
-        foreach (MachineEquipmentGroupDefinition definition in configuration.equipmentGroups)
+        foreach (Transform candidate in UnityEngine.Object
+                     .FindObjectsByType<Transform>(FindObjectsInactive.Include))
         {
-            Transform groupTransform = groupRootObject.transform.Find(definition.objectName);
-            if (groupTransform == null)
+            if (candidate.name == "Presentation Groups" ||
+                candidate.name == "Telemetry Presentation Groups")
             {
-                groupTransform = new GameObject(definition.objectName).transform;
-                groupTransform.SetParent(groupRootObject.transform, false);
+                UnityEngine.Object.DestroyImmediate(candidate.gameObject);
             }
-
-            groupTransform.localPosition = definition.localPosition;
-            configuredGroups.Add(groupTransform.gameObject);
-            TelemetryEquipmentGroup group =
-                groupTransform.GetComponent<TelemetryEquipmentGroup>() ??
-                groupTransform.gameObject.AddComponent<TelemetryEquipmentGroup>();
-            PerformanceStatSource[] members = definition.memberSensorIds
-                .Where(sourcesById.ContainsKey)
-                .Select(id => sourcesById[id])
-                .ToArray();
-
-            SerializedObject serialized = new(group);
-            Set(serialized, "groupId", definition.groupId);
-            Set(serialized, "displayName", definition.displayName);
-            serialized.FindProperty("worldAnchor").objectReferenceValue = groupTransform;
-            SetObjectArray(serialized.FindProperty("members"), members);
-            Set(serialized, "maximumMemberDistance", definition.maximumMemberDistance);
-            Set(serialized, "maximumVisibleMetrics", definition.maximumVisibleMetrics);
-            Set(serialized, "regroupStableSeconds", definition.regroupStableSeconds);
-            serialized.ApplyModifiedPropertiesWithoutUndo();
-        }
-
-        foreach (TelemetryEquipmentGroup group in groupRootObject
-                     .GetComponentsInChildren<TelemetryEquipmentGroup>(true))
-        {
-            if (!configuredGroups.Contains(group.gameObject))
-                UnityEngine.Object.DestroyImmediate(group.gameObject);
         }
     }
 

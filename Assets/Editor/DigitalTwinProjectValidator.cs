@@ -7,6 +7,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public static class DigitalTwinProjectValidator
 {
@@ -54,7 +55,9 @@ public static class DigitalTwinProjectValidator
         ValidateManagerSources<WideStatRailManager>(sources, result);
         ValidateManagerSources<PortraitStatRailManager>(sources, result);
         ValidateOverflowRails(result);
-        ValidateEquipmentGroups(sources, result);
+        ValidatePortraitPagination(result);
+        ValidateSharedMachineViewController(result);
+        ValidateNoTelemetryGrouping(result);
         ValidateParticleController(result);
         ValidateCamera(result);
         ValidateAdaptiveQuality(result);
@@ -252,21 +255,6 @@ public static class DigitalTwinProjectValidator
                 $"'{configuration.machineId}'.");
         }
 
-        HashSet<string> groupIds = new(StringComparer.OrdinalIgnoreCase);
-        foreach (MachineEquipmentGroupDefinition group in configuration.equipmentGroups)
-        {
-            if (string.IsNullOrWhiteSpace(group.groupId) || !groupIds.Add(group.groupId))
-                result.Errors.Add("Machine equipment groups require unique stable IDs.");
-            foreach (string memberId in group.memberSensorIds)
-            {
-                if (!configuredIds.Contains(memberId))
-                {
-                    result.Errors.Add(
-                        $"Equipment group '{group.groupId}' references unknown sensor '{memberId}'.");
-                }
-            }
-        }
-
         try
         {
             DigitalTwinMachineConfigurationLoader.CreateSceneConfigurator(configuration);
@@ -305,13 +293,18 @@ public static class DigitalTwinProjectValidator
         PerformanceStatSource[] sources,
         ValidationResult result)
     {
-        TelemetryRegistry registry = UnityEngine.Object.FindFirstObjectByType<TelemetryRegistry>(
-            FindObjectsInactive.Include);
-        if (registry == null)
+        TelemetryRegistry[] registries = UnityEngine.Object.FindObjectsByType<TelemetryRegistry>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        if (registries.Length == 0)
         {
             result.Errors.Add("Telemetry Registry is missing.");
             return;
         }
+        if (registries.Length != 1)
+            result.Errors.Add($"Exactly one Telemetry Registry is required; found {registries.Length}.");
+
+        TelemetryRegistry registry = registries[0];
 
         registry.RebuildIndex();
         HashSet<PerformanceStatSource> registered = new(registry.Sources.Where(source => source != null));
@@ -407,6 +400,64 @@ public static class DigitalTwinProjectValidator
             new[] { "innerTopCardContainer", "innerBottomCardContainer" }, result);
     }
 
+    private static void ValidatePortraitPagination(ValidationResult result)
+    {
+        PortraitTelemetryPager[] pagers = UnityEngine.Object.FindObjectsByType<PortraitTelemetryPager>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        if (pagers.Length != 1)
+        {
+            result.Errors.Add($"Expected one portrait telemetry pager; found {pagers.Length}.");
+            return;
+        }
+
+        PortraitTelemetryPager pager = pagers[0];
+        if (pager.RailManager == null || pager.PreviousButton == null || pager.NextButton == null)
+            result.Errors.Add("Portrait telemetry pager has incomplete references.");
+        if (!Mathf.Approximately(pager.AvailabilityFadeDuration, 0.3f))
+            result.Errors.Add("Portrait telemetry pager fade duration must be 0.3 seconds.");
+
+        RectTransform row = pager.GetComponent<RectTransform>();
+        if (row == null ||
+            !Approximately(row.sizeDelta, new Vector2(524.6f, 68f)) ||
+            !Approximately(row.localScale, Vector3.one * 1.5f))
+        {
+            result.Errors.Add(
+                "Portrait pagination and zoom must match the view-mode control's 524.6 x 68 size and 1.5 scale.");
+        }
+
+        ValidatePaginationButton(pager.PreviousButton, "previous", result);
+        ValidatePaginationButton(pager.NextButton, "next", result);
+    }
+
+    private static void ValidateSharedMachineViewController(ValidationResult result)
+    {
+        HybridHopperClipController[] controllers = UnityEngine.Object
+            .FindObjectsByType<HybridHopperClipController>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+        if (controllers.Length != 1)
+        {
+            result.Errors.Add(
+                $"Wide and portrait UI must share one machine view controller; found {controllers.Length}.");
+            return;
+        }
+
+        HybridHopperClipController shared = controllers[0];
+        if (!shared.enabled)
+            result.Errors.Add("The shared machine view controller is disabled.");
+
+        foreach (ViewModeSegmentedControl control in UnityEngine.Object
+                     .FindObjectsByType<ViewModeSegmentedControl>(
+                         FindObjectsInactive.Include,
+                         FindObjectsSortMode.None))
+        {
+            SerializedProperty reference = new SerializedObject(control).FindProperty("hopperController");
+            if (reference?.objectReferenceValue != shared)
+                result.Errors.Add($"View control '{GetPath(control.transform)}' is not using the shared controller.");
+        }
+    }
+
     private static void ValidateRailReferences<T>(string[] propertyNames, ValidationResult result)
         where T : MonoBehaviour
     {
@@ -422,38 +473,17 @@ public static class DigitalTwinProjectValidator
         }
     }
 
-    private static void ValidateEquipmentGroups(
-        PerformanceStatSource[] sources,
-        ValidationResult result)
+    private static void ValidateNoTelemetryGrouping(ValidationResult result)
     {
-        TelemetryEquipmentGroup[] groups = UnityEngine.Object.FindObjectsByType<TelemetryEquipmentGroup>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
-        HashSet<PerformanceStatSource> knownSources = new(sources);
-        HashSet<PerformanceStatSource> assigned = new();
-
-        foreach (TelemetryEquipmentGroup group in groups)
+        foreach (Transform candidate in UnityEngine.Object.FindObjectsByType<Transform>(
+                     FindObjectsInactive.Include,
+                     FindObjectsSortMode.None))
         {
-            if (string.IsNullOrWhiteSpace(group.GroupId))
-                result.Errors.Add($"Equipment group '{group.name}' has no stable group ID.");
-
-            foreach (PerformanceStatSource member in group.Members)
+            if (candidate.name == "Presentation Groups" ||
+                candidate.name == "Telemetry Presentation Groups")
             {
-                if (member == null)
-                {
-                    result.Errors.Add($"Equipment group '{group.name}' has a missing member reference.");
-                    continue;
-                }
-                if (!knownSources.Contains(member))
-                    result.Errors.Add($"Equipment group '{group.name}' references an unregistered sensor.");
-                if (!assigned.Add(member))
-                    result.Errors.Add($"Sensor '{member.StatId}' belongs to more than one presentation group.");
-                if (Vector3.Distance(member.WorldAnchor.position, group.WorldAnchor.position) >
-                    group.MaximumMemberDistance)
-                {
-                    result.Warnings.Add(
-                        $"Sensor '{member.StatId}' is farther from '{group.GroupId}' than its grouping limit.");
-                }
+                result.Errors.Add(
+                    $"Legacy telemetry grouping object '{candidate.name}' must be removed.");
             }
         }
     }
@@ -497,7 +527,61 @@ public static class DigitalTwinProjectValidator
             FindObjectsSortMode.None);
         if (views.Length != 2)
             result.Errors.Add($"Expected wide and portrait connection-health views; found {views.Length}.");
+
+        ConnectionHealthView portrait = views.FirstOrDefault(view =>
+            GetPath(view.transform).Contains("/Portrait layout/", StringComparison.Ordinal));
+        if (portrait == null)
+        {
+            result.Errors.Add("Portrait connection-health view is missing.");
+            return;
+        }
+
+        Transform[] fields = portrait.GetComponentsInChildren<Transform>(true);
+        foreach (string hidden in new[] { "MODE", "DATA QUALITY" })
+        {
+            Transform field = fields.FirstOrDefault(candidate => candidate.name == hidden);
+            if (field != null && field.gameObject.activeSelf)
+                result.Errors.Add($"Portrait top bar must not show '{hidden}'.");
+        }
+        foreach (string required in new[] { "GATEWAY", "LAST UPDATE" })
+        {
+            Transform field = fields.FirstOrDefault(candidate => candidate.name == required);
+            if (field == null || !field.gameObject.activeSelf)
+                result.Errors.Add($"Portrait top bar must show '{required}'.");
+        }
     }
+
+    private static void ValidatePaginationButton(
+        Button button,
+        string direction,
+        ValidationResult result)
+    {
+        if (button == null)
+            return;
+
+        Image image = button.targetGraphic as Image;
+        string normalPath = image != null ? AssetDatabase.GetAssetPath(image.sprite) : string.Empty;
+        string pressedPath = AssetDatabase.GetAssetPath(button.spriteState.pressedSprite);
+        if (button.transition != Selectable.Transition.SpriteSwap ||
+            normalPath != "Assets/UI/Sprites/Panel Background.png" ||
+            pressedPath != "Assets/UI/Sprites/Compact Button Background.png")
+        {
+            result.Errors.Add(
+                $"Portrait {direction}-page button must use the panel background at rest and compact background when pressed.");
+        }
+
+        RectTransform rect = button.transform as RectTransform;
+        if (rect == null || !Approximately(rect.sizeDelta, new Vector2(153.3f, 68f)))
+            result.Errors.Add($"Portrait {direction}-page button must be 153.3 x 68.");
+    }
+
+    private static bool Approximately(Vector2 first, Vector2 second) =>
+        Mathf.Approximately(first.x, second.x) && Mathf.Approximately(first.y, second.y);
+
+    private static bool Approximately(Vector3 first, Vector3 second) =>
+        Mathf.Approximately(first.x, second.x) &&
+        Mathf.Approximately(first.y, second.y) &&
+        Mathf.Approximately(first.z, second.z);
 
     private static Transform FindTransform(string objectName) =>
         UnityEngine.Object.FindObjectsByType<Transform>(

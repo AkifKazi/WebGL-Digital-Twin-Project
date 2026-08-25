@@ -142,7 +142,6 @@ public static class ProjectAssetOrganization
         ("Assets/Scripts/SafeAreaFitter.cs", "Assets/Scripts/Runtime/SafeAreaFitter.cs"),
         ("Assets/Scripts/StatLeaderLineView.cs", "Assets/Scripts/Runtime/StatLeaderLineView.cs"),
         ("Assets/Scripts/TMPOverflowScroller.cs", "Assets/Scripts/Runtime/TMPOverflowScroller.cs"),
-        ("Assets/Scripts/TelemetryEquipmentGroup.cs", "Assets/Scripts/Runtime/TelemetryEquipmentGroup.cs"),
         ("Assets/Scripts/TelemetryJsonIngestor.cs", "Assets/Scripts/Runtime/TelemetryJsonIngestor.cs"),
         ("Assets/Scripts/TelemetryOperatingModeController.cs", "Assets/Scripts/Runtime/TelemetryOperatingModeController.cs"),
         ("Assets/Scripts/TelemetryReading.cs", "Assets/Scripts/Runtime/TelemetryReading.cs"),

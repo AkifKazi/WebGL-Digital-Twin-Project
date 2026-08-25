@@ -49,7 +49,7 @@ MonoBehaviour:
     warningAbove: 17
     criticalAbove: 20
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 1.278, z: 1.963}
+    localPosition: {x: 0, y: 1.278, z: 2}
     wideRail: 0
     portraitRail: 0
     displayPriority: 30
@@ -103,7 +103,7 @@ MonoBehaviour:
     warningAbove: 7.1
     criticalAbove: 11
     staleAfterSeconds: 5
-    localPosition: {x: 0.16, y: 0.82, z: 0.08}
+    localPosition: {x: 0, y: 0.82, z: 0}
     wideRail: 2
     portraitRail: 2
     displayPriority: 100
@@ -121,7 +121,7 @@ MonoBehaviour:
     warningAbove: 21
     criticalAbove: 23
     staleAfterSeconds: 5
-    localPosition: {x: -0.16, y: 0.61, z: 0.08}
+    localPosition: {x: 0, y: 0.61, z: 0}
     wideRail: 1
     portraitRail: 2
     displayPriority: 60
@@ -139,7 +139,7 @@ MonoBehaviour:
     warningAbove: 42
     criticalAbove: 48
     staleAfterSeconds: 5
-    localPosition: {x: 0.18, y: 0.58, z: -0.08}
+    localPosition: {x: 0, y: 0.58, z: 0}
     wideRail: 2
     portraitRail: 2
     displayPriority: 50
@@ -157,7 +157,7 @@ MonoBehaviour:
     warningAbove: 85
     criticalAbove: 95
     staleAfterSeconds: 5
-    localPosition: {x: -0.2, y: 2.05, z: 0.25}
+    localPosition: {x: 0, y: 2.05, z: 0}
     wideRail: 1
     portraitRail: 1
     displayPriority: 90
@@ -175,7 +175,7 @@ MonoBehaviour:
     warningAbove: 75
     criticalAbove: 90
     staleAfterSeconds: 5
-    localPosition: {x: 0.14, y: 0.79, z: 0.06}
+    localPosition: {x: 0, y: 0.79, z: 0}
     wideRail: 2
     portraitRail: 2
     displayPriority: 85
@@ -193,7 +193,7 @@ MonoBehaviour:
     warningAbove: 51
     criticalAbove: 53
     staleAfterSeconds: 5
-    localPosition: {x: -0.1, y: 0.65, z: 0.04}
+    localPosition: {x: 0, y: 0.65, z: 0}
     wideRail: 1
     portraitRail: 2
     displayPriority: 45
@@ -211,7 +211,7 @@ MonoBehaviour:
     warningAbove: 90
     criticalAbove: 100
     staleAfterSeconds: 5
-    localPosition: {x: 0.08, y: 0.63, z: -0.05}
+    localPosition: {x: 0, y: 0.63, z: 0}
     wideRail: 2
     portraitRail: 2
     displayPriority: 65
@@ -229,7 +229,7 @@ MonoBehaviour:
     warningAbove: 1
     criticalAbove: 1.15
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.38, z: 1.72}
+    localPosition: {x: 0, y: 0.38, z: -2}
     wideRail: 1
     portraitRail: 0
     displayPriority: 35
@@ -247,7 +247,7 @@ MonoBehaviour:
     warningAbove: 108.8
     criticalAbove: 121.6
     staleAfterSeconds: 5
-    localPosition: {x: 0.2, y: 2.04, z: 0.2}
+    localPosition: {x: 0, y: 2.04, z: 0}
     wideRail: 2
     portraitRail: 1
     displayPriority: 75
@@ -265,7 +265,7 @@ MonoBehaviour:
     warningAbove: 10
     criticalAbove: 14
     staleAfterSeconds: 5
-    localPosition: {x: -0.34, y: 2.18, z: 0.38}
+    localPosition: {x: 0, y: 2.18, z: 0}
     wideRail: 1
     portraitRail: 1
     displayPriority: 58
@@ -283,7 +283,7 @@ MonoBehaviour:
     warningAbove: 45
     criticalAbove: 55
     staleAfterSeconds: 5
-    localPosition: {x: 0.34, y: 2.2, z: 0.34}
+    localPosition: {x: 0, y: 2.2, z: 0}
     wideRail: 2
     portraitRail: 1
     displayPriority: 52
@@ -301,7 +301,7 @@ MonoBehaviour:
     warningAbove: 8
     criticalAbove: 15
     staleAfterSeconds: 5
-    localPosition: {x: -0.52, y: 1.45, z: 0.1}
+    localPosition: {x: 0, y: 1.45, z: 0}
     wideRail: 1
     portraitRail: 1
     displayPriority: 82
@@ -319,7 +319,7 @@ MonoBehaviour:
     warningAbove: 95
     criticalAbove: 99
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 1.22, z: 0.18}
+    localPosition: {x: 0, y: 1.22, z: 0}
     wideRail: 2
     portraitRail: 1
     displayPriority: 68
@@ -337,7 +337,7 @@ MonoBehaviour:
     warningAbove: 22
     criticalAbove: 25
     staleAfterSeconds: 5
-    localPosition: {x: -0.38, y: 0.42, z: 1.46}
+    localPosition: {x: 0, y: 0.42, z: 2}
     wideRail: 1
     portraitRail: 2
     displayPriority: 73
@@ -355,7 +355,7 @@ MonoBehaviour:
     warningAbove: 70
     criticalAbove: 85
     staleAfterSeconds: 5
-    localPosition: {x: 0.34, y: 0.43, z: 1.58}
+    localPosition: {x: 0, y: 0.43, z: 2}
     wideRail: 2
     portraitRail: 2
     displayPriority: 78
@@ -373,7 +373,7 @@ MonoBehaviour:
     warningAbove: 19
     criticalAbove: 23
     staleAfterSeconds: 5
-    localPosition: {x: 0.42, y: 0.48, z: 1.28}
+    localPosition: {x: 0, y: 0.48, z: 2}
     wideRail: 2
     portraitRail: 2
     displayPriority: 62
@@ -391,7 +391,7 @@ MonoBehaviour:
     warningAbove: 4
     criticalAbove: 7
     staleAfterSeconds: 5
-    localPosition: {x: -0.18, y: 0.38, z: 1.9}
+    localPosition: {x: 0, y: 0.38, z: -2}
     wideRail: 1
     portraitRail: 2
     displayPriority: 88
@@ -409,7 +409,7 @@ MonoBehaviour:
     warningAbove: 4.5
     criticalAbove: 7.1
     staleAfterSeconds: 5
-    localPosition: {x: -0.72, y: 0.55, z: 0.05}
+    localPosition: {x: 0, y: 0.55, z: 0}
     wideRail: 1
     portraitRail: 2
     displayPriority: 76
@@ -427,7 +427,7 @@ MonoBehaviour:
     warningAbove: 40
     criticalAbove: 48
     staleAfterSeconds: 5
-    localPosition: {x: -1.05, y: 1.75, z: -0.3}
+    localPosition: {x: -2, y: 1.75, z: 0}
     wideRail: 1
     portraitRail: 1
     displayPriority: 20
@@ -445,7 +445,7 @@ MonoBehaviour:
     warningAbove: 75
     criticalAbove: 90
     staleAfterSeconds: 5
-    localPosition: {x: 1.05, y: 1.75, z: -0.3}
+    localPosition: {x: -2, y: 1.75, z: 0}
     wideRail: 2
     portraitRail: 1
     displayPriority: 18
@@ -463,7 +463,7 @@ MonoBehaviour:
     warningAbove: 420
     criticalAbove: 440
     staleAfterSeconds: 5
-    localPosition: {x: 0.58, y: 0.66, z: -0.42}
+    localPosition: {x: 0, y: 0.66, z: 0}
     wideRail: 2
     portraitRail: 2
     displayPriority: 66
@@ -481,24 +481,7 @@ MonoBehaviour:
     warningAbove: 1
     criticalAbove: 1
     staleAfterSeconds: 5
-    localPosition: {x: 0.62, y: 0.72, z: -0.38}
+    localPosition: {x: 0, y: 0.72, z: 0}
     wideRail: 2
     portraitRail: 2
     displayPriority: 54
-  equipmentGroups:
-  - groupId: VIB-01.DRIVE
-    objectName: Drive Motor
-    displayName: DRIVE MOTOR
-    localPosition: {x: 0, y: 0.7, z: 0}
-    memberSensorIds:
-    - VIB-01.MOTOR.TEMP
-    - VIB-01.MOTOR.SPEED
-    - VIB-01.BEARING.VEL_RMS
-    - VIB-01.MOTOR.POWER
-    - VIB-01.MOTOR.CURRENT
-    - VIB-01.BEARING.TEMP
-    - VIB-01.DRIVE.FREQUENCY
-    - VIB-01.MOTOR.LOAD
-    maximumMemberDistance: 0.75
-    maximumVisibleMetrics: 3
-    regroupStableSeconds: 12
