@@ -133,6 +133,10 @@ public class ViewModeSegmentedControl : MonoBehaviour
     [SerializeField, Min(0f)]
     private float minimumSegmentWidth = 90f;
 
+    [Tooltip("Logs the computed widths once per change. Diagnostic only.")]
+    [SerializeField]
+    private bool logSizing;
+
     private bool listenersAdded;
     private Vector2 lastReferenceSize = new(-1f, -1f);
 
@@ -190,8 +194,20 @@ public class ViewModeSegmentedControl : MonoBehaviour
         var rectTransform = (RectTransform)transform;
         var group = GetComponent<HorizontalLayoutGroup>();
 
-        float available = referenceSize.x - horizontalPadding * 2f;
-        float target = Mathf.Min(available, maximumWidth);
+        // The control may be scaled relative to the rect it is measured against,
+        // in which case its rect units are not screen units. Widths are worked
+        // out in screen units and converted back, so a scaled control fits the
+        // screen rather than overflowing it by its scale factor.
+        float scaleRatio = 1f;
+
+        if (Mathf.Abs(reference.lossyScale.x) > 0.0001f)
+            scaleRatio = rectTransform.lossyScale.x / reference.lossyScale.x;
+
+        if (Mathf.Abs(scaleRatio) < 0.0001f)
+            scaleRatio = 1f;
+
+        float availableOnScreen = referenceSize.x - horizontalPadding * 2f;
+        float target = Mathf.Min(availableOnScreen, maximumWidth) / scaleRatio;
 
         List<Button> segments = CollectSegments();
 
@@ -213,7 +229,12 @@ public class ViewModeSegmentedControl : MonoBehaviour
         LayoutElement element = GetComponent<LayoutElement>();
 
         if (element != null)
+        {
+            // An authored minimum larger than the space available would
+            // reintroduce the overflow this pass exists to prevent.
+            element.minWidth = Mathf.Min(element.minWidth, target);
             element.preferredWidth = target;
+        }
 
         // A parent that does not control child width leaves the rect to us.
         if (!ParentControlsWidth())
@@ -229,6 +250,15 @@ public class ViewModeSegmentedControl : MonoBehaviour
             segmentElement.minWidth = 0f;
             segmentElement.preferredWidth = perSegment;
             segmentElement.flexibleWidth = 1f;
+        }
+
+        if (logSizing)
+        {
+            Debug.Log($"SEGMENT-SIZING: ref={referenceSize.x:F0} target={target:F0} " +
+                      $"perSegment={perSegment:F0} rectAfter={rectTransform.rect.width:F0} " +
+                      $"ownMin={(element != null ? element.minWidth : -99f):F0} " +
+                      $"scale={scaleRatio:F2} onScreen={target * scaleRatio:F0} " +
+                      $"parentControls={ParentControlsWidth()}", this);
         }
     }
 
