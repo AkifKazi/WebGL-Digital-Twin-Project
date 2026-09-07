@@ -24,11 +24,11 @@ public class StatLeaderLineView : MonoBehaviour
     [SerializeField] private Color defaultColor = Color.cyan;
 
     [Header("Focus Presentation")]
-    [SerializeField, Range(0f, 1f)] private float restingLineOpacity = 0.4f;
+    [SerializeField, Range(0f, 1f)] private float restingLineOpacity = 0.025f;
     [Tooltip("Resting line opacity used when no secondary rail contains a card.")]
-    [SerializeField, Range(0f, 1f)] private float emptySecondaryRailsRestingOpacity = 0.8f;
-    [SerializeField, Range(0f, 1f)] private float restingAnchorOpacity = 0.8f;
-    [SerializeField, Min(0.05f)] private float focusToRestDuration = 1.5f;
+    [SerializeField, Range(0f, 1f)] private float emptySecondaryRailsRestingOpacity = 0.4f;
+    [SerializeField, Range(0f, 1f)] private float restingAnchorOpacity = 0.4f;
+    [SerializeField, Min(0.05f)] private float focusToRestDuration = 0.23f;
     [Tooltip("Fade duration when secondary-rail occupancy changes the resting line opacity.")]
     [SerializeField, Min(0.05f)] private float secondaryRailOpacityTransitionDuration = 1f;
 
@@ -56,6 +56,12 @@ public class StatLeaderLineView : MonoBehaviour
     private float fadeStartAnchorOpacity = 1f;
     private float activeRestingLineOpacity;
     private bool fadingToRest;
+    private CanvasGroup peerPresentationGroup;
+    private float peerPresentationAlpha = 1f;
+    private float peerPresentationStartAlpha = 1f;
+    private float peerPresentationTargetAlpha = 1f;
+    private float peerPresentationTransitionStartedAt;
+    private bool peerPresentationTransitioning;
 
     private static readonly int RevealDistanceId = Shader.PropertyToID("_RevealDistance");
     private static readonly int SegmentStartDistanceId = Shader.PropertyToID("_SegmentStartDistance");
@@ -85,6 +91,20 @@ public class StatLeaderLineView : MonoBehaviour
         ApplyAnchorAppearance();
     }
 
+    private void OnEnable()
+    {
+        PerformanceStatCardView.ActiveFocusChanged -= HandleActiveFocusChanged;
+        PerformanceStatCardView.ActiveFocusChanged += HandleActiveFocusChanged;
+        CachePeerPresentationGroup();
+        ApplyPeerPresentationInstant(ResolvePeerPresentationAlpha());
+    }
+
+    private void OnDisable()
+    {
+        PerformanceStatCardView.ActiveFocusChanged -= HandleActiveFocusChanged;
+        ApplyPeerPresentationInstant(1f);
+    }
+
     public void Bind(
         PerformanceStatSource newSource,
         PerformanceStatCardView newCard,
@@ -110,6 +130,7 @@ public class StatLeaderLineView : MonoBehaviour
         else
             SetPresentationOpacityInstant(activeRestingLineOpacity, restingAnchorOpacity);
         fadingToRest = false;
+        ApplyPeerPresentationInstant(ResolvePeerPresentationAlpha());
         CacheImages();
         CreateRuntimeMaterials();
         PrepareLinePart(horizontalSegment);
@@ -133,6 +154,7 @@ public class StatLeaderLineView : MonoBehaviour
 
     private void LateUpdate()
     {
+        UpdatePeerPresentation();
         UpdateFocusPresentation();
         UpdateLine();
     }
@@ -521,6 +543,82 @@ public class StatLeaderLineView : MonoBehaviour
         card != null && (card.VisualState == StatVisualState.Warning ||
                          card.VisualState == StatVisualState.Critical);
 
+    private void HandleActiveFocusChanged(PerformanceStatCardView activeCard)
+    {
+        BeginPeerPresentation(ResolvePeerPresentationAlpha());
+    }
+
+    private float ResolvePeerPresentationAlpha()
+    {
+        PerformanceStatCardView activeCard = PerformanceStatCardView.ActiveFocusedCard;
+        if (card == null || activeCard == null || activeCard == card || IsAlarmState())
+            return 1f;
+
+        return card.UnfocusedPeerOpacity;
+    }
+
+    private void BeginPeerPresentation(float target)
+    {
+        target = Mathf.Clamp01(target);
+        if (Mathf.Approximately(peerPresentationTargetAlpha, target) &&
+            (!peerPresentationTransitioning ||
+             Mathf.Approximately(peerPresentationAlpha, target)))
+        {
+            return;
+        }
+
+        peerPresentationStartAlpha = peerPresentationAlpha;
+        peerPresentationTargetAlpha = target;
+        peerPresentationTransitionStartedAt = Time.unscaledTime;
+        peerPresentationTransitioning = true;
+    }
+
+    private void UpdatePeerPresentation()
+    {
+        float resolvedTarget = ResolvePeerPresentationAlpha();
+        if (!Mathf.Approximately(resolvedTarget, peerPresentationTargetAlpha))
+            BeginPeerPresentation(resolvedTarget);
+
+        if (!peerPresentationTransitioning)
+            return;
+
+        float duration = card != null ? card.PeerFocusTransitionDuration : 0.23f;
+        float progress = Mathf.Clamp01(
+            (Time.unscaledTime - peerPresentationTransitionStartedAt) /
+            Mathf.Max(0.02f, duration));
+        float eased = Mathf.SmoothStep(0f, 1f, progress);
+        ApplyPeerPresentationAlpha(Mathf.Lerp(
+            peerPresentationStartAlpha,
+            peerPresentationTargetAlpha,
+            eased));
+
+        if (progress >= 1f)
+            peerPresentationTransitioning = false;
+    }
+
+    private void ApplyPeerPresentationInstant(float alpha)
+    {
+        peerPresentationAlpha = Mathf.Clamp01(alpha);
+        peerPresentationStartAlpha = peerPresentationAlpha;
+        peerPresentationTargetAlpha = peerPresentationAlpha;
+        peerPresentationTransitioning = false;
+        ApplyPeerPresentationAlpha(peerPresentationAlpha);
+    }
+
+    private void ApplyPeerPresentationAlpha(float alpha)
+    {
+        peerPresentationAlpha = Mathf.Clamp01(alpha);
+        CachePeerPresentationGroup();
+        if (peerPresentationGroup != null)
+            peerPresentationGroup.alpha = peerPresentationAlpha;
+    }
+
+    private void CachePeerPresentationGroup()
+    {
+        if (peerPresentationGroup == null)
+            peerPresentationGroup = GetComponent<CanvasGroup>();
+    }
+
     private bool ReferencesAreValid()
     {
         return source != null &&
@@ -564,6 +662,7 @@ public class StatLeaderLineView : MonoBehaviour
 
     private void OnDestroy()
     {
+        PerformanceStatCardView.ActiveFocusChanged -= HandleActiveFocusChanged;
         if (card != null)
             card.FocusChanged -= HandleCardFocusChanged;
         DestroyRuntimeMaterial(horizontalMaterialInstance);

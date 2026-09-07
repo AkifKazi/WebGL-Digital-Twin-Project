@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,26 +6,39 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
 {
     [Header("Pagination")]
     [SerializeField] private PortraitStatRailManager railManager;
+    [SerializeField] private WideStatRailManager wideRailManager;
+
+    [Header("Telemetry visibility")]
+    [Tooltip("Pagination is available only while telemetry is visible in Cross Section view.")]
+    [SerializeField] private HybridHopperClipController hopperController;
+    [Tooltip("Optional shared group used when pagination has its own standalone panel.")]
+    [SerializeField] private CanvasGroup paginationCanvasGroup;
 
     [Header("Previous page")]
     [SerializeField] private Button previousButton;
     [SerializeField] private CanvasGroup previousCanvasGroup;
+    [SerializeField] private Graphic previousIcon;
 
     [Header("Next page")]
     [SerializeField] private Button nextButton;
     [SerializeField] private CanvasGroup nextCanvasGroup;
+    [SerializeField] private Graphic nextIcon;
 
-    [Header("Transition")]
-    [SerializeField, Min(0.01f)] private float availabilityFadeDuration = 0.3f;
+    [Header("Availability colours")]
+    [SerializeField] private Color enabledIconColor = Color.white;
+    [SerializeField] private Color disabledIconColor = new(0.48f, 0.52f, 0.55f, 1f);
 
-    private Coroutine previousFade;
-    private Coroutine nextFade;
     private bool listenersAdded;
 
     public PortraitStatRailManager RailManager => railManager;
+    public WideStatRailManager WideRailManager => wideRailManager;
+    public HybridHopperClipController HopperController => hopperController;
+    public CanvasGroup PaginationCanvasGroup => paginationCanvasGroup;
     public Button PreviousButton => previousButton;
     public Button NextButton => nextButton;
-    public float AvailabilityFadeDuration => availabilityFadeDuration;
+    public Graphic PreviousIcon => previousIcon;
+    public Graphic NextIcon => nextIcon;
+    public bool HasExactlyOneRailManager => (railManager != null) != (wideRailManager != null);
 
     private void Awake()
     {
@@ -37,13 +49,12 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
     {
         AddButtonListeners();
         Subscribe();
-        Refresh(true);
+        Refresh();
     }
 
     private void OnDisable()
     {
         Unsubscribe();
-        StopFades();
     }
 
     private void OnDestroy()
@@ -74,113 +85,121 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
 
     private void Subscribe()
     {
-        if (railManager == null)
-            return;
+        if (railManager != null)
+        {
+            railManager.PaginationChanged -= HandlePaginationChanged;
+            railManager.PaginationChanged += HandlePaginationChanged;
+        }
 
-        railManager.PaginationChanged -= HandlePaginationChanged;
-        railManager.PaginationChanged += HandlePaginationChanged;
+        if (wideRailManager != null)
+        {
+            wideRailManager.PaginationChanged -= HandlePaginationChanged;
+            wideRailManager.PaginationChanged += HandlePaginationChanged;
+        }
+
+        if (hopperController != null)
+        {
+            hopperController.ViewStateChanged -= HandleViewStateChanged;
+            hopperController.ViewStateChanged += HandleViewStateChanged;
+        }
     }
 
     private void Unsubscribe()
     {
         if (railManager != null)
             railManager.PaginationChanged -= HandlePaginationChanged;
+        if (wideRailManager != null)
+            wideRailManager.PaginationChanged -= HandlePaginationChanged;
+        if (hopperController != null)
+            hopperController.ViewStateChanged -= HandleViewStateChanged;
     }
 
     private void ShowPreviousPage()
     {
-        railManager?.ShowPreviousPage();
+        if (railManager != null)
+            railManager.ShowPreviousPage();
+        else
+            wideRailManager?.ShowPreviousPage();
     }
 
     private void ShowNextPage()
     {
-        railManager?.ShowNextPage();
+        if (railManager != null)
+            railManager.ShowNextPage();
+        else
+            wideRailManager?.ShowNextPage();
     }
 
     private void HandlePaginationChanged(int currentPageIndex, int pageCount)
     {
-        Refresh(false);
+        Refresh();
     }
 
-    private void Refresh(bool instant)
+    private void HandleViewStateChanged(bool isCrossSection)
     {
-        bool canGoBack = railManager != null && railManager.CanShowPreviousPage;
-        bool canGoForward = railManager != null && railManager.CanShowNextPage;
-
-        ApplyAvailability(previousButton, previousCanvasGroup, canGoBack, instant, true);
-        ApplyAvailability(nextButton, nextCanvasGroup, canGoForward, instant, false);
+        Refresh();
     }
+
+    private void Refresh()
+    {
+        bool telemetryVisible = hopperController != null && hopperController.IsCrossSection;
+        bool paginationVisible = telemetryVisible && PageCount > 1;
+        bool canGoBack = paginationVisible && CanShowPreviousPage;
+        bool canGoForward = paginationVisible && CanShowNextPage;
+
+        if (paginationCanvasGroup != null)
+        {
+            paginationCanvasGroup.alpha = paginationVisible ? 1f : 0f;
+            paginationCanvasGroup.interactable = paginationVisible;
+            paginationCanvasGroup.blocksRaycasts = paginationVisible;
+        }
+
+        ApplyAvailability(
+            previousButton,
+            previousCanvasGroup,
+            previousIcon,
+            paginationVisible,
+            canGoBack);
+        ApplyAvailability(
+            nextButton,
+            nextCanvasGroup,
+            nextIcon,
+            paginationVisible,
+            canGoForward);
+    }
+
+    private int PageCount => railManager != null
+        ? railManager.PageCount
+        : wideRailManager != null ? wideRailManager.PageCount : 1;
+
+    private bool CanShowPreviousPage => railManager != null
+        ? railManager.CanShowPreviousPage
+        : wideRailManager != null && wideRailManager.CanShowPreviousPage;
+
+    private bool CanShowNextPage => railManager != null
+        ? railManager.CanShowNextPage
+        : wideRailManager != null && wideRailManager.CanShowNextPage;
 
     private void ApplyAvailability(
         Button button,
         CanvasGroup group,
-        bool available,
-        bool instant,
-        bool previous)
+        Graphic icon,
+        bool telemetryVisible,
+        bool available)
     {
         if (button != null)
-            button.interactable = available;
+            button.interactable = telemetryVisible && available;
+
+        if (icon != null)
+            icon.color = available ? enabledIconColor : disabledIconColor;
 
         if (group == null)
             return;
 
-        group.blocksRaycasts = available;
-        group.interactable = available;
-
-        Coroutine active = previous ? previousFade : nextFade;
-        if (active != null)
-            StopCoroutine(active);
-
-        if (instant || !isActiveAndEnabled)
-        {
-            group.alpha = available ? 1f : 0f;
-            if (previous)
-                previousFade = null;
-            else
-                nextFade = null;
-            return;
-        }
-
-        Coroutine fade = StartCoroutine(FadeTo(group, available ? 1f : 0f, previous));
-        if (previous)
-            previousFade = fade;
-        else
-            nextFade = fade;
+        bool individuallyVisible = paginationCanvasGroup != null || telemetryVisible;
+        group.alpha = individuallyVisible ? 1f : 0f;
+        group.blocksRaycasts = telemetryVisible;
+        group.interactable = telemetryVisible;
     }
 
-    private IEnumerator FadeTo(CanvasGroup group, float target, bool previous)
-    {
-        float start = group.alpha;
-        float elapsed = 0f;
-
-        while (elapsed < availabilityFadeDuration)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            group.alpha = Mathf.Lerp(start, target, Mathf.Clamp01(elapsed / availabilityFadeDuration));
-            yield return null;
-        }
-
-        group.alpha = target;
-        if (previous)
-            previousFade = null;
-        else
-            nextFade = null;
-    }
-
-    private void StopFades()
-    {
-        if (previousFade != null)
-            StopCoroutine(previousFade);
-        if (nextFade != null)
-            StopCoroutine(nextFade);
-        previousFade = null;
-        nextFade = null;
-    }
-
-#if UNITY_EDITOR
-    private void OnValidate()
-    {
-        availabilityFadeDuration = Mathf.Max(0.01f, availabilityFadeDuration);
-    }
-#endif
 }

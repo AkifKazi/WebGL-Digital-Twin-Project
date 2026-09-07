@@ -405,29 +405,56 @@ public static class DigitalTwinProjectValidator
         PortraitTelemetryPager[] pagers = UnityEngine.Object.FindObjectsByType<PortraitTelemetryPager>(
             FindObjectsInactive.Include,
             FindObjectsSortMode.None);
-        if (pagers.Length != 1)
+        if (pagers.Length != 2)
         {
-            result.Errors.Add($"Expected one portrait telemetry pager; found {pagers.Length}.");
+            result.Errors.Add($"Expected portrait and wide telemetry pagers; found {pagers.Length}.");
             return;
         }
 
-        PortraitTelemetryPager pager = pagers[0];
-        if (pager.RailManager == null || pager.PreviousButton == null || pager.NextButton == null)
-            result.Errors.Add("Portrait telemetry pager has incomplete references.");
-        if (!Mathf.Approximately(pager.AvailabilityFadeDuration, 0.3f))
-            result.Errors.Add("Portrait telemetry pager fade duration must be 0.3 seconds.");
-
-        RectTransform row = pager.GetComponent<RectTransform>();
-        if (row == null ||
-            !Approximately(row.sizeDelta, new Vector2(524.6f, 68f)) ||
-            !Approximately(row.localScale, Vector3.one * 1.5f))
+        foreach (PortraitTelemetryPager pager in pagers)
         {
-            result.Errors.Add(
-                "Portrait pagination and zoom must match the view-mode control's 524.6 x 68 size and 1.5 scale.");
-        }
+            string path = GetPath(pager.transform);
+            if (!pager.HasExactlyOneRailManager || pager.HopperController == null ||
+                pager.PreviousButton == null || pager.NextButton == null ||
+                pager.PreviousIcon == null || pager.NextIcon == null)
+            {
+                result.Errors.Add($"Telemetry pager '{path}' has incomplete references.");
+            }
+            RectTransform row = pager.GetComponent<RectTransform>();
+            if (pager.RailManager != null)
+            {
+                RectTransform bottomControls = row?.parent as RectTransform;
+                RectTransform viewControls = bottomControls?
+                    .GetComponentsInChildren<ViewModeSegmentedControl>(true)
+                    .Select(control => control.transform as RectTransform)
+                    .FirstOrDefault();
+                if (row == null || viewControls == null ||
+                    !Approximately(row.sizeDelta, viewControls.sizeDelta) ||
+                    !Approximately(row.localScale, viewControls.localScale))
+                {
+                    result.Errors.Add(
+                        $"Portrait telemetry pager '{path}' must match its view-mode control.");
+                }
 
-        ValidatePaginationButton(pager.PreviousButton, "previous", result);
-        ValidatePaginationButton(pager.NextButton, "next", result);
+                HorizontalLayoutGroup rowLayout = pager.GetComponent<HorizontalLayoutGroup>();
+                if (rowLayout == null || !Mathf.Approximately(rowLayout.spacing, 26f) ||
+                    !rowLayout.childControlWidth)
+                {
+                    result.Errors.Add(
+                        $"Portrait pager '{path}' must retain 26 spacing and flexible arrows.");
+                }
+            }
+            else if (pager.PaginationCanvasGroup == null || row?.parent?.name != "Top bar" ||
+                     !Mathf.Approximately(row.anchorMin.x, 1f) ||
+                     !Mathf.Approximately(row.pivot.x, 1f))
+            {
+                result.Errors.Add(
+                    $"Wide pager '{path}' must be a standalone, right-anchored top-bar control.");
+            }
+
+            ValidatePaginationButton(pager.PreviousButton, "previous", result);
+            ValidatePaginationButton(pager.NextButton, "next", result);
+        }
     }
 
     private static void ValidateSharedMachineViewController(ValidationResult result)
@@ -525,30 +552,9 @@ public static class DigitalTwinProjectValidator
         ConnectionHealthView[] views = UnityEngine.Object.FindObjectsByType<ConnectionHealthView>(
             FindObjectsInactive.Include,
             FindObjectsSortMode.None);
-        if (views.Length != 2)
-            result.Errors.Add($"Expected wide and portrait connection-health views; found {views.Length}.");
-
-        ConnectionHealthView portrait = views.FirstOrDefault(view =>
-            GetPath(view.transform).Contains("/Portrait layout/", StringComparison.Ordinal));
-        if (portrait == null)
-        {
-            result.Errors.Add("Portrait connection-health view is missing.");
-            return;
-        }
-
-        Transform[] fields = portrait.GetComponentsInChildren<Transform>(true);
-        foreach (string hidden in new[] { "MODE", "DATA QUALITY" })
-        {
-            Transform field = fields.FirstOrDefault(candidate => candidate.name == hidden);
-            if (field != null && field.gameObject.activeSelf)
-                result.Errors.Add($"Portrait top bar must not show '{hidden}'.");
-        }
-        foreach (string required in new[] { "GATEWAY", "LAST UPDATE" })
-        {
-            Transform field = fields.FirstOrDefault(candidate => candidate.name == required);
-            if (field == null || !field.gameObject.activeSelf)
-                result.Errors.Add($"Portrait top bar must show '{required}'.");
-        }
+        if (views.Length > 0)
+            result.Errors.Add(
+                $"Connection-health top-bar UI should remain absent; found {views.Length} view(s).");
     }
 
     private static void ValidatePaginationButton(
@@ -563,16 +569,12 @@ public static class DigitalTwinProjectValidator
         string normalPath = image != null ? AssetDatabase.GetAssetPath(image.sprite) : string.Empty;
         string pressedPath = AssetDatabase.GetAssetPath(button.spriteState.pressedSprite);
         if (button.transition != Selectable.Transition.SpriteSwap ||
-            normalPath != "Assets/UI/Sprites/Panel Background.png" ||
+            normalPath != "Assets/UI/Sprites/Solid UI Fill.png" ||
             pressedPath != "Assets/UI/Sprites/Compact Button Background.png")
         {
             result.Errors.Add(
-                $"Portrait {direction}-page button must use the panel background at rest and compact background when pressed.");
+                $"The {direction}-page button must use the solid/compact interaction sprites.");
         }
-
-        RectTransform rect = button.transform as RectTransform;
-        if (rect == null || !Approximately(rect.sizeDelta, new Vector2(153.3f, 68f)))
-            result.Errors.Add($"Portrait {direction}-page button must be 153.3 x 68.");
     }
 
     private static bool Approximately(Vector2 first, Vector2 second) =>

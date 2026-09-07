@@ -143,7 +143,7 @@ MonoBehaviour:
   criticalIcon: {fileID: 0}
   unavailableIcon: {fileID: 0}
   backgroundImage: {fileID: 7496281890614703983}
-  normalBackground: {fileID: 21300000, guid: d11c0c5b29a2d427b8f8fdce725416ab, type: 3}
+  normalBackground: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
   warningBackground: {fileID: 21300000, guid: 753f13e68b4254e55a1cb8fce0210c18, type: 3}
   criticalBackground: {fileID: 21300000, guid: 9d8ea704ed215498e9b6df179ec4ba11, type: 3}
   unavailableBackground: {fileID: 21300000, guid: 4dd561af49e584a47b21428f728c2181, type: 3}
@@ -170,8 +170,10 @@ MonoBehaviour:
   metricContentGap: 8
   valueRowHeight: 48
   useAccurateUnitCasing: 0
-  mobileTapFocusSeconds: 4
-  focusToRestDuration: 1.5
+  mobileTapFocusSeconds: 0.75
+  focusToRestDuration: 0.5
+  unfocusedPeerOpacity: 0.15
+  peerFocusTransitionDuration: 0.23
   contentPaddingInsideBackground: 32
   verticalContentPadding: 16
 --- !u!1 &441163957847820561
@@ -867,7 +869,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: d11c0c5b29a2d427b8f8fdce725416ab, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1

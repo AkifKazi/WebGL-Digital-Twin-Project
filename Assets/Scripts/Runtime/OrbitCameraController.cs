@@ -1,7 +1,14 @@
+using System;
 using UnityEngine;
 
 public class OrbitCameraController : MonoBehaviour
 {
+    public event Action ZoomAvailabilityChanged;
+
+    private const float ZoomLimitEpsilon = 0.01f;
+
+    public bool CanZoomIn => !introPlaying && desiredDistance > minDistance + ZoomLimitEpsilon;
+    public bool CanZoomOut => !introPlaying && desiredDistance < maxDistance - ZoomLimitEpsilon;
     [Header("Target")]
     public Transform target;
 
@@ -110,6 +117,9 @@ public class OrbitCameraController : MonoBehaviour
     private bool hasLastTouchPosition;
     private float previousPinchDistance;
     private bool pinchActive;
+    private bool lastCanZoomIn;
+    private bool lastCanZoomOut;
+    private bool zoomAvailabilityInitialised;
 
     private void Start()
     {
@@ -120,6 +130,7 @@ public class OrbitCameraController : MonoBehaviour
         {
             CalculateOrbitValuesFromCurrentCameraPosition();
             introPlaying = false;
+            PublishZoomAvailability(true);
             return;
         }
 
@@ -139,6 +150,7 @@ public class OrbitCameraController : MonoBehaviour
         introPlaying = true;
 
         ApplyCameraPosition(true);
+        PublishZoomAvailability(true);
     }
 
     private void Update()
@@ -173,6 +185,12 @@ public class OrbitCameraController : MonoBehaviour
                 " | Intro Playing: " + introPlaying
             );
         }
+
+        if (!CanZoomIn)
+            zoomingIn = false;
+        if (!CanZoomOut)
+            zoomingOut = false;
+        PublishZoomAvailability(false);
     }
 
     private void UpdateIntroAnimation()
@@ -468,7 +486,7 @@ public class OrbitCameraController : MonoBehaviour
 
     public void StartZoomIn()
     {
-        if (!introPlaying)
+        if (CanZoomIn)
             zoomingIn = true;
     }
 
@@ -479,7 +497,7 @@ public class OrbitCameraController : MonoBehaviour
 
     public void StartZoomOut()
     {
-        if (!introPlaying)
+        if (CanZoomOut)
             zoomingOut = true;
     }
 
@@ -492,19 +510,37 @@ public class OrbitCameraController : MonoBehaviour
 
     public void StepZoomIn()
     {
-        if (introPlaying)
+        if (!CanZoomIn)
             return;
 
         desiredDistance -= buttonZoomSpeed * 0.25f;
         ClampValues();
+        PublishZoomAvailability(false);
     }
 
     public void StepZoomOut()
     {
-        if (introPlaying)
+        if (!CanZoomOut)
             return;
 
         desiredDistance += buttonZoomSpeed * 0.25f;
         ClampValues();
+        PublishZoomAvailability(false);
+    }
+
+    private void PublishZoomAvailability(bool force)
+    {
+        bool canZoomIn = CanZoomIn;
+        bool canZoomOut = CanZoomOut;
+        if (!force && zoomAvailabilityInitialised &&
+            canZoomIn == lastCanZoomIn && canZoomOut == lastCanZoomOut)
+        {
+            return;
+        }
+
+        zoomAvailabilityInitialised = true;
+        lastCanZoomIn = canZoomIn;
+        lastCanZoomOut = canZoomOut;
+        ZoomAvailabilityChanged?.Invoke();
     }
 }

@@ -10,12 +10,17 @@ public class WideStatRailManager : MonoBehaviour
 {
     public event Action LayoutRebuilt;
     public event Action<int> HiddenPresentationCountChanged;
+    public event Action<int, int> PaginationChanged;
 
     public IReadOnlyDictionary<
         PerformanceStatSource,
         PerformanceStatCardView
     > ActiveCards => activeCards;
     public int HiddenPresentationCount { get; private set; }
+    public int CurrentPageIndex { get; private set; }
+    public int PageCount { get; private set; } = 1;
+    public bool CanShowPreviousPage => CurrentPageIndex > 0;
+    public bool CanShowNextPage => CurrentPageIndex + 1 < PageCount;
     public bool HasSecondaryRailCards =>
         innerLeftBindings.Count > 0 || innerRightBindings.Count > 0;
 
@@ -225,10 +230,31 @@ public class WideStatRailManager : MonoBehaviour
                 viewportPosition.y));
         }
 
-        AllocateAcrossRails(candidates);
+        candidates.Sort((a, b) =>
+        {
+            int rankComparison = b.Presentation.DisplayRank.CompareTo(
+                a.Presentation.DisplayRank);
+            return rankComparison != 0
+                ? rankComparison
+                : string.CompareOrdinal(a.Presentation.Key, b.Presentation.Key);
+        });
+
+        List<List<PresentationPosition>> pages = BuildPages(candidates);
+        PageCount = Mathf.Max(1, pages.Count);
+        CurrentPageIndex = Mathf.Clamp(CurrentPageIndex, 0, PageCount - 1);
+
+        List<PresentationPosition> pageCandidates = pages.Count > 0
+            ? pages[CurrentPageIndex]
+            : new List<PresentationPosition>();
+
+        AllocateAcrossRails(pageCandidates);
+        int visibleOnPage = leftSources.Count + rightSources.Count +
+                            innerLeftSources.Count + innerRightSources.Count;
+        SetHiddenPresentationCount(candidates.Count - visibleOnPage);
 
         Debug.Log(
             $"TELEMETRY_WIDE_LAYOUT candidates={candidates.Count} " +
+            $"page={CurrentPageIndex + 1}/{PageCount} " +
             $"outerLeft={leftSources.Count} outerRight={rightSources.Count} " +
             $"innerLeft={innerLeftSources.Count} innerRight={innerRightSources.Count} " +
             $"heights={GetAvailableRailHeight(leftCardContainer):F1}/" +
@@ -271,6 +297,7 @@ public class WideStatRailManager : MonoBehaviour
         InitialiseRailPositions(innerRightBindings, innerRightCardContainer);
 
         LayoutRebuilt?.Invoke();
+        PaginationChanged?.Invoke(CurrentPageIndex, PageCount);
     }
 
     private void ResolveSources()
@@ -352,7 +379,6 @@ public class WideStatRailManager : MonoBehaviour
 
     private void AllocateAcrossRails(List<PresentationPosition> candidates)
     {
-        candidates.Sort((a, b) => b.Presentation.DisplayRank.CompareTo(a.Presentation.DisplayRank));
         foreach (PresentationPosition candidate in candidates)
         {
             StatRailSide preferred = DetermineSide(
@@ -377,6 +403,107 @@ public class WideStatRailManager : MonoBehaviour
                 Debug.Log($"Telemetry presentation '{candidate.Presentation.Key}' hidden: all four rails are full.", this);
             SetHiddenPresentationCount(HiddenPresentationCount + 1);
         }
+    }
+
+    private List<List<PresentationPosition>> BuildPages(
+        IReadOnlyList<PresentationPosition> candidates)
+    {
+        List<List<PresentationPosition>> pages = new();
+        PageAllocation allocation = new();
+
+        foreach (PresentationPosition candidate in candidates)
+        {
+            if (TryAllocateToPage(candidate, allocation))
+                continue;
+
+            if (allocation.Candidates.Count > 0)
+            {
+                pages.Add(allocation.Candidates);
+                allocation = new PageAllocation();
+            }
+
+            if (!TryAllocateToPage(candidate, allocation))
+            {
+                // A single card should always fit a rail. Retaining it on a page
+                // is safer than silently making telemetry permanently inaccessible.
+                allocation.Candidates.Add(candidate);
+            }
+        }
+
+        if (allocation.Candidates.Count > 0)
+            pages.Add(allocation.Candidates);
+
+        return pages;
+    }
+
+    private bool TryAllocateToPage(
+        PresentationPosition candidate,
+        PageAllocation allocation)
+    {
+        StatRailSide preferred = DetermineSide(
+            candidate.Presentation,
+            new Vector3(candidate.ViewportX, candidate.ViewportY, 1f));
+
+        List<PresentationPosition> preferredOuter = preferred == StatRailSide.Left
+            ? allocation.Left
+            : allocation.Right;
+        List<PresentationPosition> otherOuter = preferred == StatRailSide.Left
+            ? allocation.Right
+            : allocation.Left;
+        RectTransform preferredOuterContainer = preferred == StatRailSide.Left
+            ? leftCardContainer
+            : rightCardContainer;
+        RectTransform otherOuterContainer = preferred == StatRailSide.Left
+            ? rightCardContainer
+            : leftCardContainer;
+        List<PresentationPosition> preferredInner = preferred == StatRailSide.Left
+            ? allocation.InnerLeft
+            : allocation.InnerRight;
+        List<PresentationPosition> otherInner = preferred == StatRailSide.Left
+            ? allocation.InnerRight
+            : allocation.InnerLeft;
+        RectTransform preferredInnerContainer = preferred == StatRailSide.Left
+            ? innerLeftCardContainer
+            : innerRightCardContainer;
+        RectTransform otherInnerContainer = preferred == StatRailSide.Left
+            ? innerRightCardContainer
+            : innerLeftCardContainer;
+
+        bool allocated =
+            TryAllocate(candidate, preferredOuter, preferredOuterContainer) ||
+            TryAllocate(candidate, otherOuter, otherOuterContainer) ||
+            TryAllocate(candidate, preferredInner, preferredInnerContainer) ||
+            TryAllocate(candidate, otherInner, otherInnerContainer);
+
+        if (allocated)
+            allocation.Candidates.Add(candidate);
+
+        return allocated;
+    }
+
+    public void ShowPreviousPage()
+    {
+        ShowPage(CurrentPageIndex - 1);
+    }
+
+    public void ShowNextPage()
+    {
+        ShowPage(CurrentPageIndex + 1);
+    }
+
+    public void ShowFirstPage()
+    {
+        ShowPage(0);
+    }
+
+    public void ShowPage(int pageIndex)
+    {
+        int clamped = Mathf.Clamp(pageIndex, 0, Mathf.Max(0, PageCount - 1));
+        if (clamped == CurrentPageIndex)
+            return;
+
+        CurrentPageIndex = clamped;
+        RebuildLayout();
     }
 
     private void SetHiddenPresentationCount(int value)
@@ -896,6 +1023,8 @@ public class WideStatRailManager : MonoBehaviour
 
     private void HandleLayoutPriorityChanged(PerformanceStatSource source)
     {
+        // A newly raised alarm must always return to the highest-priority page.
+        CurrentPageIndex = 0;
         RebuildLayout();
     }
 
@@ -993,6 +1122,15 @@ public class WideStatRailManager : MonoBehaviour
             TargetY = 0f;
             CurrentVelocity = 0f;
         }
+    }
+
+    private sealed class PageAllocation
+    {
+        public readonly List<PresentationPosition> Candidates = new();
+        public readonly List<PresentationPosition> Left = new();
+        public readonly List<PresentationPosition> Right = new();
+        public readonly List<PresentationPosition> InnerLeft = new();
+        public readonly List<PresentationPosition> InnerRight = new();
     }
 
     private readonly struct PresentationPosition

@@ -33,6 +33,9 @@ public enum MetricLabelLayoutMode
 public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
     public event Action<PerformanceStatCardView, bool> FocusChanged;
+    public static event Action<PerformanceStatCardView> ActiveFocusChanged;
+
+    public static PerformanceStatCardView ActiveFocusedCard { get; private set; }
 
     [Header("Text")]
     [SerializeField] private TMP_Text metricName;
@@ -101,8 +104,10 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     [SerializeField, Min(32f)] private float valueRowHeight = 48f;
     [SerializeField, Tooltip("Preserve case-sensitive engineering unit symbols such as mm/s, kN, kW and MPa. Disable for an all-uppercase visual style.")]
     private bool useAccurateUnitCasing;
-    [SerializeField, Min(0f)] private float mobileTapFocusSeconds = 4f;
-    [SerializeField, Min(0.05f)] private float focusToRestDuration = 1.5f;
+    [SerializeField, Min(0f)] private float mobileTapFocusSeconds = 0.75f;
+    [SerializeField, Min(0.05f)] private float focusToRestDuration = 0.5f;
+    [SerializeField, Range(0.05f, 1f)] private float unfocusedPeerOpacity = 0.15f;
+    [SerializeField, Min(0.02f)] private float peerFocusTransitionDuration = 0.23f;
     [SerializeField, Min(0f)] private float contentPaddingInsideBackground = 32f;
     [SerializeField, Min(0f)] private float verticalContentPadding = 16f;
 
@@ -118,6 +123,12 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     private float connectionEmphasis;
     private RectTransformSnapshot[] accentGeometry = Array.Empty<RectTransformSnapshot>();
     private float nextAccentGeometryCheck;
+    private Graphic[] focusGraphics = Array.Empty<Graphic>();
+    private float peerPresentationAlpha = 1f;
+    private float peerPresentationStartAlpha = 1f;
+    private float peerPresentationTargetAlpha = 1f;
+    private float peerPresentationTransitionStartedAt;
+    private bool peerPresentationTransitioning;
 
     private const float AccentGeometryCheckInterval = 0.5f;
 
@@ -129,6 +140,8 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
         ? presentationAnchor
         : boundSource != null ? boundSource.WorldAnchor : null;
     public bool IsFocused => focused;
+    public float UnfocusedPeerOpacity => unfocusedPeerOpacity;
+    public float PeerFocusTransitionDuration => peerFocusTransitionDuration;
     public RectTransform ActiveConnectionPoint
     {
         get
@@ -146,6 +159,7 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
 
     private void Awake()
     {
+        CacheFocusGraphics();
         CaptureAccentGeometry();
         InitialiseMetricTemplate();
         if (backgroundImage != null)
@@ -157,6 +171,8 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
 
     private void OnEnable()
     {
+        ActiveFocusChanged -= HandleActiveFocusChanged;
+        ActiveFocusChanged += HandleActiveFocusChanged;
         // Pooled cards may have previously been resized, reoriented, or caught
         // mid-presentation. Reapply the prefab accent geometry before the card
         // becomes visible in its new rail.
@@ -165,16 +181,22 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
         RestoreAccentGeometry();
         SetConnectionEmphasis(IsAlarmState() ? 1f : 0f);
         nextAccentGeometryCheck = Time.unscaledTime + AccentGeometryCheckInterval;
+        ApplyPeerPresentationInstant(ResolvePeerPresentationAlpha(ActiveFocusedCard));
     }
 
     private void OnDisable()
     {
+        ActiveFocusChanged -= HandleActiveFocusChanged;
+        if (ActiveFocusedCard == this)
+            SetActiveFocusedCard(null);
+
         bool wasFocused = focused;
         focused = false;
         tapFocusUntil = 0f;
         fadingConnectionToRest = false;
         connectionFadeStartEmphasis = 0f;
         SetConnectionEmphasis(0f);
+        ApplyPeerPresentationInstant(1f);
         if (wasFocused)
             FocusChanged?.Invoke(this, false);
     }
@@ -216,6 +238,8 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
             if (progress >= 1f)
                 fadingConnectionToRest = false;
         }
+
+        UpdatePeerPresentation();
     }
 
     private void LateUpdate()
@@ -279,6 +303,10 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
                     useAccurateUnitCasing,
                     GetStateColor());
         }
+
+        // TextMeshPro can refresh its renderers when telemetry text changes.
+        // Reapply the presentation alpha so a dimmed peer cannot flash opaque.
+        ApplyPeerPresentationAlpha(peerPresentationAlpha);
     }
 
     public void RefreshBoundSources()
@@ -318,9 +346,14 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     public void SetState(StatVisualState state)
     {
         if (visualState == state)
+        {
+            ApplyPeerPresentationAlpha(peerPresentationAlpha);
             return;
+        }
         visualState = state;
         ApplyState();
+        BeginPeerPresentation(ResolvePeerPresentationAlpha(ActiveFocusedCard));
+        ApplyPeerPresentationAlpha(peerPresentationAlpha);
     }
 
     private void ApplySide()
@@ -463,6 +496,10 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
         if (focused == value)
             return;
         focused = value;
+        if (focused)
+            SetActiveFocusedCard(this);
+        else if (ActiveFocusedCard == this)
+            SetActiveFocusedCard(null);
         if (focused || IsAlarmState())
         {
             fadingConnectionToRest = false;
@@ -470,13 +507,95 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
         }
         else
         {
-            // Focus-to-rest begins immediately, but takes 1.5 seconds. There
-            // is no extra delay and no click-to-lock state.
+            // Focus-to-rest begins immediately with no delay or click-to-lock state.
             fadingConnectionToRest = true;
             connectionFadeStartedAt = Time.unscaledTime;
             connectionFadeStartEmphasis = connectionEmphasis;
         }
         FocusChanged?.Invoke(this, focused);
+    }
+
+    private static void SetActiveFocusedCard(PerformanceStatCardView card)
+    {
+        if (ActiveFocusedCard == card)
+            return;
+
+        ActiveFocusedCard = card;
+        ActiveFocusChanged?.Invoke(card);
+    }
+
+    private void HandleActiveFocusChanged(PerformanceStatCardView activeCard)
+    {
+        BeginPeerPresentation(ResolvePeerPresentationAlpha(activeCard));
+    }
+
+    private float ResolvePeerPresentationAlpha(PerformanceStatCardView activeCard)
+    {
+        if (activeCard == null || activeCard == this || IsAlarmState())
+            return 1f;
+
+        return unfocusedPeerOpacity;
+    }
+
+    private void BeginPeerPresentation(float target)
+    {
+        target = Mathf.Clamp01(target);
+        if (Mathf.Approximately(peerPresentationTargetAlpha, target) &&
+            (!peerPresentationTransitioning ||
+             Mathf.Approximately(peerPresentationAlpha, target)))
+        {
+            return;
+        }
+
+        peerPresentationStartAlpha = peerPresentationAlpha;
+        peerPresentationTargetAlpha = target;
+        peerPresentationTransitionStartedAt = Time.unscaledTime;
+        peerPresentationTransitioning = true;
+    }
+
+    private void UpdatePeerPresentation()
+    {
+        if (!peerPresentationTransitioning)
+            return;
+
+        float progress = Mathf.Clamp01(
+            (Time.unscaledTime - peerPresentationTransitionStartedAt) /
+            Mathf.Max(0.02f, peerFocusTransitionDuration));
+        float eased = Mathf.SmoothStep(0f, 1f, progress);
+        ApplyPeerPresentationAlpha(Mathf.Lerp(
+            peerPresentationStartAlpha,
+            peerPresentationTargetAlpha,
+            eased));
+
+        if (progress >= 1f)
+            peerPresentationTransitioning = false;
+    }
+
+    private void ApplyPeerPresentationInstant(float alpha)
+    {
+        peerPresentationAlpha = Mathf.Clamp01(alpha);
+        peerPresentationStartAlpha = peerPresentationAlpha;
+        peerPresentationTargetAlpha = peerPresentationAlpha;
+        peerPresentationTransitioning = false;
+        ApplyPeerPresentationAlpha(peerPresentationAlpha);
+    }
+
+    private void ApplyPeerPresentationAlpha(float alpha)
+    {
+        peerPresentationAlpha = Mathf.Clamp01(alpha);
+        if (focusGraphics.Length == 0)
+            CacheFocusGraphics();
+
+        foreach (Graphic graphic in focusGraphics)
+        {
+            if (graphic != null)
+                graphic.canvasRenderer.SetAlpha(peerPresentationAlpha);
+        }
+    }
+
+    private void CacheFocusGraphics()
+    {
+        focusGraphics = GetComponentsInChildren<Graphic>(true);
     }
 
     private void InitialiseMetricTemplate()
@@ -971,6 +1090,8 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
 #if UNITY_EDITOR
     private void OnValidate()
     {
+        unfocusedPeerOpacity = Mathf.Clamp(unfocusedPeerOpacity, 0.05f, 1f);
+        peerFocusTransitionDuration = Mathf.Max(0.02f, peerFocusTransitionDuration);
         ApplySide();
         ApplyState();
     }

@@ -232,17 +232,23 @@ public static class TelemetryLayoutStressValidator
             .FindObjectsByType<PortraitTelemetryPager>(
                 FindObjectsInactive.Include,
                 FindObjectsSortMode.None);
-        if (pagers.Length != 1)
+        if (pagers.Length != 2)
         {
-            errors.Add($"Exactly one portrait telemetry pager is required; found {pagers.Length}.");
+            errors.Add($"Portrait and wide telemetry pagers are required; found {pagers.Length}.");
             return;
         }
 
-        PortraitTelemetryPager pager = pagers[0];
-        if (pager.RailManager == null || pager.PreviousButton == null || pager.NextButton == null)
-            errors.Add("Portrait telemetry pager has incomplete manager or button references.");
-        if (!Mathf.Approximately(pager.AvailabilityFadeDuration, 0.3f))
-            errors.Add("Portrait telemetry pager availability fade must be 0.3 seconds.");
+        foreach (PortraitTelemetryPager pager in pagers)
+        {
+            if (!pager.HasExactlyOneRailManager || pager.HopperController == null ||
+                pager.PreviousButton == null || pager.NextButton == null ||
+                pager.PreviousIcon == null || pager.NextIcon == null)
+            {
+                errors.Add($"Telemetry pager '{pager.name}' has incomplete references.");
+            }
+            if (pager.WideRailManager != null && pager.PaginationCanvasGroup == null)
+                errors.Add("Wide pagination must own a standalone visibility group.");
+        }
     }
 
     private static void ValidateReferences(
