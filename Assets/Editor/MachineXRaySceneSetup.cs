@@ -32,6 +32,10 @@ public static class MachineXRaySceneSetup
     private const float WideControlWidth = 940f;
     private const float PortraitButtonWidth = 150f;
 
+    // Portrait fills the safe area minus padding; the cap only prevents the
+    // control stretching absurdly wide on a tablet held upright.
+    private const float PortraitMaxWidth = 1100f;
+
     public static void Apply(DigitalTwinMachineConfiguration configuration)
     {
         Material material = GetOrCreateMaterial();
@@ -446,6 +450,15 @@ public static class MachineXRaySceneSetup
             serialized.FindProperty("sectionText").stringValue = portrait ? "INTERIOR" : "CROSS SECTION";
             serialized.FindProperty("xrayText").stringValue = "X-RAY";
 
+            // The control measures itself against the safe area, so it adapts to
+            // any screen instead of relying on an authored width.
+            serialized.FindProperty("adaptWidthToScreen").boolValue = true;
+            serialized.FindProperty("widthReference").objectReferenceValue = FindSafeArea(control.transform);
+            serialized.FindProperty("horizontalPadding").floatValue = portrait ? 28f : 24f;
+            serialized.FindProperty("maximumWidth").floatValue = portrait ? PortraitMaxWidth : WideControlWidth;
+            serialized.FindProperty("minimumSegmentWidth").floatValue = portrait ? 90f : 180f;
+            serialized.FindProperty("autoSizeLabels").boolValue = true;
+
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             ApplySegmentSizing(control, portrait);
@@ -485,6 +498,24 @@ public static class MachineXRaySceneSetup
 
     private static void ApplySegmentSizing(ViewModeSegmentedControl control, bool portrait)
     {
+        // Wide has room for three segments, but the same floor would still cap
+        // how small they may become on a narrow window.
+        if (!portrait)
+        {
+            foreach (Transform child in control.transform)
+            {
+                LayoutElement wideElement = child.GetComponent<LayoutElement>();
+
+                if (wideElement == null)
+                    continue;
+
+                Undo.RecordObject(wideElement, "Resize view mode segment");
+                wideElement.minWidth = 0f;
+                wideElement.flexibleWidth = 1f;
+                EditorUtility.SetDirty(wideElement);
+            }
+        }
+
         LayoutElement container = control.GetComponent<LayoutElement>();
 
         if (container != null && !portrait)
@@ -509,6 +540,12 @@ public static class MachineXRaySceneSetup
                 continue;
 
             Undo.RecordObject(element, "Resize view mode segment");
+
+            // The authored 240 minimum meant three segments could never fit a
+            // phone: the layout had no room to shrink them and overflowed the
+            // screen instead. The runtime pass sizes them from the space
+            // available, so the floor is cleared here.
+            element.minWidth = 0f;
             element.preferredWidth = PortraitButtonWidth;
             element.flexibleWidth = 1f;
             EditorUtility.SetDirty(element);
@@ -562,6 +599,18 @@ public static class MachineXRaySceneSetup
         }
 
         return false;
+    }
+
+    /// <summary>Nearest "Safe area" ancestor, which is the usable screen rect.</summary>
+    private static RectTransform FindSafeArea(Transform from)
+    {
+        for (Transform current = from; current != null; current = current.parent)
+        {
+            if (current.name == "Safe area" && current is RectTransform rect)
+                return rect;
+        }
+
+        return from.parent as RectTransform;
     }
 
     private static GameObject FindSceneObject(string name) =>

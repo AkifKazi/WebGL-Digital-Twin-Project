@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -101,7 +102,39 @@ public class ViewModeSegmentedControl : MonoBehaviour
     [SerializeField]
     private bool showIcons = true;
 
+    [Tooltip("Lets segment labels shrink to fit their segment instead of overflowing it.")]
+    [SerializeField]
+    private bool autoSizeLabels = true;
+
+    [Tooltip("Smallest font size a shrinking label is allowed to reach.")]
+    [SerializeField, Min(6f)]
+    private float minimumLabelFontSize = 16f;
+
+    [Header("Adaptive width")]
+    [Tooltip("Recomputes the control and segment widths from the space actually available, " +
+             "so three segments fit on any screen instead of relying on authored sizes.")]
+    [SerializeField]
+    private bool adaptWidthToScreen = true;
+
+    [Tooltip("Rect the available width is measured from, normally the Safe area. " +
+             "Falls back to this object's parent when unset.")]
+    [SerializeField]
+    private RectTransform widthReference;
+
+    [Tooltip("Gap left on each side, inside the safe area, so the control never touches the screen edge.")]
+    [SerializeField, Min(0f)]
+    private float horizontalPadding = 28f;
+
+    [Tooltip("Upper bound on the control width. Wide screens stop growing here; narrow screens shrink below it.")]
+    [SerializeField, Min(0f)]
+    private float maximumWidth = 940f;
+
+    [Tooltip("A segment is never squeezed narrower than this, even if that means the control overflows.")]
+    [SerializeField, Min(0f)]
+    private float minimumSegmentWidth = 90f;
+
     private bool listenersAdded;
+    private Vector2 lastReferenceSize = new(-1f, -1f);
 
     private void Awake()
     {
@@ -111,8 +144,119 @@ public class ViewModeSegmentedControl : MonoBehaviour
     private void OnEnable()
     {
         ApplySegmentPresentation();
+        ApplyAdaptiveWidth(force: true);
         SubscribeToController();
         RefreshFromController();
+    }
+
+    private void Update()
+    {
+        // Only reacts when the available width actually changes: rotation, a
+        // resized browser window, or the safe area updating.
+        if (adaptWidthToScreen)
+            ApplyAdaptiveWidth(force: false);
+    }
+
+    private RectTransform ResolveWidthReference()
+    {
+        if (widthReference != null)
+            return widthReference;
+
+        return transform.parent as RectTransform;
+    }
+
+    /// <summary>
+    /// Sizes the control from the space available and divides it equally between
+    /// the visible segments, so the layout adapts to any screen rather than
+    /// depending on authored widths that only suit one device.
+    /// </summary>
+    private void ApplyAdaptiveWidth(bool force)
+    {
+        if (!adaptWidthToScreen)
+            return;
+
+        RectTransform reference = ResolveWidthReference();
+
+        if (reference == null)
+            return;
+
+        Vector2 referenceSize = reference.rect.size;
+
+        if (!force && (referenceSize - lastReferenceSize).sqrMagnitude < 0.01f)
+            return;
+
+        lastReferenceSize = referenceSize;
+
+        var rectTransform = (RectTransform)transform;
+        var group = GetComponent<HorizontalLayoutGroup>();
+
+        float available = referenceSize.x - horizontalPadding * 2f;
+        float target = Mathf.Min(available, maximumWidth);
+
+        List<Button> segments = CollectSegments();
+
+        if (segments.Count == 0)
+            return;
+
+        float spacing = group != null ? group.spacing : 0f;
+        float innerPadding = group != null ? group.padding.horizontal : 0f;
+
+        float perSegment =
+            (target - innerPadding - spacing * (segments.Count - 1)) / segments.Count;
+
+        perSegment = Mathf.Max(perSegment, minimumSegmentWidth);
+
+        // Recompute the control from the segments so a clamped segment width
+        // widens the control instead of overflowing it.
+        target = perSegment * segments.Count + spacing * (segments.Count - 1) + innerPadding;
+
+        LayoutElement element = GetComponent<LayoutElement>();
+
+        if (element != null)
+            element.preferredWidth = target;
+
+        // A parent that does not control child width leaves the rect to us.
+        if (!ParentControlsWidth())
+            rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, target);
+
+        foreach (Button segment in segments)
+        {
+            LayoutElement segmentElement = segment.GetComponent<LayoutElement>();
+
+            if (segmentElement == null)
+                continue;
+
+            segmentElement.minWidth = 0f;
+            segmentElement.preferredWidth = perSegment;
+            segmentElement.flexibleWidth = 1f;
+        }
+    }
+
+    private bool ParentControlsWidth()
+    {
+        if (transform.parent == null)
+            return false;
+
+        var parentGroup = transform.parent.GetComponent<HorizontalOrVerticalLayoutGroup>();
+
+        return parentGroup != null && parentGroup.childControlWidth;
+    }
+
+    private List<Button> CollectSegments()
+    {
+        List<Button> segments = new();
+
+        AddSegment(segments, exteriorButton);
+        AddSegment(segments, sectionButton);
+        AddSegment(segments, xrayButton);
+
+        return segments;
+    }
+
+    private static void AddSegment(List<Button> segments, Button button)
+    {
+        if (button != null && button.gameObject.activeSelf)
+            segments.Add(button);
     }
 
     /// <summary>
@@ -134,10 +278,23 @@ public class ViewModeSegmentedControl : MonoBehaviour
         SetIconVisible(xrayIcon);
     }
 
-    private static void SetLabelText(TMP_Text label, string text)
+    private void SetLabelText(TMP_Text label, string text)
     {
-        if (label != null && !string.IsNullOrEmpty(text))
+        if (label == null)
+            return;
+
+        if (!string.IsNullOrEmpty(text))
             label.text = text;
+
+        if (!autoSizeLabels)
+            return;
+
+        // Shrinking the type is preferable to a label pushing its segment wider
+        // than the space available.
+        label.enableAutoSizing = true;
+        label.fontSizeMin = minimumLabelFontSize;
+        label.fontSizeMax = label.fontSize > 0f ? label.fontSize : label.fontSizeMax;
+        label.overflowMode = TextOverflowModes.Ellipsis;
     }
 
     private void SetIconVisible(Image icon)
