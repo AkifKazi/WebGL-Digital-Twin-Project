@@ -235,10 +235,10 @@ MonoBehaviour:
     valueFormat: 0.0
     initialValue: 0.8
     limitMode: 2
-    warningBelow: 0.55
-    criticalBelow: 0.35
-    warningAbove: 1
-    criticalAbove: 1.15
+    warningBelow: 0.9
+    criticalBelow: 0.6
+    warningAbove: 1.25
+    criticalAbove: 1.45
     staleAfterSeconds: 5
     localPosition: {x: 0, y: 0.38, z: -2}
     wideRail: 1
@@ -343,7 +343,7 @@ MonoBehaviour:
   - id: FEED-01.BELT.TENSION
     legacyId: 
     objectName: Belt Tension
-    category: Conveyor
+    category: Material Feed
     label: BELT TENSION
     unit: kN
     valueFormat: 0.0
@@ -358,7 +358,7 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 2
     displayPriority: 73
-    enabled: 1
+    enabled: 0
   - id: FEED-01.BEARING.TEMP
     legacyId: 
     objectName: Conveyor Bearing Temperature
@@ -400,7 +400,7 @@ MonoBehaviour:
   - id: FEED-01.SLIP
     legacyId: 
     objectName: Belt Slip
-    category: Material Feed
+    category: Conveyor
     label: BELT SLIP
     unit: '%'
     valueFormat: 0.0
@@ -408,14 +408,14 @@ MonoBehaviour:
     limitMode: 0
     warningBelow: 0
     criticalBelow: 0
-    warningAbove: 4
-    criticalAbove: 7
+    warningAbove: 0.8
+    criticalAbove: 1.2
     staleAfterSeconds: 5
     localPosition: {x: 0, y: 0.38, z: -2}
     wideRail: 1
     portraitRail: 2
     displayPriority: 88
-    enabled: 0
+    enabled: 1
   - id: STRUCT-01.FRAME.VIBRATION
     legacyId: 
     objectName: Frame Vibration

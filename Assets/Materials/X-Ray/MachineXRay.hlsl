@@ -20,6 +20,7 @@ CBUFFER_START(UnityPerMaterial)
     half   _EdgeWidth;
     half   _EdgeSoftness;
     half   _EdgeIntensity;
+    half   _EdgeGate;
     half   _CreaseIntensity;
     half   _CreaseSharpness;
 
@@ -35,6 +36,9 @@ CBUFFER_START(UnityPerMaterial)
     half   _FocusDim;
     half   _GhostFillScale;
     half   _GhostEdgeScale;
+    half   _GhostGlareScale;
+    half   _GlareStrength;
+    half4  _KeyLightDirection;
 
     half   _ContourSpacing;
     half   _ContourIntensity;
@@ -146,11 +150,14 @@ half4 MachineXRayFragment(Varyings input) : SV_Target
 
     // Directional lighting keeps upward faces brighter than vertical ones, so
     // the shell still reads as a solid object rather than a flat overlay.
-    Light mainLight = GetMainLight();
-    half wrapped = saturate((dot(normalWS, mainLight.direction) + _LightWrap) / (1.0h + _LightWrap));
+    // A fixed key direction rather than the scene light: the X-Ray environment
+    // dims the real light, and a constant top-down key keeps upward faces
+    // reliably brighter than vertical ones from every camera angle.
+    half3 keyDirection = normalize(_KeyLightDirection.xyz);
+    half wrapped = saturate((dot(normalWS, keyDirection) + _LightWrap) / (1.0h + _LightWrap));
     half3 ambient = SampleSH(normalWS);
 
-    half3 halfVector = normalize(mainLight.direction + viewWS);
+    half3 halfVector = normalize(keyDirection + viewWS);
     half sheen = pow(saturate(dot(normalWS, halfVector)), max(_SheenSharpness, 1.0h)) * _Sheen;
 
     half lightLevel = _LightFloor + _LightInfluence * wrapped;
@@ -162,18 +169,35 @@ half4 MachineXRayFragment(Varyings input) : SV_Target
 
     // Face-on surfaces stay nearly invisible so interior parts read through;
     // grazing surfaces thicken into the glass shell.
-    half fillAmount = _FillOpacity * (1.0h + _FillFresnel * fresnel * fresnel);
-    half3 fillPart = bodyColor * (lightLevel + ambient * _AmbientInfluence) * fillAmount;
-    fillPart += edgeColor * sheen * fillAmount;
+    half baseFill = _FillOpacity;
+    half glareFill = _FillOpacity * _FillFresnel * fresnel * fresnel;
+    half fillAmount = baseFill + glareFill;
+
+    half3 shading = bodyColor * (lightLevel + ambient * _AmbientInfluence);
+
+    half3 fillPart = shading * baseFill;
+
+    // Glare is the grazing-angle thickening plus the specular sheen. Both are
+    // view dependent, so they are what makes panels flare white as the camera
+    // swings; keeping them separate allows them to be dialled back on their own.
+    half3 glarePart = shading * glareFill + edgeColor * sheen * fillAmount;
 
     half3 linePart = 0.0h;
 
     // Silhouette line. Dividing by the screen-space rate of change of the
     // facing ratio keeps a constant pixel weight instead of smearing the band
     // across gently curved surfaces.
+    half fresnelChange = fwidth(fresnel);
     half insideAmount = _EdgeThreshold - fresnel;
-    half edgeWidth = fwidth(fresnel) * _EdgeWidth + _EdgeSoftness;
+    half edgeWidth = fresnelChange * _EdgeWidth + _EdgeSoftness;
     half edgeMask = 1.0h - smoothstep(0.0h, max(edgeWidth, 1e-5h), insideAmount);
+
+    // A flat panel seen edge-on has its whole surface past the grazing
+    // threshold, which would light the entire panel instead of drawing a line.
+    // A real silhouette only exists where the facing ratio changes quickly, so
+    // the edge is gated on that rate of change.
+    edgeMask *= saturate(fresnelChange * _EdgeGate);
+
     linePart += edgeColor * edgeMask * _EdgeIntensity;
     linePart += edgeColor * creaseAmount * _CreaseIntensity;
 
@@ -217,6 +241,7 @@ half4 MachineXRayFragment(Varyings input) : SV_Target
     // its shape while one part is inspected.
     half focusDim = saturate(_FocusDim);
     half3 color = fillPart * lerp(1.0h, _GhostFillScale, focusDim)
+                + glarePart * _GlareStrength * lerp(1.0h, _GhostGlareScale, focusDim)
                 + linePart * lerp(1.0h, _GhostEdgeScale, focusDim);
 
     if (_FlickerAmount > 0.0h)

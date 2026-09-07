@@ -14,10 +14,12 @@ Shader "Digital Twin/Machine X-Ray"
         _EdgeWidth                  ("Edge Line Width (px)", Range(0.5, 8)) = 2.2
         _EdgeSoftness               ("Edge Angular Bleed", Range(0, 0.5)) = 0.02
         _EdgeIntensity              ("Edge Intensity", Range(0, 10)) = 1.3
+        _EdgeGate                   ("Edge Flatness Gate", Range(0, 400)) = 120
         _CreaseIntensity            ("Crease Intensity", Range(0, 10)) = 0.7
         _CreaseSharpness            ("Crease Sharpness", Range(0.1, 20)) = 4
 
         [Header(Lighting)][Space(4)]
+        _KeyLightDirection          ("Key Light Direction", Vector) = (0, 1, 0, 0)
         _LightFloor                 ("Unlit Floor", Range(0, 2)) = 0.35
         _LightInfluence             ("Light Influence", Range(0, 3)) = 0.9
         _LightWrap                  ("Light Wrap", Range(0, 1)) = 0.45
@@ -28,10 +30,14 @@ Shader "Digital Twin/Machine X-Ray"
         [Header(Interior)][Space(4)]
         _BackFaceDim                ("Back Face Dim", Range(0, 1)) = 0.25
 
+        [Header(Glare)][Space(4)]
+        _GlareStrength              ("Glare Strength", Range(0, 2)) = 0.45
+
         [Header(Hover Isolation)][Space(4)]
         _FocusDim                   ("Focus Dim", Range(0, 1)) = 0
         _GhostFillScale             ("Ghost Fill Scale", Range(0, 1)) = 0.05
-        _GhostEdgeScale             ("Ghost Edge Scale", Range(0, 1)) = 0.3
+        _GhostEdgeScale             ("Ghost Edge Scale", Range(0, 1)) = 0.45
+        _GhostGlareScale            ("Ghost Glare Scale", Range(0, 1)) = 0
 
         [Header(Contours)][Space(4)]
         _ContourSpacing             ("Contour Spacing (m)", Range(0.05, 5)) = 0.5

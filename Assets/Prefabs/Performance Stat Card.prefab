@@ -170,7 +170,7 @@ MonoBehaviour:
   metricContentGap: 8
   valueRowHeight: 48
   useAccurateUnitCasing: 0
-  mobileTapFocusSeconds: 0.75
+  mobileTapFocusSeconds: 4
   focusToRestDuration: 0.5
   unfocusedPeerOpacity: 0.15
   peerFocusTransitionDuration: 0.23

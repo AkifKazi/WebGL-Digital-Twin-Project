@@ -104,7 +104,9 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     [SerializeField, Min(32f)] private float valueRowHeight = 48f;
     [SerializeField, Tooltip("Preserve case-sensitive engineering unit symbols such as mm/s, kN, kW and MPa. Disable for an all-uppercase visual style.")]
     private bool useAccurateUnitCasing;
-    [SerializeField, Min(0f)] private float mobileTapFocusSeconds = 0.75f;
+    [SerializeField, Min(0f), Tooltip("Seconds a tapped card stays focused on touch devices, which have no hover state. " +
+        "Long enough to read the isolated mechanism in the X-Ray view before focus releases.")]
+    private float mobileTapFocusSeconds = 4f;
     [SerializeField, Min(0.05f)] private float focusToRestDuration = 0.5f;
     [SerializeField, Range(0.05f, 1f)] private float unfocusedPeerOpacity = 0.15f;
     [SerializeField, Min(0.02f)] private float peerFocusTransitionDuration = 0.23f;

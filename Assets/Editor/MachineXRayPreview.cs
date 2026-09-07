@@ -117,6 +117,12 @@ public static class MachineXRayPreview
             Render(cam, Path.Combine(outputDir, $"machine_xray_{angle:D3}.png"));
         }
 
+        // Low, close angle looking up through the chute: the view where grazing
+        // panels flare worst, so glare tuning can be judged on the hard case.
+        cam.transform.position = bounds.center + new Vector3(0.35f, -0.30f, -0.55f) * distance;
+        cam.transform.LookAt(bounds.center + new Vector3(0f, bounds.extents.y * 0.35f, 0f));
+        Render(cam, Path.Combine(outputDir, "machine_xray_glare.png"));
+
         // Alarm shot: colour the vibratory drive critical and the conveyor warning.
         Quaternion heroOrbit = Quaternion.Euler(16f, 35f, 0f);
         cam.transform.position = bounds.center + heroOrbit * new Vector3(0f, 0f, -distance);

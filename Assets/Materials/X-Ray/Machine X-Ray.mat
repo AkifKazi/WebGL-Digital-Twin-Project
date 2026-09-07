@@ -32,37 +32,41 @@ Material:
     - _ClipEdgeWidth: 0.06
     - _ClipEnabled: 0
     - _ClipX: 1.5
-    - _ContourIntensity: 0.1
+    - _ContourIntensity: 0.14
     - _ContourSpacing: 0.5
-    - _CreaseIntensity: 1.3
+    - _CreaseIntensity: 1.45
     - _CreaseSharpness: 6
-    - _EdgeIntensity: 1.35
+    - _EdgeGate: 120
+    - _EdgeIntensity: 1.85
     - _EdgeSoftness: 0.02
     - _EdgeThreshold: 0.75
     - _EdgeWidth: 2.2
-    - _FillFresnel: 2.9
+    - _FillFresnel: 2.2
     - _FillOpacity: 0.034
     - _FlickerAmount: 0
     - _FlickerSpeed: 18
     - _FocusDim: 0
     - _GhostEdgeScale: 0.45
     - _GhostFillScale: 0.05
-    - _LightFloor: 0.35
-    - _LightInfluence: 0.9
+    - _GhostGlareScale: 0
+    - _GlareStrength: 0.35
+    - _LightFloor: 0.3
+    - _LightInfluence: 0.75
     - _LightWrap: 0.45
     - _Opacity: 1
     - _RevealBandIntensity: 3
     - _RevealBandWidth: 0.35
     - _SelectionBlend: 0
     - _SelectionBoost: 1.6
-    - _Sheen: 0.18
-    - _SheenSharpness: 24
+    - _Sheen: 0.1
+    - _SheenSharpness: 40
     - _StatusBlend: 0
     - _StatusPulseAmount: 1.5
     - _StatusPulseSpeed: 1.2
     m_Colors:
     - _BaseColor: {r: 0.08, g: 0.42, b: 0.85, a: 1}
     - _EdgeColor: {r: 0.756, g: 0.9765, b: 1.05, a: 1.05}
+    - _KeyLightDirection: {r: 0, g: 1, b: 0, a: 0}
     - _StatusColor: {r: 1, g: 0.4, b: 0.14, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

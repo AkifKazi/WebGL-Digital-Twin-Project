@@ -111,24 +111,35 @@ public static class MachineXRaySceneSetup
         material.SetColor("_StatusColor", new Color(1.00f, 0.40f, 0.14f));
 
         material.SetFloat("_FillOpacity", 0.034f);
-        material.SetFloat("_FillFresnel", 2.9f);
+        material.SetFloat("_FillFresnel", 2.2f);
 
         material.SetFloat("_EdgeThreshold", 0.75f);
         material.SetFloat("_EdgeWidth", 2.2f);
         material.SetFloat("_EdgeSoftness", 0.02f);
-        material.SetFloat("_EdgeIntensity", 1.35f);
-        material.SetFloat("_CreaseIntensity", 1.30f);
+        material.SetFloat("_EdgeIntensity", 1.85f);
+        material.SetFloat("_EdgeGate", 120f);
+        material.SetFloat("_CreaseIntensity", 1.45f);
         material.SetFloat("_CreaseSharpness", 6f);
 
-        material.SetFloat("_LightFloor", 0.35f);
-        material.SetFloat("_LightInfluence", 0.9f);
+        material.SetFloat("_LightFloor", 0.30f);
+        material.SetFloat("_LightInfluence", 0.75f);
         material.SetFloat("_LightWrap", 0.45f);
         material.SetFloat("_AmbientInfluence", 0.5f);
-        material.SetFloat("_Sheen", 0.18f);
-        material.SetFloat("_SheenSharpness", 24f);
+        // Top-down key: upward faces read brighter than vertical ones, and the
+        // result no longer depends on the scene light the X-Ray view dims.
+        material.SetVector("_KeyLightDirection", new Vector4(0f, 1f, 0f, 0f));
+
+        material.SetFloat("_Sheen", 0.10f);
+        material.SetFloat("_SheenSharpness", 40f);
+
+        // Glare is the view-dependent flare on grazing panels. Held well down
+        // so surfaces stay readable from every camera angle, and removed
+        // entirely on mechanisms that are not the hover focus.
+        material.SetFloat("_GlareStrength", 0.35f);
+        material.SetFloat("_GhostGlareScale", 0f);
 
         material.SetFloat("_BackFaceDim", 0.25f);
-        material.SetFloat("_ContourIntensity", 0.10f);
+        material.SetFloat("_ContourIntensity", 0.14f);
         material.SetFloat("_ContourSpacing", 0.5f);
 
         material.SetFloat("_GhostFillScale", 0.05f);
