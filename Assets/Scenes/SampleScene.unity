@@ -15791,14 +15791,14 @@ MonoBehaviour:
   limitMode: 0
   warningBelow: 0
   criticalBelow: 0
-  warningAbove: 4
-  criticalAbove: 7
+  warningAbove: 0.8
+  criticalAbove: 1.2
   dataQuality: 0
   staleAfterSeconds: 5
   preferredRail: 1
   preferredPortraitRail: 2
   displayPriority: 88
-  visible: 0
+  visible: 1
 --- !u!4 &190539547
 Transform:
   m_ObjectHideFlags: 0
@@ -15812,7 +15812,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1847023729}
+  m_Father: {fileID: 2013742850}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &218332097
 GameObject:
@@ -27114,7 +27114,7 @@ MonoBehaviour:
   preferredRail: 1
   preferredPortraitRail: 2
   displayPriority: 73
-  visible: 1
+  visible: 0
 --- !u!4 &381216275
 Transform:
   m_ObjectHideFlags: 0
@@ -27128,7 +27128,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2013742850}
+  m_Father: {fileID: 1847023729}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &423111684
 GameObject:
@@ -54675,10 +54675,10 @@ MonoBehaviour:
   visualState: 0
   useAutomaticThresholds: 1
   limitMode: 2
-  warningBelow: 0.55
-  criticalBelow: 0.35
-  warningAbove: 1
-  criticalAbove: 1.15
+  warningBelow: 0.9
+  criticalBelow: 0.6
+  warningAbove: 1.25
+  criticalAbove: 1.45
   dataQuality: 0
   staleAfterSeconds: 5
   preferredRail: 1
@@ -67549,37 +67549,37 @@ MonoBehaviour:
   quantity: 1
   discoverInChildren: 0
   particleSystems:
+  - {fileID: 2073314177}
+  - {fileID: 169803499}
+  - {fileID: 72449598}
   - {fileID: 703949485}
-  - {fileID: 713861412}
-  - {fileID: 1519186295}
+  - {fileID: 912078262}
+  - {fileID: 256571806}
+  - {fileID: 1086364943}
+  - {fileID: 932795479}
+  - {fileID: 1588987390}
+  - {fileID: 1704646236}
   - {fileID: 44876321}
   - {fileID: 224951036}
-  - {fileID: 912078262}
-  - {fileID: 932795479}
-  - {fileID: 256571806}
-  - {fileID: 1704646236}
-  - {fileID: 169803499}
-  - {fileID: 2073314177}
-  - {fileID: 1086364943}
-  - {fileID: 72449598}
+  - {fileID: 713861412}
   - {fileID: 627258359}
+  - {fileID: 1519186295}
   - {fileID: 645758549}
-  - {fileID: 1588987390}
   rockFlows:
   - {fileID: 912078260}
   filteredFlows:
+  - {fileID: 256571804}
+  - {fileID: 1588987388}
+  - {fileID: 703949483}
+  - {fileID: 1519186293}
+  - {fileID: 2073314175}
+  - {fileID: 1086364941}
+  - {fileID: 713861410}
   - {fileID: 72449596}
   - {fileID: 627258357}
-  - {fileID: 1519186293}
-  - {fileID: 1588987388}
-  - {fileID: 224951034}
-  - {fileID: 2073314175}
-  - {fileID: 713861410}
-  - {fileID: 256571804}
-  - {fileID: 1086364941}
-  - {fileID: 703949483}
-  - {fileID: 645758547}
   - {fileID: 169803495}
+  - {fileID: 645758547}
+  - {fileID: 224951034}
 --- !u!1 &1517592139
 GameObject:
   m_ObjectHideFlags: 0
@@ -82829,6 +82829,7 @@ GameObject:
   - component: {fileID: 1721390492}
   - component: {fileID: 1721390491}
   - component: {fileID: 1721390490}
+  - component: {fileID: 1721390493}
   m_Layer: 0
   m_Name: X-Ray View Controller
   m_TagString: Untagged
@@ -82953,7 +82954,29 @@ MonoBehaviour:
   selectionBlend: 1
   isolateOnCardFocus: 1
   isolationStrength: 1
+  keepAlarmedMechanismsLit: 1
   isolationFadeDuration: 0.23
+--- !u!114 &1721390493
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1721390488}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99e196f053933485197f5db10bbce253, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MachineHoverOverlay
+  overlayMaterial: {fileID: 2100000, guid: 0850c9bcd43aa4b23a6684f9970e25d7, type: 2}
+  overlayOpacity: 1
+  viewModeController: {fileID: 1721390490}
+  partGroups:
+  - {fileID: 919132148980571993}
+  - {fileID: 6565274373165279498}
+  - {fileID: 8003859728197440517}
+  equipmentRoots: []
+  fadeDuration: 0.2
 --- !u!1 &1741284733
 GameObject:
   m_ObjectHideFlags: 0
@@ -83592,7 +83615,7 @@ Transform:
   - {fileID: 1236391824}
   - {fileID: 1775960675}
   - {fileID: 786300542}
-  - {fileID: 190539547}
+  - {fileID: 381216275}
   m_Father: {fileID: 459979277}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1857298081
@@ -84709,8 +84732,8 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 914302947}
-  - {fileID: 381216275}
   - {fileID: 1517592141}
+  - {fileID: 190539547}
   m_Father: {fileID: 459979277}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2027241633

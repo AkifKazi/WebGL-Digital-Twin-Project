@@ -41,9 +41,7 @@ CBUFFER_START(UnityPerMaterial)
     half4  _GhostTint;
     half   _GhostTintBlend;
     half   _GlareStrength;
-    half   _FocusHighlight;
-    half4  _HighlightColor;
-    half   _HighlightBoost;
+    half   _IgnoreGlobalOpacity;
     half4  _KeyLightDirection;
 
     half   _ContourSpacing;
@@ -261,15 +259,6 @@ half4 MachineXRayFragment(Varyings input) : SV_Target
     half ghostLuma = dot(color, half3(0.30h, 0.59h, 0.11h));
     color = lerp(color, ghostLuma * _GhostTint.rgb, focusDim * _GhostTintBlend);
 
-    // The focused mechanism is pulled toward the highlight colour and lifted,
-    // widening the gap between it and everything around it.
-    if (_FocusHighlight > 0.0h)
-    {
-        half focusLuma = dot(color, half3(0.30h, 0.59h, 0.11h));
-        color = lerp(color, focusLuma * _HighlightColor.rgb, _FocusHighlight * 0.90h);
-        color *= 1.0h + _FocusHighlight * _HighlightBoost;
-    }
-
     if (_FlickerAmount > 0.0h)
     {
         half flicker = 1.0h - _FlickerAmount * (0.5h + 0.5h * sin(_Time.y * _FlickerSpeed + positionWS.y * 24.0h));
@@ -280,7 +269,11 @@ half4 MachineXRayFragment(Varyings input) : SV_Target
     color *= _BackFaceDim;
 #endif
 
-    color *= _Opacity * _XRayOpacity;
+    // _XRayOpacity is owned by the presenter and is zero until it runs. The
+    // hover overlay is drawn outside the X-Ray view, so it opts out rather
+    // than depending on another component having initialised first.
+    half globalOpacity = lerp(_XRayOpacity, 1.0h, saturate(_IgnoreGlobalOpacity));
+    color *= _Opacity * globalOpacity;
 
     // Additive output: order independent, so overlapping shells never sort
     // against each other and no depth sorting pass is needed.

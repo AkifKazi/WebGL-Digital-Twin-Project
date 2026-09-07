@@ -32,6 +32,14 @@ public static class MachineXRayPreview
 
         EditorSceneManager.OpenScene("Assets/Scenes/SampleScene.unity", OpenSceneMode.Single);
 
+        // Overlay trial: keep the real materials, draw the edge treatment over
+        // one mechanism, exactly as the hover overlay does at runtime.
+        if (System.Environment.GetEnvironmentVariable("XRAY_OVERLAY_TEST") == "1")
+        {
+            CaptureOverlayTrial(outputDir);
+            return;
+        }
+
         Material material = MachineXRaySceneSetup.GetOrCreateMaterial();
         MachineXRaySceneSetup.ApplyPreset(material);
 
@@ -140,8 +148,6 @@ public static class MachineXRayPreview
         SetFocusDim(equipment, "Vibratory Drive/Upper Rotor", 1f);
         SetFocusDim(equipment, "Vibratory Drive/Motor", 0f);
         SetFocusDim(equipment, "Vibratory Drive/Lower Rotor", 0f);
-        SetFocusHighlight(equipment, "Vibratory Drive/Motor", 1f);
-        SetFocusHighlight(equipment, "Vibratory Drive/Lower Rotor", 1f);
 
         SetFocusDim(equipment, "Conveyor Assembly", 0f);
         TintMechanism(equipment, "Conveyor Assembly", new Color(1f, 0.26f, 0.22f), 1f);
@@ -150,6 +156,23 @@ public static class MachineXRayPreview
         cam.transform.LookAt(bounds.center - new Vector3(0f, bounds.extents.y * 0.35f, 0f));
 
         Render(cam, Path.Combine(outputDir, "machine_xray_isolated.png"));
+
+        // Objective isolation check: identical camera, whole machine lit, then
+        // whole machine ghosted. The ratio is the actual reduction achieved.
+        ClearStatus(equipment);
+
+        cam.transform.position = bounds.center + heroOrbit * new Vector3(0f, 0f, -distance);
+        cam.transform.LookAt(bounds.center);
+
+        SetFocusDimAll(equipment, 0f);
+        double lit = Measure(cam);
+
+        SetFocusDimAll(equipment, 1f);
+        double ghosted = Measure(cam);
+
+        SetFocusDimAll(equipment, 0f);
+
+        Debug.Log($"XRAY-MEASURE: lit={lit:F3} ghosted={ghosted:F3} reduction={(1.0 - ghosted / System.Math.Max(lit, 1e-6)) * 100.0:F1}%");
 
         Debug.Log("XRAY-PREVIEW: done");
         EditorApplication.Exit(0);
@@ -172,21 +195,121 @@ public static class MachineXRayPreview
         }
     }
 
-    private static void SetFocusHighlight(GameObject equipment, string path, float value)
+    /// <summary>
+    /// Overlay trial. Editor batch renders do not pick up renderers created or
+    /// enabled between Render() calls, so the proxies are built before the
+    /// first render and toggled through the material instead.
+    /// </summary>
+    private static void CaptureOverlayTrial(string outputDir)
     {
-        Transform target = equipment.transform.Find(path);
+        GameObject equipment = Object.FindObjectsByType<GameObject>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .FirstOrDefault(go => go.name == "03 - Equipment");
 
-        if (target == null)
-            return;
+        Material overlay = MachineXRaySceneSetup.GetOrCreateOverlayMaterial();
+        MachineXRaySceneSetup.ApplyOverlayPreset(overlay);
+        overlay.SetFloat("_Opacity", 0f);
 
+        Transform drive = equipment.transform.Find("Vibratory Drive");
+
+        foreach (MeshRenderer source in drive.GetComponentsInChildren<MeshRenderer>(false))
+        {
+            MeshFilter sourceFilter = source.GetComponent<MeshFilter>();
+
+            if (sourceFilter == null || sourceFilter.sharedMesh == null)
+                continue;
+
+            GameObject proxyObject = new("Hover Overlay");
+            proxyObject.transform.SetParent(source.transform, false);
+
+            MeshFilter filter = proxyObject.AddComponent<MeshFilter>();
+            filter.sharedMesh = sourceFilter.sharedMesh;
+
+            MeshRenderer renderer = proxyObject.AddComponent<MeshRenderer>();
+            Material[] slots = new Material[sourceFilter.sharedMesh.subMeshCount];
+
+            for (int i = 0; i < slots.Length; i++)
+                slots[i] = overlay;
+
+            renderer.sharedMaterials = slots;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+        }
+
+        Camera cam = Camera.main;
+
+        Bounds driveBounds = default;
+        bool driveValid = false;
+
+        foreach (MeshRenderer r in drive.GetComponentsInChildren<MeshRenderer>(false))
+        {
+            if (r.gameObject.name == "Hover Overlay")
+                continue;
+
+            if (!driveValid) { driveBounds = r.bounds; driveValid = true; }
+            else driveBounds.Encapsulate(r.bounds);
+        }
+
+        cam.fieldOfView = 34f;
+
+        float driveDistance = driveBounds.extents.magnitude /
+                              Mathf.Sin(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * 2.0f;
+
+        Quaternion orbit = Quaternion.Euler(6f, 135f, 0f);
+        cam.transform.position = driveBounds.center + orbit * new Vector3(0f, 0f, -driveDistance);
+        cam.transform.LookAt(driveBounds.center);
+
+        // Discard one frame: the first render of a batch session happens before
+        // lighting settles.
+        Render(cam, Path.Combine(outputDir, "warmup.png"));
+
+        Render(cam, Path.Combine(outputDir, "overlay_before.png"));
+
+        overlay.SetFloat("_Opacity", 1f);
+        Render(cam, Path.Combine(outputDir, "overlay_after.png"));
+
+        Debug.Log("XRAY-PREVIEW: overlay trial done");
+        EditorApplication.Exit(0);
+    }
+
+    private static void SetFocusDimAll(GameObject equipment, float dim)
+    {
         MaterialPropertyBlock block = new();
 
-        foreach (Renderer r in target.GetComponentsInChildren<Renderer>(false))
+        foreach (Renderer r in equipment.GetComponentsInChildren<Renderer>(false))
         {
             r.GetPropertyBlock(block);
-            block.SetFloat("_FocusHighlight", value);
+            block.SetFloat("_FocusDim", dim);
             r.SetPropertyBlock(block);
         }
+    }
+
+    private static double Measure(Camera cam)
+    {
+        const int width = 640;
+        const int height = 480;
+
+        RenderTexture rt = new(width, height, 24, RenderTextureFormat.DefaultHDR);
+        cam.targetTexture = rt;
+        cam.Render();
+        RenderTexture.active = rt;
+
+        Texture2D shot = new(width, height, TextureFormat.RGBA32, false);
+        shot.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+        shot.Apply();
+
+        RenderTexture.active = null;
+        cam.targetTexture = null;
+
+        double total = 0;
+
+        foreach (Color32 pixel in shot.GetPixels32())
+            total += pixel.r + pixel.g + pixel.b;
+
+        Object.DestroyImmediate(shot);
+        rt.Release();
+        Object.DestroyImmediate(rt);
+
+        return total / (width * (double)height);
     }
 
     private static void ClearStatus(GameObject equipment)

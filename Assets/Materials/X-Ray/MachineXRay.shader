@@ -7,6 +7,11 @@ Shader "Digital Twin/Machine X-Ray"
         _FillOpacity                ("Fill Opacity", Range(0, 1)) = 0.022
         _FillFresnel                ("Grazing Thickness", Range(0, 8)) = 3.5
         _Opacity                    ("Material Opacity", Range(0, 2)) = 1
+        [Toggle] _IgnoreGlobalOpacity ("Ignore Global Opacity", Float) = 0
+
+        [Header(Depth Bias)][Space(4)]
+        _OffsetFactor               ("Depth Offset Factor", Range(-4, 4)) = 0
+        _OffsetUnits                ("Depth Offset Units", Range(-8, 8)) = 0
 
         [Header(Edges)][Space(4)]
         [HDR] _EdgeColor            ("Edge Color", Color) = (0.72, 0.93, 1, 1)
@@ -42,10 +47,6 @@ Shader "Digital Twin/Machine X-Ray"
         [HDR] _GhostTint            ("Ghost Tint", Color) = (0.16, 0.34, 0.62, 1)
         _GhostTintBlend             ("Ghost Tint Blend", Range(0, 1)) = 0.85
 
-        [Header(Focus Highlight)][Space(4)]
-        _FocusHighlight             ("Focus Highlight", Range(0, 1)) = 0
-        [HDR] _HighlightColor       ("Highlight Color", Color) = (0.35, 0.75, 1, 1)
-        _HighlightBoost             ("Highlight Boost", Range(0, 2)) = 0.45
 
         [Header(Contours)][Space(4)]
         _ContourSpacing             ("Contour Spacing (m)", Range(0.05, 5)) = 0.5
@@ -98,6 +99,7 @@ Shader "Digital Twin/Machine X-Ray"
             Name "XRayInterior"
             Tags { "LightMode" = "SRPDefaultUnlit" }
             Cull Front
+            Offset [_OffsetFactor], [_OffsetUnits]
 
             HLSLPROGRAM
             #pragma vertex MachineXRayVertex
@@ -116,6 +118,7 @@ Shader "Digital Twin/Machine X-Ray"
             Name "XRayShell"
             Tags { "LightMode" = "UniversalForward" }
             Cull Back
+            Offset [_OffsetFactor], [_OffsetUnits]
 
             HLSLPROGRAM
             #pragma vertex MachineXRayVertex
