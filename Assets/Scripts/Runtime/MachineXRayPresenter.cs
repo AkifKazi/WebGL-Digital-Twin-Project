@@ -91,8 +91,16 @@ public sealed class MachineXRayPresenter : MonoBehaviour
     [Tooltip("Hovering a telemetry card fades every mechanism except the one that owns that sensor.")]
     [SerializeField] private bool isolateOnCardFocus = true;
 
-    [Tooltip("How far de-focused mechanisms fade back. 1 is the full edges-only ghost.")]
+    [Tooltip("How far de-focused mechanisms fade back. 1 is the full dissolve.")]
     [SerializeField, Range(0f, 1f)] private float isolationStrength = 1f;
+
+    [Tooltip("Pulls the hovered mechanism toward the highlight colour. A mechanism in " +
+             "warning or critical keeps its alarm colour instead.")]
+    [SerializeField, Range(0f, 1f)] private float focusHighlightStrength = 1f;
+
+    [Tooltip("Mechanisms in warning or critical are never dimmed by hover isolation, " +
+             "so a fault stays visible while another part is inspected.")]
+    [SerializeField] private bool keepAlarmedMechanismsLit = true;
 
     [Tooltip("Seconds to cross-fade in and out of isolation. Matches the card peer fade by default.")]
     [SerializeField, Min(0.02f)] private float isolationFadeDuration = 0.23f;
@@ -426,8 +434,20 @@ public sealed class MachineXRayPresenter : MonoBehaviour
 
     private void HandleGroupStateChanged(MachinePartGroup group)
     {
-        if (IsPresenting)
-            PushStatusVisuals();
+        if (!IsPresenting)
+            return;
+
+        PushStatusVisuals();
+
+        // A mechanism entering or leaving alarm changes whether it stays lit,
+        // so the isolation targets are recalculated.
+        if (focusedGroup != null)
+        {
+            if (isolationRoutine != null)
+                StopCoroutine(isolationRoutine);
+
+            isolationRoutine = StartCoroutine(IsolationRoutine());
+        }
     }
 
     /// <summary>Re-applies alarm colours for every mechanism.</summary>
@@ -532,13 +552,29 @@ public sealed class MachineXRayPresenter : MonoBehaviour
         int count = resolvedGroups.Count;
         float[] from = new float[count];
         float[] to = new float[count];
+        float[] highlightFrom = new float[count];
+        float[] highlightTo = new float[count];
 
         for (int i = 0; i < count; i++)
         {
             MachinePartGroup group = resolvedGroups[i];
 
             from[i] = group != null ? group.CurrentFocusDim : 0f;
-            to[i] = focusedGroup == null || group == focusedGroup ? 0f : isolationStrength;
+            highlightFrom[i] = group != null ? group.CurrentFocusHighlight : 0f;
+
+            bool isFocused = group == focusedGroup;
+
+            // An alarmed mechanism is pinned lit: a fault must not disappear
+            // because the operator is reading a different card.
+            bool pinned = keepAlarmedMechanismsLit && group != null && group.IsAlarmed;
+
+            to[i] = focusedGroup == null || isFocused || pinned ? 0f : isolationStrength;
+
+            // The highlight colour would override an alarm colour, so an
+            // alarmed mechanism keeps red or amber even while hovered.
+            highlightTo[i] = isFocused && focusedGroup != null && !(group != null && group.IsAlarmed)
+                ? focusHighlightStrength
+                : 0f;
         }
 
         float timer = 0f;
@@ -551,8 +587,11 @@ public sealed class MachineXRayPresenter : MonoBehaviour
 
             for (int i = 0; i < count; i++)
             {
-                if (resolvedGroups[i] != null)
-                    resolvedGroups[i].ApplyFocusDim(Mathf.Lerp(from[i], to[i], t));
+                if (resolvedGroups[i] == null)
+                    continue;
+
+                resolvedGroups[i].ApplyFocusDim(Mathf.Lerp(from[i], to[i], t));
+                resolvedGroups[i].ApplyFocusHighlight(Mathf.Lerp(highlightFrom[i], highlightTo[i], t));
             }
 
             yield return null;
@@ -560,8 +599,11 @@ public sealed class MachineXRayPresenter : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            if (resolvedGroups[i] != null)
-                resolvedGroups[i].ApplyFocusDim(to[i]);
+            if (resolvedGroups[i] == null)
+                continue;
+
+            resolvedGroups[i].ApplyFocusDim(to[i]);
+            resolvedGroups[i].ApplyFocusHighlight(highlightTo[i]);
         }
 
         isolationRoutine = null;

@@ -25,7 +25,7 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _AmbientInfluence: 0.5
+    - _AmbientInfluence: 0.35
     - _BackFaceDim: 0.25
     - _ClipDirection: 1
     - _ClipEdgeGlow: 2
@@ -41,18 +41,22 @@ Material:
     - _EdgeSoftness: 0.02
     - _EdgeThreshold: 0.75
     - _EdgeWidth: 2.2
-    - _FillFresnel: 2.2
-    - _FillOpacity: 0.034
+    - _FillFresnel: 0.9
+    - _FillOpacity: 0.055
     - _FlickerAmount: 0
     - _FlickerSpeed: 18
     - _FocusDim: 0
-    - _GhostEdgeScale: 0.45
-    - _GhostFillScale: 0.05
+    - _FocusHighlight: 0
+    - _GhostDissolve: 0.9
+    - _GhostEdgeScale: 0.26
+    - _GhostFillScale: 0.02
     - _GhostGlareScale: 0
-    - _GlareStrength: 0.35
-    - _LightFloor: 0.3
-    - _LightInfluence: 0.75
-    - _LightWrap: 0.45
+    - _GhostTintBlend: 0.85
+    - _GlareStrength: 0.3
+    - _HighlightBoost: 0
+    - _LightFloor: 0.42
+    - _LightInfluence: 0.45
+    - _LightWrap: 0.7
     - _Opacity: 1
     - _RevealBandIntensity: 3
     - _RevealBandWidth: 0.35
@@ -66,6 +70,8 @@ Material:
     m_Colors:
     - _BaseColor: {r: 0.08, g: 0.42, b: 0.85, a: 1}
     - _EdgeColor: {r: 0.756, g: 0.9765, b: 1.05, a: 1.05}
+    - _GhostTint: {r: 0.16, g: 0.34, b: 0.62, a: 1}
+    - _HighlightColor: {r: 0.15, g: 0.55, b: 1, a: 1}
     - _KeyLightDirection: {r: 0, g: 1, b: 0, a: 0}
     - _StatusColor: {r: 1, g: 0.4, b: 0.14, a: 1}
   m_BuildTextureStacks: []

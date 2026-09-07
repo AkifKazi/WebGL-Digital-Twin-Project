@@ -37,7 +37,13 @@ CBUFFER_START(UnityPerMaterial)
     half   _GhostFillScale;
     half   _GhostEdgeScale;
     half   _GhostGlareScale;
+    half   _GhostDissolve;
+    half4  _GhostTint;
+    half   _GhostTintBlend;
     half   _GlareStrength;
+    half   _FocusHighlight;
+    half4  _HighlightColor;
+    half   _HighlightBoost;
     half4  _KeyLightDirection;
 
     half   _ContourSpacing;
@@ -240,9 +246,29 @@ half4 MachineXRayFragment(Varyings input) : SV_Target
     // de-focused mechanism survives as a faint wireframe and the machine keeps
     // its shape while one part is inspected.
     half focusDim = saturate(_FocusDim);
-    half3 color = fillPart * lerp(1.0h, _GhostFillScale, focusDim)
-                + glarePart * _GlareStrength * lerp(1.0h, _GhostGlareScale, focusDim)
+
+    // The dissolve applies to the surface only, never to the outline. Surfaces
+    // facing the camera drop away first, so a de-focused mechanism empties out
+    // into the background while its wireframe stays to hold the shape.
+    half surfaceDissolve = lerp(1.0h, 1.0h - _GhostDissolve * (1.0h - fresnel * fresnel), focusDim);
+
+    half3 color = fillPart * lerp(1.0h, _GhostFillScale, focusDim) * surfaceDissolve
+                + glarePart * _GlareStrength * lerp(1.0h, _GhostGlareScale, focusDim) * surfaceDissolve
                 + linePart * lerp(1.0h, _GhostEdgeScale, focusDim);
+
+    // What is left is pushed toward a cold tint so it reads as background depth
+    // rather than as another live component.
+    half ghostLuma = dot(color, half3(0.30h, 0.59h, 0.11h));
+    color = lerp(color, ghostLuma * _GhostTint.rgb, focusDim * _GhostTintBlend);
+
+    // The focused mechanism is pulled toward the highlight colour and lifted,
+    // widening the gap between it and everything around it.
+    if (_FocusHighlight > 0.0h)
+    {
+        half focusLuma = dot(color, half3(0.30h, 0.59h, 0.11h));
+        color = lerp(color, focusLuma * _HighlightColor.rgb, _FocusHighlight * 0.90h);
+        color *= 1.0h + _FocusHighlight * _HighlightBoost;
+    }
 
     if (_FlickerAmount > 0.0h)
     {

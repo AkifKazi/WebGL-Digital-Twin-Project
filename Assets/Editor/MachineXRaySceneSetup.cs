@@ -110,8 +110,8 @@ public static class MachineXRaySceneSetup
         material.SetColor("_EdgeColor", new Color(0.72f, 0.93f, 1.00f) * 1.05f);
         material.SetColor("_StatusColor", new Color(1.00f, 0.40f, 0.14f));
 
-        material.SetFloat("_FillOpacity", 0.034f);
-        material.SetFloat("_FillFresnel", 2.2f);
+        material.SetFloat("_FillOpacity", 0.055f);
+        material.SetFloat("_FillFresnel", 0.9f);
 
         material.SetFloat("_EdgeThreshold", 0.75f);
         material.SetFloat("_EdgeWidth", 2.2f);
@@ -121,10 +121,10 @@ public static class MachineXRaySceneSetup
         material.SetFloat("_CreaseIntensity", 1.45f);
         material.SetFloat("_CreaseSharpness", 6f);
 
-        material.SetFloat("_LightFloor", 0.30f);
-        material.SetFloat("_LightInfluence", 0.75f);
-        material.SetFloat("_LightWrap", 0.45f);
-        material.SetFloat("_AmbientInfluence", 0.5f);
+        material.SetFloat("_LightFloor", 0.42f);
+        material.SetFloat("_LightInfluence", 0.45f);
+        material.SetFloat("_LightWrap", 0.70f);
+        material.SetFloat("_AmbientInfluence", 0.35f);
         // Top-down key: upward faces read brighter than vertical ones, and the
         // result no longer depends on the scene light the X-Ray view dims.
         material.SetVector("_KeyLightDirection", new Vector4(0f, 1f, 0f, 0f));
@@ -135,15 +135,24 @@ public static class MachineXRaySceneSetup
         // Glare is the view-dependent flare on grazing panels. Held well down
         // so surfaces stay readable from every camera angle, and removed
         // entirely on mechanisms that are not the hover focus.
-        material.SetFloat("_GlareStrength", 0.35f);
+        material.SetFloat("_GlareStrength", 0.30f);
         material.SetFloat("_GhostGlareScale", 0f);
+
+        // De-focused mechanisms collapse to roughly a tenth of their presence
+        // and take on a cold tint, so the hovered part stands well clear.
+        material.SetFloat("_GhostDissolve", 0.90f);
+        material.SetColor("_GhostTint", new Color(0.16f, 0.34f, 0.62f));
+        material.SetFloat("_GhostTintBlend", 0.85f);
+
+        material.SetColor("_HighlightColor", new Color(0.15f, 0.55f, 1.00f));
+        material.SetFloat("_HighlightBoost", 0f);
 
         material.SetFloat("_BackFaceDim", 0.25f);
         material.SetFloat("_ContourIntensity", 0.14f);
         material.SetFloat("_ContourSpacing", 0.5f);
 
-        material.SetFloat("_GhostFillScale", 0.05f);
-        material.SetFloat("_GhostEdgeScale", 0.45f);
+        material.SetFloat("_GhostFillScale", 0.02f);
+        material.SetFloat("_GhostEdgeScale", 0.26f);
 
         material.SetFloat("_ClipEdgeGlow", 2f);
         material.SetFloat("_RevealBandIntensity", 3f);

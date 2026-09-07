@@ -32,6 +32,7 @@ public sealed class MachinePartGroup : MonoBehaviour
     private static readonly int StatusBlendId = Shader.PropertyToID("_StatusBlend");
     private static readonly int SelectionBlendId = Shader.PropertyToID("_SelectionBlend");
     private static readonly int FocusDimId = Shader.PropertyToID("_FocusDim");
+    private static readonly int FocusHighlightId = Shader.PropertyToID("_FocusHighlight");
 
     private readonly List<PerformanceStatSource> boundSensors = new();
 
@@ -43,6 +44,7 @@ public sealed class MachinePartGroup : MonoBehaviour
     private float appliedStatusBlend = -1f;
     private float appliedSelectionBlend = -1f;
     private float appliedFocusDim = -1f;
+    private float appliedFocusHighlight = -1f;
 
     /// <summary>Raised when the worst alarm state of this mechanism changes.</summary>
     public event Action<MachinePartGroup> StateChanged;
@@ -52,8 +54,19 @@ public sealed class MachinePartGroup : MonoBehaviour
 
     public StatVisualState WorstState => worstState;
 
+    /// <summary>
+    /// True while a bound sensor is in warning or critical. Alarmed mechanisms
+    /// keep their colour and are never dimmed by hover isolation, matching how
+    /// the telemetry cards hold their alarm state.
+    /// </summary>
+    public bool IsAlarmed =>
+        worstState == StatVisualState.Warning || worstState == StatVisualState.Critical;
+
     /// <summary>Current hover-isolation dim, 0 lit through 1 ghosted.</summary>
     public float CurrentFocusDim => Mathf.Max(appliedFocusDim, 0f);
+
+    /// <summary>Current focus highlight, 0 through 1.</summary>
+    public float CurrentFocusHighlight => Mathf.Max(appliedFocusHighlight, 0f);
 
     public IReadOnlyList<PerformanceStatSource> BoundSensors => boundSensors;
 
@@ -239,11 +252,23 @@ public sealed class MachinePartGroup : MonoBehaviour
         WriteBlock(block => block.SetFloat(FocusDimId, dim));
     }
 
+    /// <summary>Pulls the focused mechanism toward the highlight colour.</summary>
+    public void ApplyFocusHighlight(float highlight)
+    {
+        if (Mathf.Approximately(highlight, appliedFocusHighlight))
+            return;
+
+        appliedFocusHighlight = highlight;
+
+        WriteBlock(block => block.SetFloat(FocusHighlightId, highlight));
+    }
+
     public void ClearVisuals()
     {
         ApplyStatusVisual(Color.clear, 0f);
         ApplySelectionVisual(0f);
         ApplyFocusDim(0f);
+        ApplyFocusHighlight(0f);
     }
 
     /// <summary>True when this mechanism owns the given sensor.</summary>

@@ -133,13 +133,21 @@ public static class MachineXRayPreview
 
         Render(cam, Path.Combine(outputDir, "machine_xray_alarms.png"));
 
-        // Hover isolation: focus the drive motor, ghost everything else.
+        // Hover isolation: focus the drive motor, dissolve everything else, and
+        // keep the alarmed conveyor pinned lit the way the runtime rule does.
         ClearStatus(equipment);
         SetFocusDim(equipment, "Hopper Assembly", 1f);
-        SetFocusDim(equipment, "Conveyor Assembly", 1f);
         SetFocusDim(equipment, "Vibratory Drive/Upper Rotor", 1f);
         SetFocusDim(equipment, "Vibratory Drive/Motor", 0f);
         SetFocusDim(equipment, "Vibratory Drive/Lower Rotor", 0f);
+        SetFocusHighlight(equipment, "Vibratory Drive/Motor", 1f);
+        SetFocusHighlight(equipment, "Vibratory Drive/Lower Rotor", 1f);
+
+        SetFocusDim(equipment, "Conveyor Assembly", 0f);
+        TintMechanism(equipment, "Conveyor Assembly", new Color(1f, 0.26f, 0.22f), 1f);
+
+        cam.transform.position = bounds.center + heroOrbit * new Vector3(0f, 0f, -distance * 0.55f);
+        cam.transform.LookAt(bounds.center - new Vector3(0f, bounds.extents.y * 0.35f, 0f));
 
         Render(cam, Path.Combine(outputDir, "machine_xray_isolated.png"));
 
@@ -160,6 +168,23 @@ public static class MachineXRayPreview
         {
             r.GetPropertyBlock(block);
             block.SetFloat("_FocusDim", dim);
+            r.SetPropertyBlock(block);
+        }
+    }
+
+    private static void SetFocusHighlight(GameObject equipment, string path, float value)
+    {
+        Transform target = equipment.transform.Find(path);
+
+        if (target == null)
+            return;
+
+        MaterialPropertyBlock block = new();
+
+        foreach (Renderer r in target.GetComponentsInChildren<Renderer>(false))
+        {
+            r.GetPropertyBlock(block);
+            block.SetFloat("_FocusHighlight", value);
             r.SetPropertyBlock(block);
         }
     }

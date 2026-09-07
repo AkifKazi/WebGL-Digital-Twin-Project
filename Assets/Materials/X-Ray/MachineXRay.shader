@@ -38,6 +38,14 @@ Shader "Digital Twin/Machine X-Ray"
         _GhostFillScale             ("Ghost Fill Scale", Range(0, 1)) = 0.05
         _GhostEdgeScale             ("Ghost Edge Scale", Range(0, 1)) = 0.45
         _GhostGlareScale            ("Ghost Glare Scale", Range(0, 1)) = 0
+        _GhostDissolve              ("Ghost Dissolve", Range(0, 1)) = 0.85
+        [HDR] _GhostTint            ("Ghost Tint", Color) = (0.16, 0.34, 0.62, 1)
+        _GhostTintBlend             ("Ghost Tint Blend", Range(0, 1)) = 0.85
+
+        [Header(Focus Highlight)][Space(4)]
+        _FocusHighlight             ("Focus Highlight", Range(0, 1)) = 0
+        [HDR] _HighlightColor       ("Highlight Color", Color) = (0.35, 0.75, 1, 1)
+        _HighlightBoost             ("Highlight Boost", Range(0, 2)) = 0.45
 
         [Header(Contours)][Space(4)]
         _ContourSpacing             ("Contour Spacing (m)", Range(0.05, 5)) = 0.5
