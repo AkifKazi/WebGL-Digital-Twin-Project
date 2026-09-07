@@ -35,6 +35,7 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 0
     displayPriority: 40
+    enabled: 0
   - id: FEED-01.FLOW.OUT
     legacyId: STAT-02
     objectName: Discharge Rate
@@ -53,10 +54,11 @@ MonoBehaviour:
     wideRail: 0
     portraitRail: 0
     displayPriority: 30
+    enabled: 0
   - id: VIB-01.MOTOR.TEMP
     legacyId: STAT-03
     objectName: Motor Temperature
-    category: Vibratory Drive
+    category: Drive Motor
     label: MOTOR TEMPERATURE
     unit: "\xB0C"
     valueFormat: 0.0
@@ -71,10 +73,11 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 0
     displayPriority: 80
+    enabled: 1
   - id: VIB-01.MOTOR.SPEED
     legacyId: STAT-04
     objectName: Motor Speed
-    category: Vibratory Drive
+    category: Drive Motor
     label: MOTOR SPEED
     unit: rpm
     valueFormat: 0.0
@@ -89,10 +92,11 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 0
     displayPriority: 70
+    enabled: 1
   - id: VIB-01.BEARING.VEL_RMS
     legacyId: STAT-05
     objectName: Bearing Vibration
-    category: Vibratory Drive
+    category: Upper Mixer
     label: BEARING VIBRATION
     unit: mm/s RMS
     valueFormat: 0.0
@@ -107,10 +111,11 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 2
     displayPriority: 100
+    enabled: 1
   - id: VIB-01.MOTOR.POWER
     legacyId: STAT-06
     objectName: Motor Power
-    category: Vibratory Drive
+    category: Drive Motor
     label: MOTOR POWER
     unit: kW
     valueFormat: 0.0
@@ -125,10 +130,11 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 2
     displayPriority: 60
+    enabled: 1
   - id: VIB-01.MOTOR.CURRENT
     legacyId: STAT-07
     objectName: Motor Current
-    category: Vibratory Drive
+    category: Drive Motor
     label: MOTOR CURRENT
     unit: A
     valueFormat: 0.0
@@ -143,6 +149,7 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 2
     displayPriority: 50
+    enabled: 1
   - id: HOP-01.LEVEL
     legacyId: STAT-08
     objectName: Fill Level
@@ -161,10 +168,11 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 1
     displayPriority: 90
+    enabled: 0
   - id: VIB-01.BEARING.TEMP
     legacyId: 
     objectName: Bearing Temperature
-    category: Vibratory Drive
+    category: Upper Mixer
     label: BEARING TEMPERATURE
     unit: "\xB0C"
     valueFormat: 0.0
@@ -179,10 +187,11 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 2
     displayPriority: 85
+    enabled: 1
   - id: VIB-01.DRIVE.FREQUENCY
     legacyId: 
     objectName: Drive Frequency
-    category: Vibratory Drive
+    category: Drive Motor
     label: DRIVE FREQUENCY
     unit: Hz
     valueFormat: 0.0
@@ -197,10 +206,11 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 2
     displayPriority: 45
+    enabled: 1
   - id: VIB-01.MOTOR.LOAD
     legacyId: 
     objectName: Motor Load
-    category: Vibratory Drive
+    category: Drive Motor
     label: MOTOR LOAD
     unit: '%'
     valueFormat: 0.0
@@ -215,10 +225,11 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 2
     displayPriority: 65
+    enabled: 1
   - id: FEED-01.BELT.SPEED
     legacyId: 
     objectName: Belt Speed
-    category: Material Feed
+    category: Conveyor
     label: BELT SPEED
     unit: m/s
     valueFormat: 0.0
@@ -233,6 +244,7 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 0
     displayPriority: 35
+    enabled: 1
   - id: HOP-01.MASS
     legacyId: 
     objectName: Material Mass
@@ -251,6 +263,7 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 1
     displayPriority: 75
+    enabled: 0
   - id: HOP-01.MATERIAL.MOISTURE
     legacyId: 
     objectName: Material Moisture
@@ -269,6 +282,7 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 1
     displayPriority: 58
+    enabled: 0
   - id: HOP-01.MATERIAL.TEMP
     legacyId: 
     objectName: Material Temperature
@@ -287,6 +301,7 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 1
     displayPriority: 52
+    enabled: 0
   - id: HOP-01.LOADCELL.IMBALANCE
     legacyId: 
     objectName: Load Imbalance
@@ -305,6 +320,7 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 1
     displayPriority: 82
+    enabled: 0
   - id: HOP-01.OUTLET.GATE.POSITION
     legacyId: 
     objectName: Gate Position
@@ -323,10 +339,11 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 1
     displayPriority: 68
+    enabled: 0
   - id: FEED-01.BELT.TENSION
     legacyId: 
     objectName: Belt Tension
-    category: Material Feed
+    category: Conveyor
     label: BELT TENSION
     unit: kN
     valueFormat: 0.0
@@ -341,10 +358,11 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 2
     displayPriority: 73
+    enabled: 1
   - id: FEED-01.BEARING.TEMP
     legacyId: 
     objectName: Conveyor Bearing Temperature
-    category: Material Feed
+    category: Conveyor
     label: CONVEYOR BEARING TEMP
     unit: "\xB0C"
     valueFormat: 0.0
@@ -359,6 +377,7 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 2
     displayPriority: 78
+    enabled: 1
   - id: FEED-01.DRIVE.CURRENT
     legacyId: 
     objectName: Conveyor Drive Current
@@ -377,6 +396,7 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 2
     displayPriority: 62
+    enabled: 0
   - id: FEED-01.SLIP
     legacyId: 
     objectName: Belt Slip
@@ -395,6 +415,7 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 2
     displayPriority: 88
+    enabled: 0
   - id: STRUCT-01.FRAME.VIBRATION
     legacyId: 
     objectName: Frame Vibration
@@ -413,6 +434,7 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 2
     displayPriority: 76
+    enabled: 0
   - id: ENV-01.AMBIENT.TEMP
     legacyId: 
     objectName: Ambient Temperature
@@ -431,6 +453,7 @@ MonoBehaviour:
     wideRail: 1
     portraitRail: 1
     displayPriority: 20
+    enabled: 0
   - id: ENV-01.RELATIVE.HUMIDITY
     legacyId: 
     objectName: Ambient Humidity
@@ -449,6 +472,7 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 1
     displayPriority: 18
+    enabled: 0
   - id: POWER-01.SUPPLY.VOLTAGE
     legacyId: 
     objectName: Supply Voltage
@@ -467,6 +491,7 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 2
     displayPriority: 66
+    enabled: 0
   - id: POWER-01.POWER.FACTOR
     legacyId: 
     objectName: Power Factor
@@ -485,3 +510,100 @@ MonoBehaviour:
     wideRail: 2
     portraitRail: 2
     displayPriority: 54
+    enabled: 0
+  - id: MIX-01.ROTOR.SPEED
+    legacyId: 
+    objectName: Rotor Speed
+    category: Upper Mixer
+    label: ROTOR SPEED
+    unit: rpm
+    valueFormat: 0
+    initialValue: 980
+    limitMode: 2
+    warningBelow: 850
+    criticalBelow: 700
+    warningAbove: 1080
+    criticalAbove: 1150
+    staleAfterSeconds: 5
+    localPosition: {x: 0, y: 1.02, z: 0}
+    wideRail: 2
+    portraitRail: 1
+    displayPriority: 58
+    enabled: 1
+  - id: MIX-01.ROTOR.TORQUE
+    legacyId: 
+    objectName: Rotor Torque
+    category: Upper Mixer
+    label: ROTOR TORQUE
+    unit: N.m
+    valueFormat: 0.0
+    initialValue: 142
+    limitMode: 0
+    warningBelow: 0
+    criticalBelow: 0
+    warningAbove: 190
+    criticalAbove: 220
+    staleAfterSeconds: 5
+    localPosition: {x: 0, y: 0.98, z: 0}
+    wideRail: 2
+    portraitRail: 1
+    displayPriority: 57
+    enabled: 1
+  - id: MIX-01.ROTOR.IMBALANCE
+    legacyId: 
+    objectName: Rotor Imbalance
+    category: Upper Mixer
+    label: ROTOR IMBALANCE
+    unit: mm/s RMS
+    valueFormat: 0.0
+    initialValue: 2.1
+    limitMode: 0
+    warningBelow: 0
+    criticalBelow: 0
+    warningAbove: 4.5
+    criticalAbove: 7.1
+    staleAfterSeconds: 5
+    localPosition: {x: 0, y: 1.06, z: 0}
+    wideRail: 2
+    portraitRail: 1
+    displayPriority: 59
+    enabled: 1
+  - id: MIX-01.SCREEN.BLINDING
+    legacyId: 
+    objectName: Screen Blinding
+    category: Upper Mixer
+    label: SCREEN BLINDING
+    unit: %
+    valueFormat: 0.0
+    initialValue: 6.4
+    limitMode: 0
+    warningBelow: 0
+    criticalBelow: 0
+    warningAbove: 18
+    criticalAbove: 30
+    staleAfterSeconds: 5
+    localPosition: {x: 0, y: 1.12, z: 0}
+    wideRail: 2
+    portraitRail: 1
+    displayPriority: 56
+    enabled: 1
+  machineParts:
+  - id: CONVEYOR
+    displayName: Conveyor Assembly
+    objectPaths:
+    - Conveyor Assembly
+    sensorCategories:
+    - Conveyor
+  - id: DRIVE
+    displayName: Drive Motor
+    objectPaths:
+    - Vibratory Drive/Motor
+    - Vibratory Drive/Lower Rotor
+    sensorCategories:
+    - Drive Motor
+  - id: MIXER
+    displayName: Upper Mixer
+    objectPaths:
+    - Vibratory Drive/Upper Rotor
+    sensorCategories:
+    - Upper Mixer

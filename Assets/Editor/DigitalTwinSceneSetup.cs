@@ -62,6 +62,7 @@ public static class DigitalTwinSceneSetup
         RemoveLegacyPresentationGroups();
         ConfigureRegistry(orderedSources);
         ConfigureLiveDataAndMachineBehavior(configuration);
+        MachineXRaySceneSetup.Apply(configuration);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -78,7 +79,6 @@ public static class DigitalTwinSceneSetup
     {
         SetUpScene();
         MachineViewRuntimeSetup.Apply();
-        ConnectionHealthUISetup.Apply();
         PortraitPaginationUISetup.Apply();
         DigitalTwinSceneOrganization.Apply();
         DigitalTwinProjectValidator.Validate();
@@ -140,7 +140,7 @@ public static class DigitalTwinSceneSetup
         Set(serialized, "preferredRail", (int)sensor.wideRail);
         Set(serialized, "preferredPortraitRail", (int)sensor.portraitRail);
         Set(serialized, "displayPriority", sensor.displayPriority);
-        Set(serialized, "visible", true);
+        Set(serialized, "visible", sensor.enabled);
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 

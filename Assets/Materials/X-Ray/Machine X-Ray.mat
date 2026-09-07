@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Machine X-Ray
+  m_Shader: {fileID: 4800000, guid: 1c7d7d484498f4099a1ad82ea5e399ff, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3010
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _AmbientInfluence: 0.5
+    - _BackFaceDim: 0.25
+    - _ClipDirection: 1
+    - _ClipEdgeGlow: 2
+    - _ClipEdgeWidth: 0.06
+    - _ClipEnabled: 0
+    - _ClipX: 1.5
+    - _ContourIntensity: 0.1
+    - _ContourSpacing: 0.5
+    - _CreaseIntensity: 1.3
+    - _CreaseSharpness: 6
+    - _EdgeIntensity: 1.35
+    - _EdgeSoftness: 0.02
+    - _EdgeThreshold: 0.75
+    - _EdgeWidth: 2.2
+    - _FillFresnel: 2.9
+    - _FillOpacity: 0.034
+    - _FlickerAmount: 0
+    - _FlickerSpeed: 18
+    - _FocusDim: 0
+    - _GhostEdgeScale: 0.45
+    - _GhostFillScale: 0.05
+    - _LightFloor: 0.35
+    - _LightInfluence: 0.9
+    - _LightWrap: 0.45
+    - _Opacity: 1
+    - _RevealBandIntensity: 3
+    - _RevealBandWidth: 0.35
+    - _SelectionBlend: 0
+    - _SelectionBoost: 1.6
+    - _Sheen: 0.18
+    - _SheenSharpness: 24
+    - _StatusBlend: 0
+    - _StatusPulseAmount: 1.5
+    - _StatusPulseSpeed: 1.2
+    m_Colors:
+    - _BaseColor: {r: 0.08, g: 0.42, b: 0.85, a: 1}
+    - _EdgeColor: {r: 0.756, g: 0.9765, b: 1.05, a: 1.05}
+    - _StatusColor: {r: 1, g: 0.4, b: 0.14, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
