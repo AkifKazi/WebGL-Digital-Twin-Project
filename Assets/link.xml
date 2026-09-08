@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  High managed stripping removes code that nothing references by name. The
+  telemetry contracts are reached through JsonUtility, which resolves fields by
+  string at runtime, so the linker cannot see those uses and would strip them.
+  Preserving this assembly keeps live JSON ingestion working with the smaller
+  stripped build.
+-->
+<linker>
+  <assembly fullname="Assembly-CSharp">
+    <type fullname="TelemetryJsonContract*" preserve="all" />
+    <type fullname="TelemetryReading*" preserve="all" />
+    <type fullname="DigitalTwinMachineConfiguration*" preserve="all" />
+    <type fullname="MachineSensorDefinition*" preserve="all" />
+    <type fullname="MachinePartDefinition*" preserve="all" />
+  </assembly>
+</linker>

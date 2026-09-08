@@ -82,3 +82,70 @@ tested as an A/B build on representative laptop and mobile screens. Start with n
 maps and non-hero environment textures, and keep the current import settings as the
 visual reference. Reflection and HDR assets should be reviewed separately because
 changes can affect the approved material appearance across the whole scene.
+
+## Load-time pass — 2026-09-08
+
+Measured on one machine with the same editor and gzip settings throughout, so
+the before and after numbers are comparable.
+
+| | Before | After | Change |
+|---|---|---|---|
+| Total build | 42,685,943 B | 28,977,518 B | −32.1% |
+| `.data.unityweb` | 28.27 MB | 18.94 MB | −33.0% |
+| `.wasm.unityweb` | 12.30 MB | 8.55 MB | −30.5% |
+| Textures | 28.9 MB | 12.3 MB | −57% |
+| Meshes | 13.3 MB | 13.3 MB | unchanged |
+
+### What produced the saving
+
+Textures were the whole of it. Every texture was importing at 2048 for WebGL
+because the per-platform overrides in the meta files were present but had
+`overridden: 0`, so they never applied. The single largest asset in the build
+was `Worn Metal - Normal` at 5.3 MB, 13% of everything downloaded, for a
+surface never inspected closely.
+
+WebGL ceilings are now set per texture in `WebGLLoadOptimization`, with colour
+maps crunched. Crunch is not applied to normal maps: it quantises, which shows
+on their gradients.
+
+### A mistake worth recording
+
+The first pass raised `Site Skybox` to 1024 and doubled it from 2.0 MB to
+4.0 MB, because its default import was already 512 and adding an override
+*raised* the ceiling rather than lowering it. Always read the effective value
+before overriding it. It is pinned at 512 now.
+
+### What did not help
+
+Mesh compression was already at or near maximum on every model, so setting it
+changed one file. Meshes are 13.3 MB because of polygon count, not import
+settings, and are now the largest category at 44%. Reducing them means
+decimating geometry or authoring LODs, which is model work rather than a
+setting.
+
+### Code size
+
+IL2CPP code generation is set to size, and managed stripping to High, with
+`Assets/link.xml` preserving the telemetry contracts that `JsonUtility`
+resolves by name. Together these took the `wasm` from 12.30 MB to 8.55 MB.
+
+These settings do not persist into `ProjectSettings.asset` from batch mode, so
+`WebGLBuildAudit` applies them in the building session. Confirm them in Player
+Settings before building from the editor.
+
+An incremental build reuses cached IL2CPP output, so a code-size change only
+shows after deleting `Library/Bee`. The measurement above is a clean build.
+
+### Warnings
+
+A clean build reports pre-existing `CS0618` deprecation warnings in the
+telemetry and rail scripts. Incremental builds do not recompile, which is why
+earlier passes recorded zero. They are unrelated to the settings above.
+
+### Still on the table
+- Film grain contributes about 2.8 MB: URP's `PostProcessData` references
+  eleven grain textures and includes them whether or not the effect is used.
+  The scene profile uses only Bloom, Vignette, Tonemapping and Motion Blur.
+- `LiberationSans SDF` is about 1.0 MB and is included because it sits in a
+  `Resources` folder. The scene uses Rajdhani throughout.
+- `ReflectionProbe-0` is 2.0 MB and can be rebaked at a lower resolution.

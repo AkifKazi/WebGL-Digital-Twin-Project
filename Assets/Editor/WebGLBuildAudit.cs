@@ -32,6 +32,10 @@ public static class WebGLBuildAudit
             .Select(scene => scene.path)
             .ToArray();
 
+        // Code size settings are build configuration rather than content, so
+        // they are applied here. This does not rewrite any asset.
+        WebGLLoadOptimization.ApplyCodeSizeSettings();
+
         BuildPlayerOptions options = new()
         {
             scenes = scenes,

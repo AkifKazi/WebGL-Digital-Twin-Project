@@ -136,9 +136,8 @@ public sealed class MachinePartGroup : MonoBehaviour
         }
         else if (sensorCategories != null && sensorCategories.Length > 0)
         {
-            PerformanceStatSource[] all = FindObjectsByType<PerformanceStatSource>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
+            PerformanceStatSource[] all =
+                FindObjectsByType<PerformanceStatSource>(FindObjectsInactive.Include);
 
             foreach (PerformanceStatSource sensor in all)
             {

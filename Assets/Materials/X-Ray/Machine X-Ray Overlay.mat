@@ -59,7 +59,7 @@ Material:
     - _LightWrap: 0.7
     - _OffsetFactor: -1
     - _OffsetUnits: -1
-    - _Opacity: 1
+    - _Opacity: 0
     - _RevealBandIntensity: 3
     - _RevealBandWidth: 0.35
     - _SelectionBlend: 0
