@@ -21,9 +21,7 @@ public static class TelemetrySourceResolver
     {
         IEnumerable<PerformanceStatSource> candidates = mode ==
             TelemetrySourceSelectionMode.SceneDiscovery
-            ? UnityEngine.Object.FindObjectsByType<PerformanceStatSource>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None)
+            ? UnityEngine.Object.FindObjectsByType<PerformanceStatSource>(FindObjectsInactive.Include)
             : configuredSources ?? Array.Empty<PerformanceStatSource>();
 
         return candidates

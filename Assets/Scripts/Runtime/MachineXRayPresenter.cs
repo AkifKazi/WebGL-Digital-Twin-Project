@@ -382,10 +382,6 @@ public sealed class MachineXRayPresenter : MonoBehaviour
             if (candidate is not (MeshRenderer or SkinnedMeshRenderer))
                 continue;
 
-            // Hover overlay proxies are not machine geometry.
-            if (candidate.GetComponent<MachineOverlayProxy>() != null)
-                continue;
-
             if (managedRenderers.Contains(candidate))
                 continue;
 

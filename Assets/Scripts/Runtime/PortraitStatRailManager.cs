@@ -190,7 +190,7 @@ public class PortraitStatRailManager : MonoBehaviour
 
         if (telemetryRegistry == null)
         {
-            telemetryRegistry = UnityEngine.Object.FindFirstObjectByType<TelemetryRegistry>(
+            telemetryRegistry = UnityEngine.Object.FindAnyObjectByType<TelemetryRegistry>(
                 FindObjectsInactive.Include);
         }
 

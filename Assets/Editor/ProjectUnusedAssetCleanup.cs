@@ -31,7 +31,25 @@ public static class ProjectUnusedAssetCleanup
         "Assets/Materials/Textures/Galvanized Zinc - Metallic.jpg",
         "Assets/Materials/Review",
         "Assets/Scripts/Legacy",
-        "Assets/Resources"
+        "Assets/Resources",
+
+        // Superseded by the September separator model.
+        "Assets/Models/Hopper - Full Model.fbx",
+        "Assets/Models/Conveyor Assembly.fbx",
+        "Assets/Models/Full Model.prefab",
+        "Assets/Models/Cross-Section Model.prefab",
+        "Assets/Materials/Dark Metal.mat",
+        "Assets/Materials/Mid Grey Metal.mat",
+        "Assets/Materials/Rocky Ground.mat",
+
+        // Retired hover-overlay trial, replaced by the selection outline.
+        "Assets/Materials/X-Ray/Machine X-Ray Overlay.mat",
+
+        // TextMesh Pro's default font. It sat in a Resources folder, so it
+        // shipped in every build; the interface uses Rajdhani only.
+        "Assets/TextMesh Pro/Resources/Fonts & Materials",
+        "Assets/TextMesh Pro/Fonts/LiberationSans.ttf",
+        "Assets/TextMesh Pro/Fonts/LiberationSans - OFL.txt"
     };
 
     [MenuItem("Tools/Digital Twin/Remove Verified Unused Assets")]

@@ -26,6 +26,24 @@ MonoBehaviour:
     BlurQuality: 0
     Falloff: 30
     SampleCount: -1
+--- !u!114 &-3663307774694766202
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc4fc4472b4d246dd95a836f04766019, type: 3}
+  m_Name: Selection Outline
+  m_EditorClassIdentifier: Assembly-CSharp::SelectionOutlineFeature
+  m_Active: 1
+  settings:
+    outlineWidth: 2
+    outlineOpacity: 1
+    fillOpacity: 0.18
+  shader: {fileID: 4800000, guid: 8f93701bdb6c843a6a957749a7c964ec, type: 3}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -52,10 +70,11 @@ MonoBehaviour:
     probeVolumeBlendStatesCS: {fileID: 7200000, guid: b9a23f869c4fd45f19c5ada54dd82176, type: 3}
   m_RendererFeatures:
   - {fileID: -4619041018931871492}
-  m_RendererFeatureMap: fc809b7faadee5bf
+  - {fileID: -3663307774694766202}
+  m_RendererFeatureMap: fc809b7faadee5bf864964eafc5029cd
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
-  postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
+  postProcessData: {fileID: 11400000, guid: 9fa74f121e4ee4680891419df920060d, type: 2}
   m_AssetVersion: 3
   m_PrepassLayerMask:
     serializedVersion: 2

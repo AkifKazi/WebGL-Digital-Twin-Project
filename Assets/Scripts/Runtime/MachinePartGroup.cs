@@ -101,17 +101,7 @@ public sealed class MachinePartGroup : MonoBehaviour
             return;
         }
 
-        // Hover overlay proxies live under the meshes they draw over, so they
-        // are excluded from the mechanism's own renderer list.
-        List<Renderer> found = new();
-
-        foreach (Renderer candidate in GetComponentsInChildren<Renderer>(true))
-        {
-            if (candidate != null && candidate.GetComponent<MachineOverlayProxy>() == null)
-                found.Add(candidate);
-        }
-
-        resolvedRenderers = found.ToArray();
+        resolvedRenderers = GetComponentsInChildren<Renderer>(true);
     }
 
     /// <summary>Re-reads the sensor binding, e.g. after scene setup regenerates sources.</summary>

@@ -1,3 +1,5 @@
+using UnityEngine.Rendering.Universal;
+using System.Reflection;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -21,8 +23,8 @@ public static class MachineXRaySceneSetup
 {
     private const string ShaderName = "Digital Twin/Machine X-Ray";
     private const string MaterialPath = "Assets/Materials/X-Ray/Machine X-Ray.mat";
-    private const string OverlayMaterialPath = "Assets/Materials/X-Ray/Machine X-Ray Overlay.mat";
     private const string ControllerName = "X-Ray View Controller";
+    private const string SelectionOutlineShaderName = "Hidden/Digital Twin/Selection Outline";
     private const string EquipmentRootName = "03 - Equipment";
     private const string EnvironmentRootName = "04 - Environment";
     private const string EffectsRootName = "05 - Effects";
@@ -66,8 +68,6 @@ public static class MachineXRaySceneSetup
                 host.transform.SetParent(runtimeRoot, true);
         }
 
-        Material overlayMaterial = GetOrCreateOverlayMaterial();
-
         MachineXRayPresenter presenter = GetOrAddComponent<MachineXRayPresenter>(host);
         XRayEnvironmentController environment = GetOrAddComponent<XRayEnvironmentController>(host);
         MachineViewModeController viewMode = GetOrAddComponent<MachineViewModeController>(host);
@@ -77,8 +77,13 @@ public static class MachineXRaySceneSetup
         ConfigureViewMode(viewMode, presenter, environment);
         ConfigureSegmentedControls(viewMode);
 
-        MachineHoverOverlay overlay = GetOrAddComponent<MachineHoverOverlay>(host);
-        ConfigureHoverOverlay(overlay, overlayMaterial, viewMode, groups);
+        // The hover-overlay trial was retired in favour of the selection
+        // outline; any component it left behind is now a missing script.
+        GameObjectUtility.RemoveMonoBehavioursWithMissingScript(host);
+
+        MachineSelectionHighlighter highlighter = GetOrAddComponent<MachineSelectionHighlighter>(host);
+        ConfigureHighlighter(highlighter, groups);
+        InstallSelectionOutline();
 
         Debug.Log($"X-Ray view configured with {groups.Count} mechanism(s).", host);
     }
@@ -168,75 +173,11 @@ public static class MachineXRaySceneSetup
         material.renderQueue = 3010;
     }
 
-    /// <summary>
-    /// Edge-only variant drawn over the normal materials when a card is
-    /// hovered outside the X-Ray view. The body fill is removed so the real
-    /// surface still reads through underneath.
-    /// </summary>
-    public static Material GetOrCreateOverlayMaterial()
-    {
-        Material existing = AssetDatabase.LoadAssetAtPath<Material>(OverlayMaterialPath);
-
-        if (existing != null)
-            return existing;
-
-        Shader shader = Shader.Find(ShaderName);
-
-        if (shader == null)
-            return null;
-
-        Directory.CreateDirectory(Path.GetDirectoryName(OverlayMaterialPath));
-
-        Material material = new(shader) { name = "Machine X-Ray Overlay" };
-        ApplyOverlayPreset(material);
-
-        AssetDatabase.CreateAsset(material, OverlayMaterialPath);
-        AssetDatabase.SaveAssets();
-
-        return material;
-    }
-
-    public static void ApplyOverlayPreset(Material material)
-    {
-        ApplyPreset(material);
-
-        // Almost no body: the machine's own material provides the surface, and
-        // the overlay contributes the rim and edge treatment on top of it.
-        material.SetFloat("_FillOpacity", 0.010f);
-        material.SetFloat("_FillFresnel", 6f);
-        material.SetFloat("_GlareStrength", 0.20f);
-
-        material.SetFloat("_EdgeIntensity", 2.2f);
-        material.SetFloat("_CreaseIntensity", 0.9f);
-        material.SetFloat("_ContourIntensity", 0f);
-        material.SetFloat("_BackFaceDim", 0.15f);
-
-        material.SetColor("_BaseColor", new Color(0.16f, 0.62f, 1.00f));
-        material.SetColor("_EdgeColor", new Color(0.62f, 0.90f, 1.00f) * 1.15f);
-
-        // Independent of the presenter's globals, which are zero until it runs.
-        material.SetFloat("_IgnoreGlobalOpacity", 1f);
-
-        // Drawn over the very mesh it decorates, so it needs a depth bias or
-        // the coplanar surfaces lose the LEqual test and nothing appears.
-        material.SetFloat("_OffsetFactor", -1f);
-        material.SetFloat("_OffsetUnits", -1f);
-
-        // Driven per-renderer as the overlay fades in and out.
-        material.SetFloat("_Opacity", 0f);
-    }
-
-    private static void ConfigureHoverOverlay(
-        MachineHoverOverlay overlay,
-        Material overlayMaterial,
-        MachineViewModeController viewMode,
+    private static void ConfigureHighlighter(
+        MachineSelectionHighlighter highlighter,
         IReadOnlyList<MachinePartGroup> groups)
     {
-        SerializedObject serialized = new(overlay);
-
-        serialized.FindProperty("overlayMaterial").objectReferenceValue = overlayMaterial;
-        serialized.FindProperty("viewModeController").objectReferenceValue = viewMode;
-
+        SerializedObject serialized = new(highlighter);
         SerializedProperty partGroups = serialized.FindProperty("partGroups");
         partGroups.arraySize = groups.Count;
 
@@ -244,6 +185,55 @@ public static class MachineXRaySceneSetup
             partGroups.GetArrayElementAtIndex(i).objectReferenceValue = groups[i];
 
         serialized.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>
+    /// Adds the selection outline feature to every URP renderer in the project,
+    /// so every quality level draws it. Safe to re-run: an existing feature is
+    /// reused and only its shader reference is refreshed.
+    /// </summary>
+    private static void InstallSelectionOutline()
+    {
+        Shader shader = Shader.Find(SelectionOutlineShaderName);
+
+        if (shader == null)
+        {
+            Debug.LogError($"Shader '{SelectionOutlineShaderName}' was not found; selection outline not installed.");
+            return;
+        }
+
+        MethodInfo validate = typeof(ScriptableRendererData).GetMethod(
+            "ValidateRendererFeatures",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+
+        foreach (string guid in AssetDatabase.FindAssets("t:UniversalRendererData", new[] { "Assets" }))
+        {
+            var rendererData = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(AssetDatabase.GUIDToAssetPath(guid));
+
+            if (rendererData == null)
+                continue;
+
+            SelectionOutlineFeature feature = rendererData.rendererFeatures.OfType<SelectionOutlineFeature>().FirstOrDefault();
+
+            if (feature == null)
+            {
+                feature = ScriptableObject.CreateInstance<SelectionOutlineFeature>();
+                feature.name = "Selection Outline";
+                AssetDatabase.AddObjectToAsset(feature, rendererData);
+                rendererData.rendererFeatures.Add(feature);
+            }
+
+            SerializedObject serialized = new(feature);
+            serialized.FindProperty("shader").objectReferenceValue = shader;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            // Rebuilds URP's feature map so the new sub-asset is registered.
+            validate?.Invoke(rendererData, null);
+            rendererData.SetDirty();
+            EditorUtility.SetDirty(rendererData);
+        }
+
+        AssetDatabase.SaveAssets();
     }
 
     [MenuItem("Tools/Digital Twin/Reset X-Ray Material To Preset", priority = 40)]
@@ -259,16 +249,6 @@ public static class MachineXRaySceneSetup
         ApplyPreset(material);
         EditorUtility.SetDirty(material);
         AssetDatabase.SaveAssets();
-
-        Material overlay = AssetDatabase.LoadAssetAtPath<Material>(OverlayMaterialPath);
-
-        if (overlay != null)
-        {
-            Undo.RecordObject(overlay, "Reset X-Ray overlay material");
-            ApplyOverlayPreset(overlay);
-            EditorUtility.SetDirty(overlay);
-            AssetDatabase.SaveAssets();
-        }
 
         Debug.Log("X-Ray materials reset to the shipped preset.", material);
     }

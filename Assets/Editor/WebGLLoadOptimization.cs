@@ -1,3 +1,4 @@
+using UnityEngine.Rendering.Universal;
 using System;
 using System.Collections.Generic;
 using UnityEditor;
@@ -52,9 +53,9 @@ public static class WebGLLoadOptimization
     {
         // Hero geometry: inspected closely in every view, so it keeps the
         // lightest compression that still saves space.
-        ("Assets/Models/Hopper - Full Model.fbx", ModelImporterMeshCompression.Low),
-        ("Assets/Models/Hopper - Cross Section.fbx", ModelImporterMeshCompression.Low),
-        ("Assets/Models/Conveyor Assembly.fbx", ModelImporterMeshCompression.Medium),
+        ("Assets/Models/Separator - Full Model.fbx", ModelImporterMeshCompression.Low),
+        ("Assets/Models/Separator - Cross-Section Assembly.fbx", ModelImporterMeshCompression.Low),
+        ("Assets/Models/Hopper - Bunker and Supports.fbx", ModelImporterMeshCompression.Low),
 
         // Background and irregular geometry, where vertex quantisation is not
         // readable. Rock Pile alone is 3.7 MB of the build.
@@ -79,6 +80,8 @@ public static class WebGLLoadOptimization
         PlayerSettings.WebGL.dataCaching = true;
 
         ApplyCodeSizeSettings();
+        ApplyTextMeshProDefaultFont();
+        ApplyPostProcessData();
 
         int textures = 0;
         int models = 0;
@@ -222,5 +225,118 @@ public static class WebGLLoadOptimization
             $"Gzip={(int)WebGLCompressionFormat.Gzip} " +
             $"Disabled={(int)WebGLCompressionFormat.Disabled} " +
             $"Current={(int)PlayerSettings.WebGL.compressionFormat}");
+    }
+
+    private const string TmpSettingsPath = "Assets/TextMesh Pro/Resources/TMP Settings.asset";
+    private const string InterfaceFontPath = "Assets/UI/Fonts/Rajdhani-Medium SDF.asset";
+    private const string PostProcessDataPath = "Assets/Settings/Post Process Data.asset";
+    private const string PlaceholderTexturePath = "Assets/Settings/Unused Post Process Texture.png";
+    private const string DefaultPostProcessDataGuid = "41439944d30ece34e96484bdb6645b55";
+
+    /// <summary>
+    /// TextMesh Pro's default font lives in a Resources folder, which ships in
+    /// every build whether used or not. The interface only uses Rajdhani, so
+    /// the default points there and LiberationSans can be removed.
+    /// </summary>
+    private static void ApplyTextMeshProDefaultFont()
+    {
+        UnityEngine.Object settings = AssetDatabase.LoadMainAssetAtPath(TmpSettingsPath);
+        UnityEngine.Object font = AssetDatabase.LoadMainAssetAtPath(InterfaceFontPath);
+
+        if (settings == null || font == null)
+        {
+            Debug.LogWarning("WebGL optimization: TMP settings or interface font not found; default font unchanged.");
+            return;
+        }
+
+        SerializedObject serialized = new(settings);
+        serialized.FindProperty("m_defaultFontAsset").objectReferenceValue = font;
+        serialized.FindProperty("m_fallbackFontAssets").arraySize = 0;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(settings);
+    }
+
+    /// <summary>
+    /// URP's post-processing data references ten film-grain textures and the
+    /// SMAA lookup textures, and all of them ship because they are referenced.
+    /// This scene uses neither film grain nor SMAA (the camera uses FXAA).
+    ///
+    /// The package asset is read-only and URP refills any empty slot in the
+    /// editor, so a project copy is used with every unused slot pointed at one
+    /// tiny placeholder: a filled slot is left alone, and the placeholder is a
+    /// few bytes. Enabling film grain or SMAA later means pointing these slots
+    /// back at the package textures.
+    /// </summary>
+    private static void ApplyPostProcessData()
+    {
+        Texture2D placeholder = GetOrCreatePlaceholderTexture();
+        PostProcessData data = AssetDatabase.LoadAssetAtPath<PostProcessData>(PostProcessDataPath);
+
+        if (data == null)
+        {
+            PostProcessData source = AssetDatabase.LoadAssetAtPath<PostProcessData>(
+                AssetDatabase.GUIDToAssetPath(DefaultPostProcessDataGuid));
+
+            if (source == null)
+            {
+                Debug.LogWarning("WebGL optimization: URP default post-process data not found; film grain kept.");
+                return;
+            }
+
+            data = UnityEngine.Object.Instantiate(source);
+            AssetDatabase.CreateAsset(data, PostProcessDataPath);
+        }
+
+        SerializedObject serialized = new(data);
+        SerializedProperty filmGrain = serialized.FindProperty("textures.filmGrainTex");
+
+        for (int i = 0; i < filmGrain.arraySize; i++)
+            filmGrain.GetArrayElementAtIndex(i).objectReferenceValue = placeholder;
+
+        serialized.FindProperty("textures.smaaAreaTex").objectReferenceValue = placeholder;
+        serialized.FindProperty("textures.smaaSearchTex").objectReferenceValue = placeholder;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(data);
+
+        foreach (string guid in AssetDatabase.FindAssets("t:UniversalRendererData", new[] { "Assets" }))
+        {
+            var renderer = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(AssetDatabase.GUIDToAssetPath(guid));
+
+            if (renderer == null || renderer.postProcessData == data)
+                continue;
+
+            renderer.postProcessData = data;
+            EditorUtility.SetDirty(renderer);
+        }
+    }
+
+    private static Texture2D GetOrCreatePlaceholderTexture()
+    {
+        Texture2D existing = AssetDatabase.LoadAssetAtPath<Texture2D>(PlaceholderTexturePath);
+
+        if (existing != null)
+            return existing;
+
+        Color32[] grey = new Color32[16];
+
+        for (int i = 0; i < grey.Length; i++)
+            grey[i] = new Color32(128, 128, 128, 255);
+
+        Texture2D pixels = new(4, 4, TextureFormat.RGBA32, false);
+        pixels.SetPixels32(grey);
+        System.IO.File.WriteAllBytes(PlaceholderTexturePath, pixels.EncodeToPNG());
+        UnityEngine.Object.DestroyImmediate(pixels);
+
+        AssetDatabase.ImportAsset(PlaceholderTexturePath);
+
+        if (AssetImporter.GetAtPath(PlaceholderTexturePath) is TextureImporter importer)
+        {
+            importer.mipmapEnabled = false;
+            importer.maxTextureSize = 32;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+        }
+
+        return AssetDatabase.LoadAssetAtPath<Texture2D>(PlaceholderTexturePath);
     }
 }

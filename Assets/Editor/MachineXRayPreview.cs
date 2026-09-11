@@ -32,14 +32,6 @@ public static class MachineXRayPreview
 
         EditorSceneManager.OpenScene("Assets/Scenes/SampleScene.unity", OpenSceneMode.Single);
 
-        // Overlay trial: keep the real materials, draw the edge treatment over
-        // one mechanism, exactly as the hover overlay does at runtime.
-        if (System.Environment.GetEnvironmentVariable("XRAY_OVERLAY_TEST") == "1")
-        {
-            CaptureOverlayTrial(outputDir);
-            return;
-        }
-
         Material material = MachineXRaySceneSetup.GetOrCreateMaterial();
         MachineXRaySceneSetup.ApplyPreset(material);
 
@@ -137,7 +129,7 @@ public static class MachineXRayPreview
         cam.transform.LookAt(bounds.center);
 
         TintMechanism(equipment, "Vibratory Drive", new Color(1f, 0.26f, 0.22f), 1f);
-        TintMechanism(equipment, "Conveyor Assembly", new Color(1f, 0.72f, 0.18f), 0.75f);
+        TintMechanism(equipment, "Conveyors", new Color(1f, 0.72f, 0.18f), 0.75f);
 
         Render(cam, Path.Combine(outputDir, "machine_xray_alarms.png"));
 
@@ -149,8 +141,8 @@ public static class MachineXRayPreview
         SetFocusDim(equipment, "Vibratory Drive/Motor", 0f);
         SetFocusDim(equipment, "Vibratory Drive/Lower Rotor", 0f);
 
-        SetFocusDim(equipment, "Conveyor Assembly", 0f);
-        TintMechanism(equipment, "Conveyor Assembly", new Color(1f, 0.26f, 0.22f), 1f);
+        SetFocusDim(equipment, "Conveyors", 0f);
+        TintMechanism(equipment, "Conveyors", new Color(1f, 0.26f, 0.22f), 1f);
 
         cam.transform.position = bounds.center + heroOrbit * new Vector3(0f, 0f, -distance * 0.55f);
         cam.transform.LookAt(bounds.center - new Vector3(0f, bounds.extents.y * 0.35f, 0f));
@@ -193,82 +185,6 @@ public static class MachineXRayPreview
             block.SetFloat("_FocusDim", dim);
             r.SetPropertyBlock(block);
         }
-    }
-
-    /// <summary>
-    /// Overlay trial. Editor batch renders do not pick up renderers created or
-    /// enabled between Render() calls, so the proxies are built before the
-    /// first render and toggled through the material instead.
-    /// </summary>
-    private static void CaptureOverlayTrial(string outputDir)
-    {
-        GameObject equipment = Object.FindObjectsByType<GameObject>(
-                FindObjectsInactive.Include, FindObjectsSortMode.None)
-            .FirstOrDefault(go => go.name == "03 - Equipment");
-
-        Material overlay = MachineXRaySceneSetup.GetOrCreateOverlayMaterial();
-        MachineXRaySceneSetup.ApplyOverlayPreset(overlay);
-        overlay.SetFloat("_Opacity", 0f);
-
-        Transform drive = equipment.transform.Find("Vibratory Drive");
-
-        foreach (MeshRenderer source in drive.GetComponentsInChildren<MeshRenderer>(false))
-        {
-            MeshFilter sourceFilter = source.GetComponent<MeshFilter>();
-
-            if (sourceFilter == null || sourceFilter.sharedMesh == null)
-                continue;
-
-            GameObject proxyObject = new("Hover Overlay");
-            proxyObject.transform.SetParent(source.transform, false);
-
-            MeshFilter filter = proxyObject.AddComponent<MeshFilter>();
-            filter.sharedMesh = sourceFilter.sharedMesh;
-
-            MeshRenderer renderer = proxyObject.AddComponent<MeshRenderer>();
-            Material[] slots = new Material[sourceFilter.sharedMesh.subMeshCount];
-
-            for (int i = 0; i < slots.Length; i++)
-                slots[i] = overlay;
-
-            renderer.sharedMaterials = slots;
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-        }
-
-        Camera cam = Camera.main;
-
-        Bounds driveBounds = default;
-        bool driveValid = false;
-
-        foreach (MeshRenderer r in drive.GetComponentsInChildren<MeshRenderer>(false))
-        {
-            if (r.gameObject.name == "Hover Overlay")
-                continue;
-
-            if (!driveValid) { driveBounds = r.bounds; driveValid = true; }
-            else driveBounds.Encapsulate(r.bounds);
-        }
-
-        cam.fieldOfView = 34f;
-
-        float driveDistance = driveBounds.extents.magnitude /
-                              Mathf.Sin(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) * 2.0f;
-
-        Quaternion orbit = Quaternion.Euler(6f, 135f, 0f);
-        cam.transform.position = driveBounds.center + orbit * new Vector3(0f, 0f, -driveDistance);
-        cam.transform.LookAt(driveBounds.center);
-
-        // Discard one frame: the first render of a batch session happens before
-        // lighting settles.
-        Render(cam, Path.Combine(outputDir, "warmup.png"));
-
-        Render(cam, Path.Combine(outputDir, "overlay_before.png"));
-
-        overlay.SetFloat("_Opacity", 1f);
-        Render(cam, Path.Combine(outputDir, "overlay_after.png"));
-
-        Debug.Log("XRAY-PREVIEW: overlay trial done");
-        EditorApplication.Exit(0);
     }
 
     private static void SetFocusDimAll(GameObject equipment, float dim)

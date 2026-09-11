@@ -54,31 +54,16 @@ public static class DigitalTwinSceneOrganization
             equipment,
             "Vibratory Drive",
             "Motor Components");
-        Transform conveyorAssembly = GetOrCreateRenamedChild(
-            equipment,
-            "Conveyor Assembly",
-            "Conveyor Belts");
-
-        RenameAndParent("Rotor top", "Upper Rotor", driveAssembly);
-        RenameAndParent("Rotor bottom", "Lower Rotor", driveAssembly);
-        Parent("Upper Rotor", driveAssembly);
-        Parent("Lower Rotor", driveAssembly);
-        Parent("Motor", driveAssembly);
-
-        RenameAndParent("Akif's final hopper copy", "Full Model", hopperAssembly);
-        RenameAndParent("Akif's final cut hopper copy", "Cross-Section Model", hopperAssembly);
-        RenameAndParent("Hopper - Full Model", "Full Model", hopperAssembly);
-        RenameAndParent("Hopper - Cross Section Model", "Cross-Section Model", hopperAssembly);
-        RenameAndParent("Akif's hopper collider", "Physics Collider", hopperAssembly);
-        RenameAndParent("Hopper - Physics Collider", "Physics Collider", hopperAssembly);
 
         Parent("Bunker", hopperAssembly);
         Parent("Supports", hopperAssembly);
-        Parent("Roller", conveyorAssembly);
-        Parent("Roller 2", conveyorAssembly);
-        Parent("Belt", conveyorAssembly);
-        Parent("Belt 2", conveyorAssembly);
-        Parent("conveyor", conveyorAssembly);
+
+        // Every model step below is scoped to a known parent. The source files
+        // reuse Blender names such as "Motor" and "Spring" across parts, so a
+        // scene-wide name search would pick the wrong object.
+        OrganizeSeparatorModels(equipment, hopperAssembly);
+        OrganizeVibratoryDrive(equipment, hopperAssembly, driveAssembly);
+        OrganizeConveyors(equipment);
 
         // Sensor categories and anchors are owned by the selected machine
         // configuration. Hierarchy cleanup must preserve that machine-defined layout.
@@ -314,6 +299,179 @@ public static class DigitalTwinSceneOrganization
             .FirstOrDefault(child => child.name == oldName || child.name == newName);
         if (target != null)
             target.name = newName;
+    }
+
+    // -----------------------------------------------------------------------
+    // Separator model (Blender object name -> what the part is)
+    // -----------------------------------------------------------------------
+
+    private static readonly (string Blender, string Name)[] SeparatorParts =
+    {
+        ("Cylinder.050", "Spring Seat - Upper"),
+        ("Cylinder.051", "Spring Seat - Lower"),
+        ("Cylinder.058", "Base Housing"),
+        ("Right_O.002", "Separator Drum"),
+        ("Right_O.005", "Screen Decks and Discharge"),
+        ("Spring", "Isolation Springs")
+    };
+
+    private static readonly (string Blender, string Name)[] DriveMotorParts =
+    {
+        ("Motor", "Lower Gusset 01"), ("Motor.001", "Lower Gusset 02"), ("Motor.002", "Lower Gusset 03"),
+        ("Motor.003", "Lower Gusset 04"), ("Motor.004", "Lower Gusset 05"), ("Motor.005", "Lower Gusset 06"),
+        ("Motor.006", "Lower Gusset 07"), ("Motor.007", "Lower Gusset 08"),
+        ("Motor.008", "Upper Gusset 01"), ("Motor.009", "Upper Gusset 02"), ("Motor.010", "Upper Gusset 03"),
+        ("Motor.011", "Upper Gusset 04"), ("Motor.012", "Upper Gusset 05"), ("Motor.013", "Upper Gusset 06"),
+        ("Motor.014", "Upper Gusset 07"), ("Motor.015", "Upper Gusset 08"),
+        ("Motor.016", "Lower End Plate"),
+        ("Motor.017", "Upper End Plate"),
+        ("Motor.020", "Motor Body"),
+        ("Cylinder.052", "Drive Shaft"),
+        ("Cylinder.053", "Shaft Collar - Top"),
+        ("Cylinder.055", "Shaft Collar - Middle"),
+        ("Cylinder.054", "Rotor Core"),
+        ("Cylinder.056", "Mounting Flange"),
+        ("Cube.022", "Stator"),
+        ("Cube.021", "Finned Housing")
+    };
+
+    // The filtered line runs under the Filtered Flow Outlet (+Z), the coarse
+    // line under the Coarse Flow Outlet (-Z). Inner faces the machine.
+    private static readonly (string Blender, string Name)[] FilteredConveyorParts =
+    {
+        ("Cylinder.057", "Belt"), ("Cylinder.059", "Idler Rollers"),
+        ("Cube.025", "Side Guard - Inner"), ("Cube.024", "Side Guard - Outer"),
+        ("Cube.028", "Leg Frame - Inner"), ("Cube.027", "Leg Frame - Outer"),
+        ("Cube.029", "Cross Members"),
+        ("Motor.018", "Foot Plates - Inner"), ("Motor.019", "Foot Plates - Outer")
+    };
+
+    private static readonly (string Blender, string Name)[] CoarseConveyorParts =
+    {
+        ("Cylinder.037", "Belt"), ("Cylinder.041", "Idler Rollers"),
+        ("Cube.034", "Side Guard - Inner"), ("Cube.030", "Side Guard - Outer"),
+        ("Cube.035", "Leg Frame - Inner"), ("Cube.031", "Leg Frame - Outer"),
+        ("Cube.033", "Cross Members"),
+        ("Motor.022", "Foot Plates - Inner"), ("Motor.021", "Foot Plates - Outer")
+    };
+
+    private static void OrganizeSeparatorModels(Transform equipment, Transform hopperAssembly)
+    {
+        Transform full = AdoptChild(hopperAssembly, equipment, "full model of hopper", "Full Model");
+        Transform cut = AdoptChild(hopperAssembly, equipment, "Cut detailed hopper", "Cross-Section Model");
+
+        foreach ((string blender, string name) in SeparatorParts)
+        {
+            RenameScoped(full, blender, name);
+            RenameScoped(cut, blender, name);
+        }
+
+        MirrorSeparatorVibration(cut, full);
+    }
+
+    private static void OrganizeVibratoryDrive(Transform equipment, Transform hopperAssembly, Transform drive)
+    {
+        Transform motor = AdoptChild(drive, equipment, "motor", "Drive Motor");
+
+        foreach ((string blender, string name) in DriveMotorParts)
+            RenameScoped(motor, blender, name);
+
+        // The source file puts the rotors inside the cutaway model, which is
+        // switched off in the Full Body view. Grouping them with the drive
+        // keeps them present in every view - hidden inside the closed drum
+        // until it is cut away - so their mechanism can still be outlined.
+        Transform cut = hopperAssembly.Find("Cross-Section Model");
+
+        if (cut != null)
+        {
+            AdoptChild(drive, cut, "Rotor top", "Upper Rotor");
+            AdoptChild(drive, cut, "Rotor bottom", "Lower Rotor");
+        }
+    }
+
+    private static void OrganizeConveyors(Transform equipment)
+    {
+        Transform conveyors = GetOrCreateRenamedChild(equipment, "Conveyors", "Conveyor");
+        Transform filtered = GetOrCreateChild(conveyors, "Filtered Material Conveyor");
+        Transform coarse = GetOrCreateChild(conveyors, "Coarse Material Conveyor");
+
+        foreach ((string blender, string name) in FilteredConveyorParts)
+            AdoptChild(filtered, conveyors, blender, name);
+
+        foreach ((string blender, string name) in CoarseConveyorParts)
+            AdoptChild(coarse, conveyors, blender, name);
+    }
+
+    /// <summary>
+    /// The cutaway model's separator parts vibrate; the full model's did not,
+    /// so the drum stood still in the Full Body view. Copies each vibration
+    /// setting onto the matching full-model part.
+    /// </summary>
+    private static void MirrorSeparatorVibration(Transform cut, Transform full)
+    {
+        if (cut == null || full == null)
+            return;
+
+        foreach (Transform cutPart in cut)
+        {
+            SeparatorVibration source = cutPart.GetComponent<SeparatorVibration>();
+            Transform fullPart = full.Find(cutPart.name);
+
+            if (source == null || fullPart == null || fullPart.GetComponent<SeparatorVibration>() != null)
+                continue;
+
+            SeparatorVibration copy = fullPart.gameObject.AddComponent<SeparatorVibration>();
+            EditorUtility.CopySerialized(source, copy);
+        }
+    }
+
+    /// <summary>
+    /// Moves a child found under <paramref name="searchRoot"/> by its old name
+    /// into <paramref name="parent"/> under its new name. Re-running finds it
+    /// already in place.
+    /// </summary>
+    private static Transform AdoptChild(Transform parent, Transform searchRoot, string oldName, string newName)
+    {
+        if (parent == null)
+            return null;
+
+        Transform target = parent.Find(newName) ??
+                           (searchRoot != null ? searchRoot.Find(oldName) : null) ??
+                           parent.Find(oldName);
+
+        if (target == null)
+            return null;
+
+        Rename(target, newName);
+
+        if (target.parent != parent)
+            target.SetParent(parent, true);
+
+        return target;
+    }
+
+    private static void RenameScoped(Transform parent, string oldName, string newName)
+    {
+        if (parent == null)
+            return;
+
+        Transform target = parent.Find(newName) ?? parent.Find(oldName);
+
+        if (target != null)
+            Rename(target, newName);
+    }
+
+    private static void Rename(Transform target, string newName)
+    {
+        if (target.name == newName)
+            return;
+
+        target.name = newName;
+
+        // Renaming inside a prefab instance is an override; recording it is
+        // what makes it survive the scene being saved and reloaded.
+        if (PrefabUtility.IsPartOfPrefabInstance(target))
+            PrefabUtility.RecordPrefabInstancePropertyModifications(target.gameObject);
     }
 
     private static int CountMissingScripts(GameObject gameObject)

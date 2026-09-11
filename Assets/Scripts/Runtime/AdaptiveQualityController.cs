@@ -36,7 +36,9 @@ public sealed class AdaptiveQualityController : MonoBehaviour
 
     [Header("Mobile WebGL")]
     [Tooltip("Mobile browsers remain on the low-quality preset instead of participating in adaptive quality.")]
+#pragma warning disable CS0414 // Read only in WebGL player builds, so editor compiles see it as unused.
     [SerializeField] private bool lockMobileBrowserToLowQuality = true;
+#pragma warning restore CS0414
 
     [Tooltip("Frame-rate limit used by mobile browsers. Desktop WebGL remains browser driven.")]
     [SerializeField, Range(15, 60)] private int mobileBrowserTargetFrameRate = 30;

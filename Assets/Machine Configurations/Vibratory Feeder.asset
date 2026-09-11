@@ -589,15 +589,15 @@ MonoBehaviour:
     enabled: 1
   machineParts:
   - id: CONVEYOR
-    displayName: Conveyor Assembly
+    displayName: Conveyors
     objectPaths:
-    - Conveyor Assembly
+    - Conveyors
     sensorCategories:
     - Conveyor
   - id: DRIVE
     displayName: Drive Motor
     objectPaths:
-    - Vibratory Drive/Motor
+    - Vibratory Drive/Drive Motor
     - Vibratory Drive/Lower Rotor
     sensorCategories:
     - Drive Motor

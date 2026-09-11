@@ -149,3 +149,77 @@ earlier passes recorded zero. They are unrelated to the settings above.
 - `LiberationSans SDF` is about 1.0 MB and is included because it sits in a
   `Resources` folder. The scene uses Rajdhani throughout.
 - `ReflectionProbe-0` is 2.0 MB and can be rebaked at a lower resolution.
+
+## Model update pass — 2026-09-11
+
+The separator model was replaced (`Separator - Full Model.fbx`,
+`Separator - Cross-Section Assembly.fbx`). This pass re-measured before
+changing anything: `LoadTimeAudit` records per-mesh vertex and triangle counts,
+and a clean `WebGLBuildAudit` build gives per-asset shipped sizes. Same editor,
+gzip, and `Library/Bee` cleared for both builds.
+
+| | Before | After |
+|---|---|---|
+| Total build | 28,700,294 B | 26,679,922 B (−7.0%) |
+| `.data.unityweb` | 18.68 MB | 16.75 MB |
+| `.wasm.unityweb` | 8.55 MB | 8.56 MB |
+
+### Removed without visual change
+
+- **Film grain and SMAA lookup textures.** URP's post-processing data
+  references ten film-grain textures and the SMAA area/search textures, so all
+  of them shipped although the volume has no Film Grain override and the
+  camera uses FXAA. `Assets/Settings/Post Process Data.asset` is a project
+  copy with those slots pointed at a 4×4 placeholder. An empty or null slot
+  would not work: URP's editor reloader resizes the array and refills null
+  slots, but leaves filled ones alone. Adding Film Grain, or switching the
+  camera to SMAA, means pointing those slots back at the package textures.
+- **LiberationSans.** It was TextMesh Pro's default font and lived in a
+  `Resources` folder, which ships regardless of use. The interface only uses
+  Rajdhani, so TMP's default now points at Rajdhani Medium.
+- **Superseded assets**, removed through `ProjectUnusedAssetCleanup` (which
+  re-checks production dependencies first): the previous hopper model files,
+  their extracted prefabs, three unreferenced materials, and the retired
+  hover-overlay material.
+- **Import flags** on the new model files: cameras, lights, blend shapes,
+  visibility and animation are no longer imported. Mesh compression is
+  unchanged (Low on the hero models).
+
+Build warnings fell from 4 to 0 and the project validator reports 30 sensors,
+0 errors, 0 warnings. The build report no longer lists any film-grain, SMAA or
+LiberationSans asset, and all twelve placeholder slots survived a fresh editor
+load, which is when URP's reloader runs.
+
+### Where the size is now
+
+Meshes are the largest category. The audit shows it is polygon count, not
+settings — four items hold roughly three quarters of the scene's triangles:
+
+| Mesh | Triangles | Note |
+|---|---|---|
+| Full model — isolation springs | 225,280 | twelve springs |
+| Cross-section — isolation springs | 122,880 | the same springs, cut |
+| Rock Pile (`Material Stockpile`) | 151,928 | background prop |
+| Conveyor idler rollers | 25,008 each | two lines |
+
+These need reducing in the modelling tool; see the decimation notes in the
+project hand-off.
+
+### Load time beyond download size
+
+- **Decompression.** GitHub Pages cannot send `Content-Encoding`, so the gzip
+  build is decompressed in JavaScript by Unity's fallback. A host that allows
+  headers (Netlify, Cloudflare Pages) would enable native decompression and
+  Brotli, measured at 25.5% smaller in the August pass.
+- **Mobile textures.** The build uses the default desktop texture format. iOS
+  and most Android GPUs cannot sample it, so textures are converted on the
+  CPU while loading on phones. A second build with ASTC textures, chosen by
+  the loader when the browser reports ASTC support, would remove that step.
+  Not yet measured on a device.
+
+### Particles
+
+The 16 particle systems (about 3,600 particles at most) are a few kilobytes of
+settings plus a 96-vertex rock mesh and a 128 px dust texture. They do not
+affect loading. Their cost is per frame: roughly 1,560 mesh particles of 96
+vertices each, and world collision on one dust plume.
