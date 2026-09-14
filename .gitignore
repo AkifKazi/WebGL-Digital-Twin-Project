@@ -48,3 +48,7 @@ crashlytics-build.properties
 *.tmp
 *.bak
 *.orig
+
+# Blender auto-save backups
+*.blend1
+*.blend2
