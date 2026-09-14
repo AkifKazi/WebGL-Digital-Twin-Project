@@ -401,6 +401,14 @@ public static class DigitalTwinSceneOrganization
         // "Supports" is what the frame was called before the Blender rename.
         RenameScoped(hopperAssembly, "Support Frame", "Supports");
 
+        // An empty leftover also named "Bunker" sat beside the real one. With
+        // no components and no children it only confused the hierarchy.
+        foreach (Transform child in hopperAssembly.Cast<Transform>().ToList())
+        {
+            if (child.name == "Bunker" && child.childCount == 0 && child.GetComponents<Component>().Length == 1)
+                UnityEngine.Object.DestroyImmediate(child.gameObject);
+        }
+
         foreach ((string original, string blender, string name) in BunkerParts)
             RelinkMesh(AdoptChild(hopperAssembly, equipment, name, original, blender), BunkerModelPath, original, blender);
     }
@@ -442,7 +450,7 @@ public static class DigitalTwinSceneOrganization
         UnpackModelInstance(frame);
 
         Transform separatorFill = RenameScoped(frame, "Section Fill - Separator", "Screen Decks and Discharge.002");
-        RenameScoped(frame, "Section Fill - Base Housing", "Screen Decks and Discharge.003");
+        RenameScoped(frame, "Section Fill - Base Housing", "Screen Decks and Discharge.003", "Screen Decks and Discharge.004");
 
         // The separator's section face moves with the vibrating drum, or the
         // clipped walls would shake behind a still face. The base housing,

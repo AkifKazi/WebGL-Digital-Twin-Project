@@ -49,7 +49,18 @@ public static class ProjectUnusedAssetCleanup
         // shipped in every build; the interface uses Rajdhani only.
         "Assets/TextMesh Pro/Resources/Fonts & Materials",
         "Assets/TextMesh Pro/Fonts/LiberationSans.ttf",
-        "Assets/TextMesh Pro/Fonts/LiberationSans - OFL.txt"
+        "Assets/TextMesh Pro/Fonts/LiberationSans - OFL.txt",
+
+        // Retired with the single clipped model and its cut frame.
+        "Assets/Models/Separator - Cross-Section Assembly.fbx",
+
+        // Card art replaced by the current telemetry card sprites.
+        "Assets/UI/Sprites/Telemetry Card - Normal.png",
+        "Assets/UI/Sprites/Telemetry ui background active new.png",
+
+        // HDRP text shaders; this project renders with URP.
+        "Assets/TextMesh Pro/Shaders/TMP_SDF-HDRP LIT.shadergraph",
+        "Assets/TextMesh Pro/Shaders/TMP_SDF-HDRP UNLIT.shadergraph"
     };
 
     [MenuItem("Tools/Digital Twin/Remove Verified Unused Assets")]

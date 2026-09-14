@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 /// <summary>
@@ -54,7 +55,6 @@ public static class WebGLLoadOptimization
         // Machine geometry. Compression levels chosen by the modeller with the
         // 2026-09-14 model update; kept here so re-running does not revert them.
         ("Assets/Models/Separator - Full Model.fbx", ModelImporterMeshCompression.Medium),
-        ("Assets/Models/Separator - Cross-Section Assembly.fbx", ModelImporterMeshCompression.Medium),
         ("Assets/Models/Vibratory Drive.fbx", ModelImporterMeshCompression.Medium),
         ("Assets/Models/Conveyor.fbx", ModelImporterMeshCompression.Medium),
         ("Assets/Models/Hopper - Bunker and Supports.fbx", ModelImporterMeshCompression.High),
@@ -84,6 +84,7 @@ public static class WebGLLoadOptimization
         ApplyCodeSizeSettings();
         ApplyTextMeshProDefaultFont();
         ApplyPostProcessData();
+        ApplyShaderFeatureTrim();
 
         int textures = 0;
         int models = 0;
@@ -144,6 +145,44 @@ public static class WebGLLoadOptimization
         PlayerSettings.SetManagedStrippingLevel(webgl, ManagedStrippingLevel.High);
 
         PlayerSettings.stripEngineCode = true;
+    }
+
+    /// <summary>
+    /// Turns off pipeline features the scene never uses, so their shader
+    /// variants are stripped from the build. Each is checked against the scene
+    /// first: LOD cross-fade only matters with LOD groups, terrain holes only
+    /// with terrain.
+    /// </summary>
+    [MenuItem("Tools/Digital Twin/Trim Unused Pipeline Features", priority = 61)]
+    public static void ApplyShaderFeatureTrim()
+    {
+        EditorSceneManager.OpenScene("Assets/Scenes/SampleScene.unity", OpenSceneMode.Single);
+
+        bool usesLod = UnityEngine.Object.FindObjectsByType<LODGroup>(FindObjectsInactive.Include).Length > 0;
+        bool usesTerrain = UnityEngine.Object.FindObjectsByType<Terrain>(FindObjectsInactive.Include).Length > 0;
+
+        foreach (string guid in AssetDatabase.FindAssets("t:UniversalRenderPipelineAsset", new[] { "Assets" }))
+        {
+            UniversalRenderPipelineAsset asset = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(
+                AssetDatabase.GUIDToAssetPath(guid));
+
+            if (asset == null)
+                continue;
+
+            SerializedObject serialized = new(asset);
+
+            if (!usesLod)
+                serialized.FindProperty("m_EnableLODCrossFade").boolValue = false;
+
+            if (!usesTerrain)
+                serialized.FindProperty("m_SupportsTerrainHoles").boolValue = false;
+
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(asset);
+        }
+
+        AssetDatabase.SaveAssets();
+        Debug.Log($"SHADER_FEATURE_TRIM keptLodCrossFade={usesLod} keptTerrainHoles={usesTerrain}");
     }
 
     private static bool SetWebGLTextureBudget(string path, int maximumSize, bool crunch)

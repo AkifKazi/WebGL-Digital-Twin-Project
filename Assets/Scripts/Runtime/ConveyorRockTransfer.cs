@@ -58,6 +58,12 @@ public sealed class ConveyorRockTransfer : MonoBehaviour
     [Tooltip("Share of the impact speed returned as a bounce. Rubber belting absorbs most of it.")]
     [SerializeField, Range(0f, 0.6f)] private float restitution = 0.15f;
 
+    [Tooltip("How far, in metres, a hard-landing rock skids or rolls sideways after striking the belt before friction stops it. Softer landings go less far.")]
+    [SerializeField, Range(0f, 0.3f)] private float impactSpread = 0.12f;
+
+    [Tooltip("Impact speed, in metres per second, at which a rock reaches the full spread.")]
+    [SerializeField, Min(0.1f)] private float fullSpreadImpactSpeed = 3.5f;
+
     [Tooltip("Seconds for a landed rock's tumbling to die away once it rests on the belt.")]
     [SerializeField, Min(0.01f)] private float spinSettleSeconds = 0.25f;
 
@@ -226,8 +232,19 @@ public sealed class ConveyorRockTransfer : MonoBehaviour
             {
                 position.y = surface;
 
-                // A hard landing hops a little; otherwise the rock follows the belt.
-                velocity.y = velocity.y < -0.2f ? -velocity.y * restitution : beltVelocity.y;
+                if (velocity.y < -0.2f)
+                {
+                    // A rock striking the belt glances off to one side and skids
+                    // until friction stops it; the harder it lands, the further.
+                    velocity += belt.Side * ImpactSideSpeed(rock.randomSeed, -velocity.y);
+
+                    // Rubber belting returns a little of the impact as a hop.
+                    velocity.y = -velocity.y * restitution;
+                }
+                else
+                {
+                    velocity.y = beltVelocity.y;
+                }
 
                 // Kinetic friction brings the rock's ground speed to the belt's.
                 Vector3 ground = new(velocity.x, 0f, velocity.z);
@@ -274,6 +291,18 @@ public sealed class ConveyorRockTransfer : MonoBehaviour
     }
 
     private float RestOffset(Vector3 size) => restHeight * (size.x + size.y + size.z) / 3f;
+
+    /// <summary>
+    /// Sideways speed that carries a rock its skid distance under belt
+    /// friction (v = sqrt(2 a d)). Distances follow a triangular spread, so most
+    /// rocks settle near where they land and only a few reach the full width.
+    /// </summary>
+    private float ImpactSideSpeed(uint seed, float impactSpeed)
+    {
+        float spread = Hash01(seed + 911u) + Hash01(seed + 3571u) - 1f;
+        float distance = Mathf.Abs(spread) * impactSpread * Mathf.Clamp01(impactSpeed / fullSpreadImpactSpeed);
+        return Mathf.Sign(spread) * Mathf.Sqrt(2f * friction * Gravity * distance);
+    }
 
     // Stable per rock, so the same rocks ride every time.
     private static float Hash01(uint seed)

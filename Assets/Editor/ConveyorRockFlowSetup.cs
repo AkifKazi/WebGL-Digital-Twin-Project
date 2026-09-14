@@ -508,6 +508,12 @@ public static class ConveyorRockFlowSetup
             mesh.SetTriangles(triangles[sub], sub);
 
         mesh.RecalculateBounds();
+
+        // Meshes made here miss the model importer's compression, which left
+        // the split rollers several times larger in the build than the FBX
+        // they came from. Same level as the conveyor model.
+        MeshUtility.SetMeshCompression(mesh, ModelImporterMeshCompression.Medium);
+        MeshUtility.Optimize(mesh);
         mesh.UploadMeshData(true);
         return mesh;
     }

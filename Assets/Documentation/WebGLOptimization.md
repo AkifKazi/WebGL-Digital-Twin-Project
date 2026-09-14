@@ -223,3 +223,36 @@ The 16 particle systems (about 3,600 particles at most) are a few kilobytes of
 settings plus a 96-vertex rock mesh and a 128 px dust texture. They do not
 affect loading. Their cost is per frame: roughly 1,560 mesh particles of 96
 vertices each, and world collision on one dust plume.
+
+## Cleanup pass — 2026-09-15
+
+Measured with two WebGL builds of the same scene, before and after.
+
+| | Before | After |
+|---|---|---|
+| Total download | 19,655,775 B | 19,284,515 B |
+| `.data` | 10,537,603 B | 10,173,498 B |
+| Shaders (uncompressed) | 2.7 MB | 2.1 MB |
+| Meshes (uncompressed) | 4.4 MB | 3.9 MB |
+
+- **Split conveyor rollers compressed.** Meshes generated in the editor miss
+  the model importer's compression; the split idler rollers were 711 KB.
+  `ConveyorRockFlowSetup` now applies Medium compression: 243 KB.
+- **Unused pipeline features off.** The scene has no LOD groups and no
+  terrain, so LOD cross-fade and terrain holes are disabled on every URP
+  asset (`WebGLLoadOptimization.ApplyShaderFeatureTrim`). `Lit.shader` went
+  from 1.2 MB to 620 KB.
+- **Unused project files removed** (they never shipped): the retired
+  cross-section model, two old card sprites, the HDRP text shaders.
+
+Left as they are, because they would change how the scene looks:
+
+| Item | Size | Option |
+|---|---|---|
+| Reflection probe | 2.0 MB | 512 → 256 px, softer metal reflections |
+| Three normal maps | 1.3 MB each | 1024 → 512 px, less surface detail up close |
+| Site skybox | 1.0 MB | lower resolution sky |
+
+Rajdhani stays dynamic: baking a static atlas would drop the two 350 KB font
+files but add a 1 MB atlas each, and any character not baked would be blank.
+
