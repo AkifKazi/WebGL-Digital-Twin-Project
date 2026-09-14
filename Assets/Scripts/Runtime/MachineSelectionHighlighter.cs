@@ -2,10 +2,11 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Outlines the mechanism behind the focused telemetry card, in every view.
-/// The colour follows the mechanism's worst alarm state, using the same
-/// palette as the cards: blue within limits, amber on warning, red when
-/// critical.
+/// Outlines the parts behind the focused telemetry card, in every view. A card
+/// can be read from several parts - motor speed from the rotor core and the
+/// drive shaft - and all of them are outlined together. The colour follows the
+/// card's own alarm state, using the same palette as the cards: blue within
+/// limits, amber on warning, red when critical.
 ///
 /// Follows the card's own focus signal, so mouse hover and the timed touch
 /// focus on mobile behave identically here.
@@ -13,24 +14,24 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class MachineSelectionHighlighter : MonoBehaviour
 {
-    [Header("Mechanisms")]
-    [Tooltip("Mechanisms that can be outlined. Left empty, they are found under the equipment roots.")]
+    [Header("Parts")]
+    [Tooltip("Parts that can be outlined. Left empty, they are found under the equipment roots.")]
     [SerializeField] private MachinePartGroup[] partGroups = System.Array.Empty<MachinePartGroup>();
 
-    [Tooltip("Roots searched for mechanisms when the list above is empty.")]
+    [Tooltip("Roots searched for parts when the list above is empty.")]
     [SerializeField] private GameObject[] equipmentRoots = System.Array.Empty<GameObject>();
 
     [Header("Colours")]
-    [Tooltip("Outline colour while every sensor on the mechanism is within limits.")]
+    [Tooltip("Outline colour while the focused card is within limits.")]
     [SerializeField] private Color normalColor = new(0.25f, 0.65f, 1f, 1f);
 
-    [Tooltip("Outline colour while a sensor on the mechanism is in warning.")]
+    [Tooltip("Outline colour while the focused card is in warning.")]
     [SerializeField] private Color warningColor = new(1f, 0.72f, 0.18f, 1f);
 
-    [Tooltip("Outline colour while a sensor on the mechanism is critical.")]
+    [Tooltip("Outline colour while the focused card is critical.")]
     [SerializeField] private Color criticalColor = new(1f, 0.26f, 0.22f, 1f);
 
-    [Tooltip("Outline colour while the mechanism's readings are unavailable or stale.")]
+    [Tooltip("Outline colour while the focused card's reading is unavailable or stale.")]
     [SerializeField] private Color unavailableColor = new(0.55f, 0.62f, 0.70f, 1f);
 
     [Header("Timing")]
@@ -41,11 +42,13 @@ public sealed class MachineSelectionHighlighter : MonoBehaviour
     [SerializeField, Min(0f)] private float fadeOutSeconds = 0.2f;
 
     private readonly List<MachinePartGroup> groups = new();
+    private readonly List<Renderer> outlinedRenderers = new();
 
-    // Target is what focus asks for; drawn is what the outline currently shows,
-    // kept while it fades out so the colour does not change mid-fade.
-    private MachinePartGroup target;
-    private MachinePartGroup drawn;
+    // Target is the sensor focus asks for; drawn is the one the outline
+    // currently shows, kept while it fades out so the colour does not change
+    // mid-fade.
+    private PerformanceStatSource target;
+    private PerformanceStatSource drawn;
     private float strength;
 
     private void Awake()
@@ -98,24 +101,31 @@ public sealed class MachineSelectionHighlighter : MonoBehaviour
         PerformanceStatSource sensor = card != null ? card.BoundSource : null;
         target = null;
 
-        if (sensor == null)
+        // A sensor read from no part (ambient, supply) outlines nothing.
+        if (sensor == null || !CollectRenderers(sensor))
             return;
+
+        target = sensor;
+
+        if (target == drawn)
+            return;
+
+        drawn = target;
+        SelectionOutline.SetTargets(outlinedRenderers);
+    }
+
+    /// <summary>Gathers the renderers of every part the sensor is read from.</summary>
+    private bool CollectRenderers(PerformanceStatSource sensor)
+    {
+        outlinedRenderers.Clear();
 
         foreach (MachinePartGroup group in groups)
         {
             if (group != null && group.Owns(sensor))
-            {
-                target = group;
-                break;
-            }
+                outlinedRenderers.AddRange(group.Renderers);
         }
 
-        // A sensor with no mechanism (ambient, supply) outlines nothing.
-        if (target == null || target == drawn)
-            return;
-
-        drawn = target;
-        SelectionOutline.SetTargets(drawn.Renderers);
+        return outlinedRenderers.Count > 0;
     }
 
     private void Update()
@@ -140,12 +150,12 @@ public sealed class MachineSelectionHighlighter : MonoBehaviour
         SelectionOutline.SetAppearance(ColorFor(drawn), strength);
     }
 
-    private Color ColorFor(MachinePartGroup group)
+    private Color ColorFor(PerformanceStatSource sensor)
     {
-        if (group == null)
+        if (sensor == null)
             return normalColor;
 
-        return group.WorstState switch
+        return sensor.VisualState switch
         {
             StatVisualState.Critical => criticalColor,
             StatVisualState.Warning => warningColor,

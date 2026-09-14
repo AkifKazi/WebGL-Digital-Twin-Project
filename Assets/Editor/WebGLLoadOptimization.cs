@@ -51,11 +51,13 @@ public static class WebGLLoadOptimization
     /// </summary>
     private static readonly (string Path, ModelImporterMeshCompression Compression)[] StaticModels =
     {
-        // Hero geometry: inspected closely in every view, so it keeps the
-        // lightest compression that still saves space.
-        ("Assets/Models/Separator - Full Model.fbx", ModelImporterMeshCompression.Low),
-        ("Assets/Models/Separator - Cross-Section Assembly.fbx", ModelImporterMeshCompression.Low),
-        ("Assets/Models/Hopper - Bunker and Supports.fbx", ModelImporterMeshCompression.Low),
+        // Machine geometry. Compression levels chosen by the modeller with the
+        // 2026-09-14 model update; kept here so re-running does not revert them.
+        ("Assets/Models/Separator - Full Model.fbx", ModelImporterMeshCompression.Medium),
+        ("Assets/Models/Separator - Cross-Section Assembly.fbx", ModelImporterMeshCompression.Medium),
+        ("Assets/Models/Vibratory Drive.fbx", ModelImporterMeshCompression.Medium),
+        ("Assets/Models/Conveyor.fbx", ModelImporterMeshCompression.Medium),
+        ("Assets/Models/Hopper - Bunker and Supports.fbx", ModelImporterMeshCompression.High),
 
         // Background and irregular geometry, where vertex quantisation is not
         // readable. Rock Pile alone is 3.7 MB of the build.

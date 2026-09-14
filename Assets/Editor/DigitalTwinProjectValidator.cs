@@ -255,6 +255,8 @@ public static class DigitalTwinProjectValidator
                 $"'{configuration.machineId}'.");
         }
 
+        ValidateMachineParts(configuration, configuredIds, result);
+
         try
         {
             DigitalTwinMachineConfigurationLoader.CreateSceneConfigurator(configuration);
@@ -262,6 +264,53 @@ public static class DigitalTwinProjectValidator
         catch (Exception exception)
         {
             result.Errors.Add(exception.Message);
+        }
+    }
+
+    /// <summary>
+    /// A card's highlight comes from the machine parts that list its sensor, so
+    /// a mistyped sensor ID or object path silently leaves a card outlining
+    /// nothing.
+    /// </summary>
+    private static void ValidateMachineParts(
+        DigitalTwinMachineConfiguration configuration,
+        HashSet<string> configuredIds,
+        ValidationResult result)
+    {
+        Transform equipment = FindTransform("03 - Equipment");
+        HashSet<string> linkedIds = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> linkedCategories = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (MachinePartDefinition part in configuration.machineParts ?? new List<MachinePartDefinition>())
+        {
+            bool listsIds = part.sensorIds != null && part.sensorIds.Count > 0;
+
+            foreach (string sensorId in part.sensorIds ?? new List<string>())
+            {
+                if (configuredIds.Contains(sensorId))
+                    linkedIds.Add(sensorId);
+                else
+                    result.Errors.Add($"Machine part '{part.id}' lists unknown sensor '{sensorId}'.");
+            }
+
+            // Categories only bind when a part lists no sensor IDs.
+            if (!listsIds && part.sensorCategories != null)
+                linkedCategories.UnionWith(part.sensorCategories);
+
+            if (equipment == null)
+                continue;
+
+            foreach (string path in part.objectPaths ?? new List<string>())
+            {
+                if (!string.IsNullOrWhiteSpace(path) && equipment.Find(path.Trim()) == null)
+                    result.Errors.Add($"Machine part '{part.id}' path '03 - Equipment/{path}' does not exist.");
+            }
+        }
+
+        foreach (MachineSensorDefinition sensor in configuration.sensors)
+        {
+            if (sensor.enabled && !linkedIds.Contains(sensor.id) && !linkedCategories.Contains(sensor.category))
+                result.Warnings.Add($"Card '{sensor.label}' ({sensor.id}) highlights no machine part.");
         }
     }
 

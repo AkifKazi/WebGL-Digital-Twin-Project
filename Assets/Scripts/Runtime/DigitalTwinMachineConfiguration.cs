@@ -31,25 +31,31 @@ public sealed class MachineSensorDefinition
 }
 
 /// <summary>
-/// One mechanism of the machine for X-Ray inspection: the geometry it owns and
-/// the telemetry categories that describe it.
+/// One instrumented part of the machine - a bearing, the stator, the conveyor
+/// belts - with the geometry it owns and the sensors read from it. Hovering a
+/// card outlines every part that lists its sensor. A part with no sensors
+/// still takes part in X-Ray hover isolation, so a mechanism fades as a whole.
 /// </summary>
 [Serializable]
 public sealed class MachinePartDefinition
 {
-    [Tooltip("Stable identifier for this mechanism.")]
+    [Tooltip("Stable identifier for this part.")]
     public string id;
 
-    [Tooltip("Name shown when the mechanism is selected or isolated.")]
+    [Tooltip("Name shown when the part is selected or isolated.")]
     public string displayName;
 
-    [Tooltip("Object paths under the equipment root holding this mechanism's renderers, for " +
-             "example 'Conveyor Assembly' or 'Vibratory Drive/Motor'. Several paths may make up " +
-             "one mechanism; the first one found hosts the component.")]
+    [Tooltip("Object paths under the equipment root holding this part's renderers, for " +
+             "example 'Vibratory Drive/Drive Motor/Stator'. Several paths may make up one part, " +
+             "such as the same component in the full and cross-section models.")]
     public List<string> objectPaths = new();
 
-    [Tooltip("Telemetry categories owned by this mechanism. Hovering a card in one of these " +
-             "categories isolates this mechanism in the X-Ray view.")]
+    [Tooltip("Sensors read from this part, by sensor ID. Hovering one of their cards outlines " +
+             "this part. A sensor may be listed on several parts, and a part may list none.")]
+    public List<string> sensorIds = new();
+
+    [Tooltip("Coarse fallback used only when no sensor IDs are listed: every sensor in these " +
+             "telemetry categories highlights the whole part.")]
     public List<string> sensorCategories = new();
 }
 

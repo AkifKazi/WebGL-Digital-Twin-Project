@@ -3,25 +3,31 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Marks one mechanism of the machine — the vibratory drive, the conveyor, the
-/// hopper — and reports the worst alarm state of the sensors that belong to it.
+/// Marks one instrumented part of the machine — a bearing, the stator, the
+/// conveyor belts — and reports the worst alarm state of the sensors read
+/// from it. Parts are declared in the machine configuration, so a card whose
+/// sensor is listed on a part outlines exactly that part.
 ///
 /// The group does not invent a second health model. It reads the existing
 /// <see cref="PerformanceStatSource"/> alarm evaluation, so a sensor crossing a
-/// configured threshold colours its mechanism with no extra authoring.
+/// configured threshold colours its part with no extra authoring.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class MachinePartGroup : MonoBehaviour
 {
     [Header("Identity")]
-    [Tooltip("Name shown when this mechanism is selected. Defaults to the object name.")]
+    [Tooltip("Name shown when this part is selected. Defaults to the object name.")]
     [SerializeField] private string displayName = string.Empty;
 
     [Header("Sensor binding")]
-    [Tooltip("Telemetry categories owned by this mechanism, matching the category names in the machine configuration.")]
+    [Tooltip("Sensors read from this part, by telemetry ID. When set, these are used instead of categories.")]
+    [SerializeField] private string[] sensorIds = Array.Empty<string>();
+
+    [Tooltip("Telemetry categories owned by this part, matching the category names in the machine " +
+             "configuration. A coarse fallback, used only when no sensor IDs are set.")]
     [SerializeField] private string[] sensorCategories = Array.Empty<string>();
 
-    [Tooltip("Optional explicit sensors. When set, these are used instead of category matching.")]
+    [Tooltip("Optional explicit sensors. When set, these are used instead of IDs or categories.")]
     [SerializeField] private PerformanceStatSource[] explicitSensors = Array.Empty<PerformanceStatSource>();
 
     [Header("Renderers")]
@@ -44,7 +50,7 @@ public sealed class MachinePartGroup : MonoBehaviour
     private float appliedSelectionBlend = -1f;
     private float appliedFocusDim = -1f;
 
-    /// <summary>Raised when the worst alarm state of this mechanism changes.</summary>
+    /// <summary>Raised when the worst alarm state of this part changes.</summary>
     public event Action<MachinePartGroup> StateChanged;
 
     public string DisplayName =>
@@ -53,9 +59,9 @@ public sealed class MachinePartGroup : MonoBehaviour
     public StatVisualState WorstState => worstState;
 
     /// <summary>
-    /// True while a bound sensor is in warning or critical. Alarmed mechanisms
-    /// keep their colour and are never dimmed by hover isolation, matching how
-    /// the telemetry cards hold their alarm state.
+    /// True while a bound sensor is in warning or critical. Alarmed parts keep
+    /// their colour and are never dimmed by hover isolation, matching how the
+    /// telemetry cards hold their alarm state.
     /// </summary>
     public bool IsAlarmed =>
         worstState == StatVisualState.Warning || worstState == StatVisualState.Critical;
@@ -124,14 +130,18 @@ public sealed class MachinePartGroup : MonoBehaviour
                     boundSensors.Add(sensor);
             }
         }
-        else if (sensorCategories != null && sensorCategories.Length > 0)
+        else if (HasEntries(sensorIds) || HasEntries(sensorCategories))
         {
             PerformanceStatSource[] all =
                 FindObjectsByType<PerformanceStatSource>(FindObjectsInactive.Include);
 
+            // Listed sensor IDs are exact; categories are the coarse fallback
+            // for configurations that do not list them.
+            bool byId = HasEntries(sensorIds);
+
             foreach (PerformanceStatSource sensor in all)
             {
-                if (sensor != null && MatchesCategory(sensor))
+                if (sensor != null && (byId ? MatchesId(sensor) : MatchesCategory(sensor)))
                     boundSensors.Add(sensor);
             }
         }
@@ -149,6 +159,22 @@ public sealed class MachinePartGroup : MonoBehaviour
         }
 
         boundSensors.Clear();
+    }
+
+    private static bool HasEntries(string[] values) => values != null && values.Length > 0;
+
+    private bool MatchesId(PerformanceStatSource sensor)
+    {
+        foreach (string id in sensorIds)
+        {
+            if (!string.IsNullOrWhiteSpace(id) &&
+                string.Equals(sensor.StatId, id.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -209,7 +235,7 @@ public sealed class MachinePartGroup : MonoBehaviour
         _ => 0
     };
 
-    /// <summary>Pushes the alarm tint onto this mechanism's renderers.</summary>
+    /// <summary>Pushes the alarm tint onto this part's renderers.</summary>
     public void ApplyStatusVisual(Color color, float blend)
     {
         if (color == appliedColor && Mathf.Approximately(blend, appliedStatusBlend))
@@ -225,7 +251,7 @@ public sealed class MachinePartGroup : MonoBehaviour
         });
     }
 
-    /// <summary>Pushes the selection highlight onto this mechanism's renderers.</summary>
+    /// <summary>Pushes the selection highlight onto this part's renderers.</summary>
     public void ApplySelectionVisual(float blend)
     {
         if (Mathf.Approximately(blend, appliedSelectionBlend))
@@ -237,7 +263,7 @@ public sealed class MachinePartGroup : MonoBehaviour
     }
 
     /// <summary>
-    /// Fades this mechanism back to an outline while another one is inspected.
+    /// Fades this part back to an outline while another one is inspected.
     /// 0 is fully lit, 1 is the edges-only ghost.
     /// </summary>
     public void ApplyFocusDim(float dim)
@@ -257,7 +283,7 @@ public sealed class MachinePartGroup : MonoBehaviour
         ApplyFocusDim(0f);
     }
 
-    /// <summary>True when this mechanism owns the given sensor.</summary>
+    /// <summary>True when the given sensor is read from this part.</summary>
     public bool Owns(PerformanceStatSource sensor)
     {
         if (sensor == null)
@@ -289,7 +315,7 @@ public sealed class MachinePartGroup : MonoBehaviour
         }
     }
 
-    /// <summary>World-space bounds of the mechanism, used for callouts and picking.</summary>
+    /// <summary>World-space bounds of the part, used for callouts and picking.</summary>
     public bool TryGetWorldBounds(out Bounds bounds)
     {
         bounds = default;

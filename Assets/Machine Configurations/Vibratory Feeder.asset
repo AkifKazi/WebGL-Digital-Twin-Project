@@ -588,22 +588,148 @@ MonoBehaviour:
     displayPriority: 56
     enabled: 1
   machineParts:
-  - id: CONVEYOR
-    displayName: Conveyors
+  - id: BEARINGS
+    displayName: Bearings
     objectPaths:
-    - Conveyors
-    sensorCategories:
-    - Conveyor
-  - id: DRIVE
-    displayName: Drive Motor
+    - Vibratory Drive/Drive Motor/Shaft Collar - Top
+    - Vibratory Drive/Drive Motor/Shaft Collar - Bottom
+    sensorIds:
+    - VIB-01.BEARING.TEMP
+    - VIB-01.BEARING.VEL_RMS
+    sensorCategories: []
+  - id: STATOR
+    displayName: Stator Windings
     objectPaths:
-    - Vibratory Drive/Drive Motor
-    - Vibratory Drive/Lower Rotor
-    sensorCategories:
-    - Drive Motor
-  - id: MIXER
-    displayName: Upper Mixer
+    - Vibratory Drive/Drive Motor/Stator
+    sensorIds:
+    - VIB-01.MOTOR.TEMP
+    - VIB-01.MOTOR.CURRENT
+    - VIB-01.DRIVE.FREQUENCY
+    sensorCategories: []
+  - id: ROTOR_CORE
+    displayName: Rotor Core
+    objectPaths:
+    - Vibratory Drive/Drive Motor/Rotor Core
+    sensorIds:
+    - VIB-01.MOTOR.SPEED
+    sensorCategories: []
+  - id: DRIVE_SHAFT
+    displayName: Drive Shaft
+    objectPaths:
+    - Vibratory Drive/Drive Motor/Drive Shaft
+    sensorIds:
+    - VIB-01.MOTOR.SPEED
+    - MIX-01.ROTOR.TORQUE
+    sensorCategories: []
+  - id: MOTOR_FRAME
+    displayName: Motor Frame
+    objectPaths:
+    - Vibratory Drive/Drive Motor/Motor Body
+    - Vibratory Drive/Drive Motor/Finned Housing
+    - Vibratory Drive/Drive Motor/Lower End Plate
+    - Vibratory Drive/Drive Motor/Upper End Plate
+    - Vibratory Drive/Drive Motor/Mounting Flange
+    - Vibratory Drive/Drive Motor/Lower Gusset 01
+    - Vibratory Drive/Drive Motor/Lower Gusset 02
+    - Vibratory Drive/Drive Motor/Lower Gusset 03
+    - Vibratory Drive/Drive Motor/Lower Gusset 04
+    - Vibratory Drive/Drive Motor/Lower Gusset 05
+    - Vibratory Drive/Drive Motor/Lower Gusset 06
+    - Vibratory Drive/Drive Motor/Lower Gusset 07
+    - Vibratory Drive/Drive Motor/Lower Gusset 08
+    - Vibratory Drive/Drive Motor/Upper Gusset 01
+    - Vibratory Drive/Drive Motor/Upper Gusset 02
+    - Vibratory Drive/Drive Motor/Upper Gusset 03
+    - Vibratory Drive/Drive Motor/Upper Gusset 04
+    - Vibratory Drive/Drive Motor/Upper Gusset 05
+    - Vibratory Drive/Drive Motor/Upper Gusset 06
+    - Vibratory Drive/Drive Motor/Upper Gusset 07
+    - Vibratory Drive/Drive Motor/Upper Gusset 08
+    sensorIds:
+    - VIB-01.MOTOR.POWER
+    - VIB-01.MOTOR.LOAD
+    - POWER-01.SUPPLY.VOLTAGE
+    - POWER-01.POWER.FACTOR
+    sensorCategories: []
+  - id: UPPER_ROTOR
+    displayName: Upper Mixer Rotor
     objectPaths:
     - Vibratory Drive/Upper Rotor
-    sensorCategories:
-    - Upper Mixer
+    sensorIds:
+    - MIX-01.ROTOR.SPEED
+    - MIX-01.ROTOR.TORQUE
+    - MIX-01.ROTOR.IMBALANCE
+    sensorCategories: []
+  - id: LOWER_ROTOR
+    displayName: Lower Rotor
+    objectPaths:
+    - Vibratory Drive/Lower Rotor
+    sensorIds: []
+    sensorCategories: []
+  - id: SCREEN_DECKS
+    displayName: Screen Decks
+    objectPaths:
+    - Hopper Assembly/Full Model/Screen Decks and Discharge
+    - Hopper Assembly/Cross-Section Model/Screen Decks and Discharge
+    sensorIds:
+    - MIX-01.SCREEN.BLINDING
+    - FEED-01.FLOW.OUT
+    sensorCategories: []
+  - id: CONVEYOR_BELTS
+    displayName: Conveyor Belts
+    objectPaths:
+    - Conveyors/Filtered Material Conveyor/Belt
+    - Conveyors/Coarse Material Conveyor/Belt
+    sensorIds:
+    - FEED-01.BELT.SPEED
+    - FEED-01.SLIP
+    - FEED-01.BELT.TENSION
+    - FEED-01.DRIVE.CURRENT
+    sensorCategories: []
+  - id: IDLER_ROLLERS
+    displayName: Idler Rollers
+    objectPaths:
+    - Conveyors/Filtered Material Conveyor/Idler Rollers
+    - Conveyors/Coarse Material Conveyor/Idler Rollers
+    sensorIds:
+    - FEED-01.BEARING.TEMP
+    sensorCategories: []
+  - id: CONVEYOR_FRAMES
+    displayName: Conveyor Frames
+    objectPaths:
+    - Conveyors/Filtered Material Conveyor/Side Guard - Inner
+    - Conveyors/Filtered Material Conveyor/Side Guard - Outer
+    - Conveyors/Filtered Material Conveyor/Leg Frame - Inner
+    - Conveyors/Filtered Material Conveyor/Leg Frame - Outer
+    - Conveyors/Filtered Material Conveyor/Cross Members
+    - Conveyors/Filtered Material Conveyor/Foot Plates - Inner
+    - Conveyors/Filtered Material Conveyor/Foot Plates - Outer
+    - Conveyors/Coarse Material Conveyor/Side Guard - Inner
+    - Conveyors/Coarse Material Conveyor/Side Guard - Outer
+    - Conveyors/Coarse Material Conveyor/Leg Frame - Inner
+    - Conveyors/Coarse Material Conveyor/Leg Frame - Outer
+    - Conveyors/Coarse Material Conveyor/Cross Members
+    - Conveyors/Coarse Material Conveyor/Foot Plates - Inner
+    - Conveyors/Coarse Material Conveyor/Foot Plates - Outer
+    sensorIds: []
+    sensorCategories: []
+  - id: BUNKER
+    displayName: Bunker
+    objectPaths:
+    - Hopper Assembly/Bunker
+    sensorIds:
+    - HOP-01.LEVEL
+    - HOP-01.MASS
+    - HOP-01.MATERIAL.MOISTURE
+    - HOP-01.MATERIAL.TEMP
+    - HOP-01.OUTLET.GATE.POSITION
+    - FEED-01.FLOW.IN
+    sensorCategories: []
+  - id: SUPPORT_FRAME
+    displayName: Support Frame
+    objectPaths:
+    - Hopper Assembly/Support Frame
+    sensorIds:
+    - HOP-01.LOADCELL.IMBALANCE
+    - STRUCT-01.FRAME.VIBRATION
+    sensorCategories: []

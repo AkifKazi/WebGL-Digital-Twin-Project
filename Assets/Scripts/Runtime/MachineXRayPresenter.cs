@@ -88,7 +88,7 @@ public sealed class MachineXRayPresenter : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float selectionBlend = 1f;
 
     [Header("Hover isolation")]
-    [Tooltip("Hovering a telemetry card fades every mechanism except the one that owns that sensor.")]
+    [Tooltip("Hovering a telemetry card fades every part except the ones that card's sensor is read from.")]
     [SerializeField] private bool isolateOnCardFocus = true;
 
     [Tooltip("How far de-focused mechanisms fade back. 1 is the full dissolve.")]
@@ -119,7 +119,9 @@ public sealed class MachineXRayPresenter : MonoBehaviour
 
     private Coroutine transitionRoutine;
     private Coroutine isolationRoutine;
-    private MachinePartGroup focusedGroup;
+    // Parts the focused card's sensor is read from; empty while no card is focused.
+    private readonly HashSet<MachinePartGroup> focusedGroups = new();
+    private readonly List<MachinePartGroup> focusScratch = new();
     private Bounds machineBounds;
     private bool boundsValid;
     private float scanTimer;
@@ -268,7 +270,7 @@ public sealed class MachineXRayPresenter : MonoBehaviour
 
         // A card may already have been hovered before the view opened, so apply
         // any pending isolation now that the hologram is on screen.
-        if (focusedGroup != null)
+        if (focusedGroups.Count > 0)
             isolationRoutine = StartCoroutine(IsolationRoutine());
 
         transitionRoutine = null;
@@ -295,7 +297,7 @@ public sealed class MachineXRayPresenter : MonoBehaviour
         }
 
         ClearSelection();
-        SetFocusedGroup(null);
+        SetFocusedGroups(null);
         RestoreMaterials();
         ResetGlobals();
 
@@ -452,7 +454,7 @@ public sealed class MachineXRayPresenter : MonoBehaviour
 
         // A mechanism entering or leaving alarm changes whether it stays lit,
         // so the isolation targets are recalculated.
-        if (focusedGroup != null)
+        if (focusedGroups.Count > 0)
         {
             if (isolationRoutine != null)
                 StopCoroutine(isolationRoutine);
@@ -513,39 +515,42 @@ public sealed class MachineXRayPresenter : MonoBehaviour
     }
 
     /// <summary>
-    /// Fades every mechanism except the one owning <paramref name="sensor"/>.
+    /// Fades every part except those <paramref name="sensor"/> is read from.
     /// Pass null to return the whole machine to full presence.
     /// </summary>
     public void FocusOn(PerformanceStatSource sensor)
     {
-        MachinePartGroup target = null;
+        focusScratch.Clear();
 
         if (sensor != null)
         {
             foreach (MachinePartGroup group in resolvedGroups)
             {
                 if (group != null && group.Owns(sensor))
-                {
-                    target = group;
-                    break;
-                }
+                    focusScratch.Add(group);
             }
+
+            // A sensor read from no part (ambient, supply) must not blank the
+            // machine, so isolation is skipped rather than applied to nothing.
+            if (focusScratch.Count == 0)
+                return;
         }
 
-        // A sensor with no mechanism (ambient, supply) must not blank the
-        // machine, so isolation is skipped rather than applied to nothing.
-        if (sensor != null && target == null)
-            return;
-
-        SetFocusedGroup(target);
+        SetFocusedGroups(focusScratch);
     }
 
-    private void SetFocusedGroup(MachinePartGroup group)
+    /// <summary>Sets the parts kept lit by hover isolation. Null or empty clears it.</summary>
+    private void SetFocusedGroups(IReadOnlyCollection<MachinePartGroup> groups)
     {
-        if (group == focusedGroup)
+        int count = groups?.Count ?? 0;
+
+        if (count == focusedGroups.Count && (count == 0 || focusedGroups.SetEquals(groups)))
             return;
 
-        focusedGroup = group;
+        focusedGroups.Clear();
+
+        if (groups != null)
+            focusedGroups.UnionWith(groups);
 
         if (!IsPresenting)
             return;
@@ -569,13 +574,13 @@ public sealed class MachineXRayPresenter : MonoBehaviour
             MachinePartGroup group = resolvedGroups[i];
 
             from[i] = group != null ? group.CurrentFocusDim : 0f;
-            bool isFocused = group == focusedGroup;
+            bool isFocused = focusedGroups.Contains(group);
 
             // An alarmed mechanism is pinned lit: a fault must not disappear
             // because the operator is reading a different card.
             bool pinned = keepAlarmedMechanismsLit && group != null && group.IsAlarmed;
 
-            to[i] = focusedGroup == null || isFocused || pinned ? 0f : isolationStrength;
+            to[i] = focusedGroups.Count == 0 || isFocused || pinned ? 0f : isolationStrength;
         }
 
         float timer = 0f;

@@ -254,31 +254,48 @@ public static class MachineXRaySceneSetup
     }
 
     // -----------------------------------------------------------------------
-    // Mechanisms
+    // Machine parts
     // -----------------------------------------------------------------------
+
+    private const string DigitalTwinRootName = "Digital Twin";
+    private const string PartHostRootName = "Machine Parts";
 
     private static List<MachinePartGroup> CreatePartGroups(
         DigitalTwinMachineConfiguration configuration,
         GameObject equipmentRoot)
     {
         List<MachinePartGroup> groups = new();
+        Transform hostRoot = GetOrCreatePartHostRoot(equipmentRoot);
 
-        if (configuration.machineParts == null)
-            return groups;
+        // Alarm tint and isolation are written per renderer, so a renderer in
+        // two parts would show whichever part wrote last.
+        Dictionary<Renderer, string> claimed = new();
 
-        foreach (MachinePartDefinition part in configuration.machineParts)
+        foreach (MachinePartDefinition part in configuration.machineParts ?? new List<MachinePartDefinition>())
         {
             List<Transform> targets = ResolvePaths(equipmentRoot.transform, part);
 
             if (targets.Count == 0)
             {
-                Debug.LogWarning($"X-Ray mechanism '{part.id}' skipped: no geometry matched its paths.");
+                Debug.LogWarning($"Machine part '{part.id}' skipped: no geometry matched its paths.");
                 continue;
             }
 
-            // The first resolved object hosts the component; the renderer list
-            // spans every path, so one mechanism can cover several objects.
-            MachinePartGroup group = GetOrAddComponent<MachinePartGroup>(targets[0].gameObject);
+            // Each part lives on its own object under the Digital Twin root. A
+            // part can span models the view modes switch on and off - the
+            // screen decks are in both separator models - and a component on a
+            // switched-off object would stop following its sensors.
+            string hostName = string.IsNullOrWhiteSpace(part.displayName) ? part.id : part.displayName;
+            Transform host = hostRoot.Find(hostName);
+
+            if (host == null)
+            {
+                host = new GameObject(hostName).transform;
+                Undo.RegisterCreatedObjectUndo(host.gameObject, "Create machine part");
+                host.SetParent(hostRoot, false);
+            }
+
+            MachinePartGroup group = GetOrAddComponent<MachinePartGroup>(host.gameObject);
 
             SerializedObject serialized = new(group);
             serialized.FindProperty("displayName").stringValue = part.displayName;
@@ -286,7 +303,19 @@ public static class MachineXRaySceneSetup
             List<Renderer> renderers = new();
 
             foreach (Transform target in targets)
-                renderers.AddRange(target.GetComponentsInChildren<Renderer>(true));
+            {
+                foreach (Renderer renderer in target.GetComponentsInChildren<Renderer>(true))
+                {
+                    if (claimed.TryGetValue(renderer, out string owner))
+                    {
+                        Debug.LogWarning($"Machine part '{part.id}': '{renderer.name}' already belongs to '{owner}' and was left out.");
+                        continue;
+                    }
+
+                    claimed.Add(renderer, part.id);
+                    renderers.Add(renderer);
+                }
+            }
 
             SerializedProperty rendererProperty = serialized.FindProperty("targetRenderers");
             rendererProperty.arraySize = renderers.Count;
@@ -294,25 +323,54 @@ public static class MachineXRaySceneSetup
             for (int i = 0; i < renderers.Count; i++)
                 rendererProperty.GetArrayElementAtIndex(i).objectReferenceValue = renderers[i];
 
-            SerializedProperty categories = serialized.FindProperty("sensorCategories");
-            categories.arraySize = part.sensorCategories?.Count ?? 0;
-
-            for (int i = 0; i < categories.arraySize; i++)
-                categories.GetArrayElementAtIndex(i).stringValue = part.sensorCategories[i];
+            SetStrings(serialized.FindProperty("sensorIds"), part.sensorIds);
+            SetStrings(serialized.FindProperty("sensorCategories"), part.sensorCategories);
 
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             groups.Add(group);
         }
 
-        // Mechanisms removed from the configuration must not linger in the scene.
+        // Parts removed from the configuration must not linger in the scene,
+        // including the mechanism groups earlier versions put on the geometry.
         foreach (MachinePartGroup stale in equipmentRoot.GetComponentsInChildren<MachinePartGroup>(true))
         {
             if (!groups.Contains(stale))
                 Undo.DestroyObjectImmediate(stale);
         }
 
+        foreach (Transform child in hostRoot.Cast<Transform>().ToList())
+        {
+            MachinePartGroup group = child.GetComponent<MachinePartGroup>();
+
+            if (group == null || !groups.Contains(group))
+                Undo.DestroyObjectImmediate(child.gameObject);
+        }
+
         return groups;
+    }
+
+    private static Transform GetOrCreatePartHostRoot(GameObject equipmentRoot)
+    {
+        GameObject twinRoot = FindSceneObject(DigitalTwinRootName);
+        Transform parent = twinRoot != null ? twinRoot.transform : equipmentRoot.transform;
+        Transform root = parent.Find(PartHostRootName);
+
+        if (root != null)
+            return root;
+
+        root = new GameObject(PartHostRootName).transform;
+        Undo.RegisterCreatedObjectUndo(root.gameObject, "Create machine parts root");
+        root.SetParent(parent, false);
+        return root;
+    }
+
+    private static void SetStrings(SerializedProperty property, List<string> values)
+    {
+        property.arraySize = values?.Count ?? 0;
+
+        for (int i = 0; i < property.arraySize; i++)
+            property.GetArrayElementAtIndex(i).stringValue = values[i].Trim();
     }
 
     private static List<Transform> ResolvePaths(Transform equipmentRoot, MachinePartDefinition part)
@@ -332,7 +390,7 @@ public static class MachineXRaySceneSetup
             if (found != null)
                 targets.Add(found);
             else
-                Debug.LogWarning($"X-Ray mechanism '{part.id}': '{EquipmentRootName}/{path}' was not found.");
+                Debug.LogWarning($"Machine part '{part.id}': '{EquipmentRootName}/{path}' was not found.");
         }
 
         return targets;

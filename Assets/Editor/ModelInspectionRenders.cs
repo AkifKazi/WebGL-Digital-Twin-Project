@@ -36,8 +36,8 @@ public static class ModelInspectionRenders
         EditorSceneManager.OpenScene("Assets/Scenes/SampleScene.unity", OpenSceneMode.Single);
 
         Transform equipment = FindTransform("03 - Equipment");
-        Transform full = FindTransform("full model of hopper");
-        Transform cut = FindTransform("Cut detailed hopper");
+        Transform full = FindTransform("Full Model") ?? FindTransform("full model of hopper");
+        Transform cut = FindTransform("Cross-Section Model") ?? FindTransform("Cut detailed hopper");
 
         foreach (string hide in new[] { "04 - Environment", "05 - Effects", "06 - User Interface" })
             SetActive(FindTransform(hide), false);
@@ -84,8 +84,8 @@ public static class ModelInspectionRenders
         SetActive(full, false); SetActive(cut, true);
         // Looked up under the equipment root: telemetry category folders share
         // some of these names and hold no geometry.
-        foreach (string group in new[] { "Cut detailed hopper", "Conveyor", "motor", "Hopper Assembly" })
-            ContactSheet(equipment.Find(group), equipment, maskMaterial);
+        foreach (string group in new[] { "Cross-Section Model", "Conveyors", "Vibratory Drive", "Hopper Assembly" })
+            ContactSheet(equipment.Find(group) ?? FindTransform(group), equipment, maskMaterial);
 
         SetActive(full, true); SetActive(cut, false);
         ContactSheet(full, equipment, maskMaterial);
