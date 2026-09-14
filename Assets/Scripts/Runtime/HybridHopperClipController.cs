@@ -15,7 +15,8 @@ public sealed class HybridHopperClipController : MonoBehaviour
     [Header("Models")]
     [Tooltip("Complete exterior model used by Full Model mode.")]
     [SerializeField] private GameObject fullHopper;
-    [Tooltip("Prepared cutaway model used by Cross Section mode.")]
+    [Tooltip("Optional prepared cutaway model for Cross Section mode. Leave empty to clip the " +
+             "full model instead; a cut-frame mesh then fills the section.")]
     [SerializeField] private GameObject cutHopper;
 
     [Header("Full Hopper Renderers With Clip Shader")]
@@ -70,8 +71,9 @@ public sealed class HybridHopperClipController : MonoBehaviour
 
         if (isCrossSection)
         {
+            // Without a prepared cutaway, the full model itself is clipped.
             if (fullHopper != null)
-                fullHopper.SetActive(false);
+                fullHopper.SetActive(cutHopper == null);
 
             if (cutHopper != null)
                 cutHopper.SetActive(true);
@@ -150,7 +152,9 @@ public sealed class HybridHopperClipController : MonoBehaviour
 
         SetClipValues(crossSectionClipX);
 
-        if (fullHopper != null)
+        // A prepared cutaway replaces the full model; a single clipped model
+        // stays on, with its cut frame filling the section.
+        if (fullHopper != null && cutHopper != null)
             fullHopper.SetActive(false);
 
         transitionRoutine = null;

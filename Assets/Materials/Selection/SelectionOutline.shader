@@ -19,6 +19,12 @@ Shader "Hidden/Digital Twin/Selection Outline"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
+            // The section clip, read from each renderer's property block. The
+            // clipping material cuts in object space along X, so a part cut
+            // away in the Cross Section view is not outlined either.
+            float _ClipX;
+            float _ClipEnabled;
+
             struct Attributes
             {
                 float4 positionOS : POSITION;
@@ -27,17 +33,20 @@ Shader "Hidden/Digital Twin/Selection Outline"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                float objectX : TEXCOORD0;
             };
 
             Varyings MaskVertex(Attributes input)
             {
                 Varyings output;
                 output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.objectX = input.positionOS.x;
                 return output;
             }
 
             half4 MaskFragment(Varyings input) : SV_Target
             {
+                clip(_ClipEnabled > 0.5 ? _ClipX - input.objectX : 1.0);
                 return 1.0h;
             }
             ENDHLSL

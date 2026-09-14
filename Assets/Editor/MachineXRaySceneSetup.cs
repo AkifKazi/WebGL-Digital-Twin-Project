@@ -184,6 +184,12 @@ public static class MachineXRaySceneSetup
         for (int i = 0; i < groups.Count; i++)
             partGroups.GetArrayElementAtIndex(i).objectReferenceValue = groups[i];
 
+        // The telemetry cards' palette, so the outline reads as part of the UI.
+        serialized.FindProperty("normalColor").colorValue = new Color(0.08f, 0.90f, 1f, 1f);
+        serialized.FindProperty("warningColor").colorValue = new Color(1f, 0.70f, 0.10f, 1f);
+        serialized.FindProperty("criticalColor").colorValue = new Color(1f, 0.22f, 0.20f, 1f);
+        serialized.FindProperty("unavailableColor").colorValue = new Color(0.45f, 0.50f, 0.55f, 1f);
+
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 

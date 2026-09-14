@@ -28,6 +28,7 @@ public static class SeparatorModelAdoption
 
         WebGLLoadOptimization.Apply();
         DigitalTwinSceneOrganization.Apply();
+        ConveyorRockFlowSetup.Apply();
         DigitalTwinSceneSetup.SetUpFromMenu();
 
         // Last, so the scene saved above no longer references what it removes.

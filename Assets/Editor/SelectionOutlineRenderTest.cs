@@ -15,7 +15,8 @@ using UnityEngine;
 /// </summary>
 public static class SelectionOutlineRenderTest
 {
-    private static readonly Color Blue = new(0.25f, 0.65f, 1f, 1f);
+    // The telemetry cards' teal, which the highlighter uses within limits.
+    private static readonly Color Blue = new(0.08f, 0.90f, 1f, 1f);
 
     public static void Run()
     {
@@ -53,6 +54,11 @@ public static class SelectionOutlineRenderTest
             Debug.Log($"OUTLINE-TEST: card '{card.label}' -> {(parts.Length > 0 ? string.Join(" + ", parts) : "NO PART")}");
         }
 
+        HybridHopperClipController clip = Object.FindObjectsByType<HybridHopperClipController>(FindObjectsInactive.Include).FirstOrDefault();
+        SerializedObject clipData = clip != null ? new SerializedObject(clip) : null;
+        float fullClipX = clipData != null ? clipData.FindProperty("fullViewClipX").floatValue : 1.5f;
+        float crossClipX = clipData != null ? clipData.FindProperty("crossSectionClipX").floatValue : 0.14f;
+
         Vector3 appPosition = cam.transform.position;
         Quaternion appRotation = cam.transform.rotation;
         float appNearClip = cam.nearClipPlane;
@@ -62,8 +68,10 @@ public static class SelectionOutlineRenderTest
 
         foreach (bool fullBody in new[] { true, false })
         {
-            if (full != null) full.gameObject.SetActive(fullBody);
+            // A prepared cutaway swaps in; a single model stays on and is clipped.
+            if (full != null) full.gameObject.SetActive(fullBody || cut == null);
             if (cut != null) cut.gameObject.SetActive(!fullBody);
+            if (cut == null && full != null) SetClip(full, fullBody ? fullClipX : crossClipX);
             string view = fullBody ? "full" : "cross";
 
             SelectionOutline.Clear();
@@ -96,6 +104,19 @@ public static class SelectionOutlineRenderTest
         SelectionOutline.Clear();
         Debug.Log("OUTLINE-TEST: done");
         EditorApplication.Exit(0);
+    }
+
+    private static void SetClip(Transform model, float clipX)
+    {
+        MaterialPropertyBlock block = new();
+
+        foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>(true))
+        {
+            renderer.GetPropertyBlock(block);
+            block.SetFloat("_ClipX", clipX);
+            block.SetFloat("_ClipEnabled", 1f);
+            renderer.SetPropertyBlock(block);
+        }
     }
 
     private static bool ListsSensor(MachinePartGroup group, string sensorId)

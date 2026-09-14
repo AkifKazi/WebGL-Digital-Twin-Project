@@ -35,6 +35,7 @@ public sealed class SelectionOutlineFeature : ScriptableRendererFeature
     [SerializeField] private Shader shader;
 
     private Material material;
+    private Material clippedMaskMaterial;
     private MaskPass maskPass;
     private CompositePass compositePass;
 
@@ -47,11 +48,17 @@ public sealed class SelectionOutlineFeature : ScriptableRendererFeature
             return;
 
         material = CoreUtils.CreateEngineMaterial(shader);
+        material.SetFloat(MaskPass.ClipEnabledId, 0f);
+
+        // Parts cut by the section clip are masked with their own clip, so
+        // the Cross Section view outlines only what is left of them.
+        clippedMaskMaterial = CoreUtils.CreateEngineMaterial(shader);
+        clippedMaskMaterial.SetFloat(MaskPass.ClipEnabledId, 1f);
 
         // The mask is drawn while the camera matrices are still the scene's;
         // the composite runs after post-processing so the outline keeps its
         // exact colour instead of being tonemapped.
-        maskPass = new MaskPass(material) { renderPassEvent = RenderPassEvent.AfterRenderingTransparents };
+        maskPass = new MaskPass(material, clippedMaskMaterial) { renderPassEvent = RenderPassEvent.AfterRenderingTransparents };
         compositePass = new CompositePass(material, settings) { renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing };
     }
 
@@ -67,7 +74,9 @@ public sealed class SelectionOutlineFeature : ScriptableRendererFeature
     protected override void Dispose(bool disposing)
     {
         CoreUtils.Destroy(material);
+        CoreUtils.Destroy(clippedMaskMaterial);
         material = null;
+        clippedMaskMaterial = null;
     }
 
     /// <summary>Hands the mask from the first pass to the second within a frame.</summary>
@@ -80,21 +89,28 @@ public sealed class SelectionOutlineFeature : ScriptableRendererFeature
 
     private sealed class MaskPass : ScriptableRenderPass
     {
+        public static readonly int ClipXId = Shader.PropertyToID("_ClipX");
+        public static readonly int ClipEnabledId = Shader.PropertyToID("_ClipEnabled");
+
         private sealed class PassData
         {
-            public Material material;
+            public List<Material> materials;
             public List<Renderer> renderers;
             public List<int> submeshCounts;
         }
 
         private readonly Material material;
+        private readonly Material clippedMaterial;
         private readonly GraphicsFormat maskFormat;
         private readonly List<Renderer> visible = new();
+        private readonly List<Material> materials = new();
         private readonly List<int> submeshCounts = new();
+        private readonly MaterialPropertyBlock block = new();
 
-        public MaskPass(Material material)
+        public MaskPass(Material material, Material clippedMaterial)
         {
             this.material = material;
+            this.clippedMaterial = clippedMaterial;
 
             // Single-channel where supported; WebGL 2 supports R8 render targets.
             maskFormat = SystemInfo.IsFormatSupported(GraphicsFormat.R8_UNorm, GraphicsFormatUsage.Render)
@@ -111,6 +127,7 @@ public sealed class SelectionOutlineFeature : ScriptableRendererFeature
                 return;
 
             visible.Clear();
+            materials.Clear();
             submeshCounts.Clear();
 
             foreach (Renderer renderer in SelectionOutline.Targets)
@@ -118,7 +135,16 @@ public sealed class SelectionOutlineFeature : ScriptableRendererFeature
                 if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy)
                     continue;
 
+                // The section clip lives in each renderer's property block. Every
+                // clipped part shares the one clip position, so one material serves.
+                renderer.GetPropertyBlock(block);
+                bool clipped = block.GetFloat(ClipEnabledId) > 0.5f;
+
+                if (clipped)
+                    clippedMaterial.SetFloat(ClipXId, block.GetFloat(ClipXId));
+
                 visible.Add(renderer);
+                materials.Add(clipped ? clippedMaterial : material);
                 submeshCounts.Add(Mathf.Max(1, renderer.sharedMaterials.Length));
             }
 
@@ -140,7 +166,7 @@ public sealed class SelectionOutlineFeature : ScriptableRendererFeature
 
             using (IRasterRenderGraphBuilder builder = renderGraph.AddRasterRenderPass("Selection Outline Mask", out PassData data))
             {
-                data.material = material;
+                data.materials = materials;
                 data.renderers = visible;
                 data.submeshCounts = submeshCounts;
 
@@ -150,7 +176,7 @@ public sealed class SelectionOutlineFeature : ScriptableRendererFeature
                     for (int i = 0; i < d.renderers.Count; i++)
                     {
                         for (int s = 0; s < d.submeshCounts[i]; s++)
-                            context.cmd.DrawRenderer(d.renderers[i], d.material, s, 0);
+                            context.cmd.DrawRenderer(d.renderers[i], d.materials[i], s, 0);
                     }
                 });
             }

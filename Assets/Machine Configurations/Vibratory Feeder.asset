@@ -670,7 +670,6 @@ MonoBehaviour:
     displayName: Screen Decks
     objectPaths:
     - Hopper Assembly/Full Model/Screen Decks and Discharge
-    - Hopper Assembly/Cross-Section Model/Screen Decks and Discharge
     sensorIds:
     - MIX-01.SCREEN.BLINDING
     - FEED-01.FLOW.OUT
@@ -682,17 +681,23 @@ MonoBehaviour:
     - Conveyors/Coarse Material Conveyor/Belt
     sensorIds:
     - FEED-01.BELT.SPEED
-    - FEED-01.SLIP
     - FEED-01.BELT.TENSION
-    - FEED-01.DRIVE.CURRENT
     sensorCategories: []
   - id: IDLER_ROLLERS
     displayName: Idler Rollers
     objectPaths:
     - Conveyors/Filtered Material Conveyor/Idler Rollers
     - Conveyors/Coarse Material Conveyor/Idler Rollers
+    sensorIds: []
+    sensorCategories: []
+  - id: DRIVE_ROLLER
+    displayName: Drive Roller
+    objectPaths:
+    - Conveyors/Filtered Material Conveyor/Drive Roller
     sensorIds:
+    - FEED-01.SLIP
     - FEED-01.BEARING.TEMP
+    - FEED-01.DRIVE.CURRENT
     sensorCategories: []
   - id: CONVEYOR_FRAMES
     displayName: Conveyor Frames

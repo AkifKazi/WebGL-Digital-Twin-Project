@@ -420,6 +420,56 @@ public static class DigitalTwinSceneOrganization
         }
 
         MirrorSeparatorVibration(cut, full);
+
+        // Single-model section: the full model is clipped and the cut frame
+        // fills the section faces, so a prepared cutaway model is retired.
+        if (AdoptCutFrame(hopperAssembly, full) != null)
+            RetireCrossSectionModel(cut);
+    }
+
+    private const string CutFrameName = "Hopper Cut Frame";
+
+    private static Transform AdoptCutFrame(Transform hopperAssembly, Transform full)
+    {
+        Transform frame = hopperAssembly.Find(CutFrameName) ?? FindTopLevel(CutFrameName) ?? Find(CutFrameName);
+
+        if (frame == null)
+            return null;
+
+        if (frame.parent != hopperAssembly)
+            frame.SetParent(hopperAssembly, true);
+
+        UnpackModelInstance(frame);
+
+        Transform separatorFill = RenameScoped(frame, "Section Fill - Separator", "Screen Decks and Discharge.002");
+        RenameScoped(frame, "Section Fill - Base Housing", "Screen Decks and Discharge.003");
+
+        // The separator's section face moves with the vibrating drum, or the
+        // clipped walls would shake behind a still face. The base housing,
+        // like its model part, stays put.
+        Transform drum = full != null ? full.Find("Separator Drum") : null;
+        SeparatorVibration drumVibration = drum != null ? drum.GetComponent<SeparatorVibration>() : null;
+
+        if (separatorFill != null && drumVibration != null && separatorFill.GetComponent<SeparatorVibration>() == null)
+            EditorUtility.CopySerialized(drumVibration, separatorFill.gameObject.AddComponent<SeparatorVibration>());
+
+        return frame;
+    }
+
+    private static void RetireCrossSectionModel(Transform cut)
+    {
+        HybridHopperClipController clip = UnityEngine.Object.FindAnyObjectByType<HybridHopperClipController>(
+            FindObjectsInactive.Include);
+
+        if (clip != null)
+        {
+            SerializedObject serialized = new(clip);
+            serialized.FindProperty("cutHopper").objectReferenceValue = null;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        if (cut != null)
+            UnityEngine.Object.DestroyImmediate(cut.gameObject);
     }
 
     private static void OrganizeVibratoryDrive(Transform equipment, Transform hopperAssembly, Transform drive)

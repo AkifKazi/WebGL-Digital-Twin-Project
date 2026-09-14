@@ -22,17 +22,18 @@ public sealed class MachineSelectionHighlighter : MonoBehaviour
     [SerializeField] private GameObject[] equipmentRoots = System.Array.Empty<GameObject>();
 
     [Header("Colours")]
-    [Tooltip("Outline colour while the focused card is within limits.")]
-    [SerializeField] private Color normalColor = new(0.25f, 0.65f, 1f, 1f);
+    // The cards' own palette, so the outline reads as part of the same UI.
+    [Tooltip("Outline colour while the focused card is within limits. The telemetry cards' teal.")]
+    [SerializeField] private Color normalColor = new(0.08f, 0.90f, 1f, 1f);
 
     [Tooltip("Outline colour while the focused card is in warning.")]
-    [SerializeField] private Color warningColor = new(1f, 0.72f, 0.18f, 1f);
+    [SerializeField] private Color warningColor = new(1f, 0.70f, 0.10f, 1f);
 
     [Tooltip("Outline colour while the focused card is critical.")]
-    [SerializeField] private Color criticalColor = new(1f, 0.26f, 0.22f, 1f);
+    [SerializeField] private Color criticalColor = new(1f, 0.22f, 0.20f, 1f);
 
     [Tooltip("Outline colour while the focused card's reading is unavailable or stale.")]
-    [SerializeField] private Color unavailableColor = new(0.55f, 0.62f, 0.70f, 1f);
+    [SerializeField] private Color unavailableColor = new(0.45f, 0.50f, 0.55f, 1f);
 
     [Header("Timing")]
     [Tooltip("Seconds for the outline to appear.")]
