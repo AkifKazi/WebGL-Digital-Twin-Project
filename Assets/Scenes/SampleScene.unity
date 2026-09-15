@@ -25861,6 +25861,7 @@ GameObject:
   - component: {fileID: 241085636}
   - component: {fileID: 241085635}
   - component: {fileID: 241085639}
+  - component: {fileID: 241085640}
   m_Layer: 5
   m_Name: Zoom Out Button
   m_TagString: Untagged
@@ -25978,7 +25979,7 @@ MonoBehaviour:
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
-    m_HighlightedSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+    m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
     m_DisabledSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
@@ -26051,6 +26052,22 @@ MonoBehaviour:
   m_FlexibleWidth: 1
   m_FlexibleHeight: 1
   m_LayoutPriority: 1
+--- !u!114 &241085640
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 241085633}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
+  target: {fileID: 241085637}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &255038687
 GameObject:
   m_ObjectHideFlags: 0
@@ -31060,6 +31077,7 @@ GameObject:
   - component: {fileID: 261023884}
   - component: {fileID: 261023883}
   - component: {fileID: 261023882}
+  - component: {fileID: 261023887}
   m_Layer: 5
   m_Name: Cross-Section Button
   m_TagString: Untagged
@@ -31133,7 +31151,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 0
+  m_Transition: 2
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -31144,7 +31162,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -31216,6 +31234,22 @@ MonoBehaviour:
   m_FlexibleWidth: 1
   m_FlexibleHeight: 1
   m_LayoutPriority: 1
+--- !u!114 &261023887
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 261023880}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
+  target: {fileID: 261023884}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &281385702
 GameObject:
   m_ObjectHideFlags: 0
@@ -31808,6 +31842,22 @@ MonoBehaviour:
   smoothMotion: 1
   smoothSpeed: 12
   showDebug: 0
+--- !u!114 &332344498
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2109000011}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
+  target: {fileID: 2109000025}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &337818787
 GameObject:
   m_ObjectHideFlags: 0
@@ -32171,6 +32221,149 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1847023729}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &414781361
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 414781362}
+  - component: {fileID: 414781364}
+  - component: {fileID: 414781363}
+  - component: {fileID: 414781366}
+  - component: {fileID: 414781365}
+  m_Layer: 5
+  m_Name: Telemetry Detail Layer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &414781362
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 414781361}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 956236832}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &414781363
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 414781361}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78d681a58872541d7a4864f81d0d3805, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TelemetryDetailPanelController
+  secondaryRails: 0
+  railWidthMultiplier: 1.5
+  railManager: {fileID: 1823147736}
+  panelPrefab: {fileID: 4554745796420776625, guid: c4ef2d9d4949e4f67bd1e751fb2780cd, type: 3}
+  historyProvider: {fileID: 776786037}
+  insightProvider: {fileID: 0}
+  graphs: 0000000001000000
+  defaultRange: 0
+  graphStyle:
+    labelFont: {fileID: 11400000, guid: a957a584c7c194375ba4ce263540e876, type: 2}
+    valueFont: {fileID: 11400000, guid: 3a1642aa745994ff387407a731b3c8ac, type: 2}
+    normal: {r: 0.08, g: 0.9, b: 1, a: 1}
+    warning: {r: 1, g: 0.7, b: 0.1, a: 1}
+    critical: {r: 1, g: 0.22, b: 0.2, a: 1}
+    unavailable: {r: 0.45, g: 0.5, b: 0.55, a: 1}
+    normalOpacity: 0.45
+    noData: {r: 1, g: 1, b: 1, a: 0.08}
+    ink: {r: 0.918, g: 0.992, b: 1, a: 1}
+    muted: {r: 0.918, g: 0.992, b: 1, a: 0.58}
+    grid: {r: 1, g: 1, b: 1, a: 0.1}
+    surface: {r: 0.035, g: 0.102, b: 0.137, a: 1}
+    fillLineArea: 0
+    labelSize: 15
+    valueSize: 30
+  railGap: 12
+  stackGap: 12
+  edgeMargin: 12
+  glideTime: 0.22
+  fadeTime: 0.15
+  maximumPinnedPanels: 3
+  refreshInterval: 1
+--- !u!114 &414781364
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 414781361}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 1
+  m_MinWidth: -1
+  m_MinHeight: -1
+  m_PreferredWidth: -1
+  m_PreferredHeight: -1
+  m_FlexibleWidth: -1
+  m_FlexibleHeight: -1
+  m_LayoutPriority: 1
+--- !u!114 &414781365
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 414781361}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
+  m_IgnoreReversedGraphics: 1
+  m_BlockingObjects: 0
+  m_BlockingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!223 &414781366
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 414781361}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 2
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 1
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
+  m_AdditionalShaderChannelsFlag: 0
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 10
+  m_TargetDisplay: 0
 --- !u!1 &423111684
 GameObject:
   m_ObjectHideFlags: 0
@@ -32182,7 +32375,7 @@ GameObject:
   - component: {fileID: 423111685}
   - component: {fileID: 423111686}
   m_Layer: 5
-  m_Name: Right overflow rail
+  m_Name: Right secondary rail
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -32882,6 +33075,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 488348006}
   m_CullTransparentMesh: 1
+--- !u!114 &489287280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2110000011}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverSprite
+  target: {fileID: 2110000025}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &495228706
 GameObject:
   m_ObjectHideFlags: 0
@@ -53916,6 +54125,7 @@ GameObject:
   - component: {fileID: 776786035}
   - component: {fileID: 776786033}
   - component: {fileID: 776786036}
+  - component: {fileID: 776786037}
   m_Layer: 0
   m_Name: Digital Twin Runtime
   m_TagString: Untagged
@@ -54036,6 +54246,25 @@ MonoBehaviour:
   degradedAfterSeconds: 3
   offlineAfterSeconds: 10
   refreshInterval: 0.25
+--- !u!114 &776786037
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 776786029}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c85eb813d97f64d1abfd74f98b87b017, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TelemetryHistoryRecorder
+  registry: {fileID: 776786031}
+  sampleInterval: 1
+  maximumGapSeconds: 10
+  backfillWithGeneratedHistory: 1
+  generatedHistorySeed: 1731
+  generatedWarningShare: 0.06
+  generatedCriticalShare: 0.02
 --- !u!1 &786300540
 GameObject:
   m_ObjectHideFlags: 0
@@ -54098,6 +54327,22 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1847023729}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &798649017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2109000031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
+  target: {fileID: 2109000045}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &804658785
 GameObject:
   m_ObjectHideFlags: 0
@@ -54520,6 +54765,7 @@ GameObject:
   - component: {fileID: 875962070}
   - component: {fileID: 875962069}
   - component: {fileID: 875962073}
+  - component: {fileID: 875962074}
   m_Layer: 5
   m_Name: Zoom In Button
   m_TagString: Untagged
@@ -54637,7 +54883,7 @@ MonoBehaviour:
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
-    m_HighlightedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
     m_DisabledSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
@@ -54710,6 +54956,22 @@ MonoBehaviour:
   m_FlexibleWidth: 1
   m_FlexibleHeight: 1
   m_LayoutPriority: 1
+--- !u!114 &875962074
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 875962067}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
+  target: {fileID: 875962071}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &876782786
 GameObject:
   m_ObjectHideFlags: 0
@@ -54724,6 +54986,7 @@ GameObject:
   - component: {fileID: 876782790}
   - component: {fileID: 876782789}
   - component: {fileID: 876782793}
+  - component: {fileID: 876782794}
   m_Layer: 5
   m_Name: Cross-Section Button
   m_TagString: Untagged
@@ -54771,7 +55034,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 0
+  m_Transition: 2
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -54782,7 +55045,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -54880,6 +55143,22 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &876782794
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 876782786}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
+  target: {fileID: 876782790}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &881534148
 GameObject:
   m_ObjectHideFlags: 0
@@ -54952,7 +55231,7 @@ GameObject:
   m_Component:
   - component: {fileID: 886076332}
   m_Layer: 5
-  m_Name: Left overflow card container
+  m_Name: Left secondary card container
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -55044,6 +55323,7 @@ GameObject:
   - component: {fileID: 896462805}
   - component: {fileID: 896462804}
   - component: {fileID: 896462803}
+  - component: {fileID: 896462808}
   m_Layer: 5
   m_Name: X-Ray Button
   m_TagString: Untagged
@@ -55117,7 +55397,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 0
+  m_Transition: 2
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -55128,7 +55408,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -55200,6 +55480,22 @@ MonoBehaviour:
   m_FlexibleWidth: 1
   m_FlexibleHeight: 1
   m_LayoutPriority: 1
+--- !u!114 &896462808
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 896462801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
+  target: {fileID: 896462805}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &906542321
 GameObject:
   m_ObjectHideFlags: 0
@@ -70053,6 +70349,7 @@ GameObject:
   - component: {fileID: 951971100}
   - component: {fileID: 951971099}
   - component: {fileID: 951971098}
+  - component: {fileID: 951971103}
   m_Layer: 5
   m_Name: X-Ray Button
   m_TagString: Untagged
@@ -70126,7 +70423,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 0
+  m_Transition: 2
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -70137,7 +70434,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -70209,6 +70506,22 @@ MonoBehaviour:
   m_FlexibleWidth: 1
   m_FlexibleHeight: 1
   m_LayoutPriority: 1
+--- !u!114 &951971103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 951971096}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
+  target: {fileID: 951971100}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &956236831
 GameObject:
   m_ObjectHideFlags: 0
@@ -70244,6 +70557,7 @@ RectTransform:
   - {fileID: 240311176}
   - {fileID: 423111685}
   - {fileID: 39663239}
+  - {fileID: 414781362}
   m_Father: {fileID: 733525953}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -75862,6 +76176,22 @@ ParticleSystem:
         m_PostInfinity: 2
         m_RotationOrder: 4
     vectorLabel1_3: W
+--- !u!114 &1091768326
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2110000031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverSprite
+  target: {fileID: 2110000045}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &1096086369
 GameObject:
   m_ObjectHideFlags: 0
@@ -77285,6 +77615,7 @@ GameObject:
   - component: {fileID: 1354334914}
   - component: {fileID: 1354334913}
   - component: {fileID: 1354334917}
+  - component: {fileID: 1354334918}
   m_Layer: 5
   m_Name: Zoom Out Button
   m_TagString: Untagged
@@ -77402,7 +77733,7 @@ MonoBehaviour:
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
-    m_HighlightedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
     m_DisabledSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
@@ -77475,6 +77806,22 @@ MonoBehaviour:
   m_FlexibleWidth: 1
   m_FlexibleHeight: 1
   m_LayoutPriority: 1
+--- !u!114 &1354334918
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1354334911}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
+  target: {fileID: 1354334915}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &1381650564
 GameObject:
   m_ObjectHideFlags: 0
@@ -77486,7 +77833,7 @@ GameObject:
   - component: {fileID: 1381650565}
   - component: {fileID: 1381650566}
   m_Layer: 5
-  m_Name: Left overflow rail
+  m_Name: Left secondary rail
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -88142,7 +88489,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1589097162}
   m_Layer: 5
-  m_Name: Right overflow card container
+  m_Name: Right secondary card container
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -94549,6 +94896,7 @@ GameObject:
   - component: {fileID: 1875655989}
   - component: {fileID: 1875655988}
   - component: {fileID: 1875655992}
+  - component: {fileID: 1875655993}
   m_Layer: 5
   m_Name: Zoom In Button
   m_TagString: Untagged
@@ -94666,7 +95014,7 @@ MonoBehaviour:
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
-    m_HighlightedSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+    m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
     m_DisabledSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
@@ -94739,6 +95087,22 @@ MonoBehaviour:
   m_FlexibleWidth: 1
   m_FlexibleHeight: 1
   m_LayoutPriority: 1
+--- !u!114 &1875655993
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1875655986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
+  target: {fileID: 1875655990}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &1876776499
 GameObject:
   m_ObjectHideFlags: 0
@@ -94784,6 +95148,7 @@ GameObject:
   - component: {fileID: 1891400245}
   - component: {fileID: 1891400244}
   - component: {fileID: 1891400248}
+  - component: {fileID: 1891400249}
   m_Layer: 5
   m_Name: Full Model Button
   m_TagString: Untagged
@@ -94851,7 +95216,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 0
+  m_Transition: 2
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -94862,7 +95227,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -94940,6 +95305,22 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &1891400249
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1891400242}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
+  target: {fileID: 1891400246}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &1918860324
 GameObject:
   m_ObjectHideFlags: 0
@@ -101280,6 +101661,7 @@ GameObject:
   - component: {fileID: 2109000015}
   - component: {fileID: 2109000016}
   - component: {fileID: 2109000017}
+  - component: {fileID: 332344498}
   m_Layer: 5
   m_Name: Previous Telemetry Page
   m_TagString: Untagged
@@ -101374,7 +101756,7 @@ MonoBehaviour:
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
-    m_HighlightedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_DisabledSprite: {fileID: 0}
@@ -101586,6 +101968,7 @@ GameObject:
   - component: {fileID: 2109000035}
   - component: {fileID: 2109000036}
   - component: {fileID: 2109000037}
+  - component: {fileID: 798649017}
   m_Layer: 5
   m_Name: Next Telemetry Page
   m_TagString: Untagged
@@ -101680,7 +102063,7 @@ MonoBehaviour:
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
-    m_HighlightedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_DisabledSprite: {fileID: 0}
@@ -102055,6 +102438,7 @@ GameObject:
   - component: {fileID: 2110000015}
   - component: {fileID: 2110000016}
   - component: {fileID: 2110000017}
+  - component: {fileID: 489287280}
   m_Layer: 5
   m_Name: Previous Telemetry Page
   m_TagString: Untagged
@@ -102149,7 +102533,7 @@ MonoBehaviour:
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
-    m_HighlightedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_DisabledSprite: {fileID: 0}
@@ -102361,6 +102745,7 @@ GameObject:
   - component: {fileID: 2110000035}
   - component: {fileID: 2110000036}
   - component: {fileID: 2110000037}
+  - component: {fileID: 1091768326}
   m_Layer: 5
   m_Name: Next Telemetry Page
   m_TagString: Untagged
@@ -102455,7 +102840,7 @@ MonoBehaviour:
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
-    m_HighlightedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_HighlightedSprite: {fileID: 0}
     m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_DisabledSprite: {fileID: 0}
@@ -102723,6 +103108,7 @@ GameObject:
   - component: {fileID: 2119497028}
   - component: {fileID: 2119497027}
   - component: {fileID: 2119497026}
+  - component: {fileID: 2119497031}
   m_Layer: 5
   m_Name: Full Model Button
   m_TagString: Untagged
@@ -102816,7 +103202,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 0
+  m_Transition: 2
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -102827,7 +103213,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -102879,6 +103265,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2119497024}
   m_CullTransparentMesh: 1
+--- !u!114 &2119497031
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2119497024}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c682b18e09f14202a87b269390ed5ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
+  target: {fileID: 2119497029}
+  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
+  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  selectedIndicator: {fileID: 0}
 --- !u!1 &2135264320
 GameObject:
   m_ObjectHideFlags: 0
@@ -102890,6 +103292,7 @@ GameObject:
   - component: {fileID: 2135264323}
   - component: {fileID: 2135264322}
   - component: {fileID: 2135264321}
+  - component: {fileID: 2135264324}
   m_Layer: 0
   m_Name: EventSystem
   m_TagString: Untagged
@@ -102958,6 +103361,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 255038688}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2135264324
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2135264320}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4dfcb8027b5e647a387da1ba07c732a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TelemetryCardFocusReleaser
 --- !u!1 &2144826829
 GameObject:
   m_ObjectHideFlags: 0

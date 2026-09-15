@@ -101,7 +101,11 @@ public static class ProjectAssetOrganization
         ("Assets/UI/Sprites/trail 4.png", "Assets/UI/Sprites/Accent Trail - Bottom.png"),
         ("Assets/UI/Sprites/trail core.png", "Assets/UI/Sprites/Accent Core.png"),
         ("Assets/UI/Sprites/trail left.png", "Assets/UI/Sprites/Accent Trail - Fade Left.png"),
-        ("Assets/UI/Sprites/trail right.png", "Assets/UI/Sprites/Accent Trail - Fade Right.png")
+        ("Assets/UI/Sprites/trail right.png", "Assets/UI/Sprites/Accent Trail - Fade Right.png"),
+        ("Assets/UI/Sprites/UI panel for extra data.png", "Assets/UI/Sprites/Detail Panel Background.png"),
+        ("Assets/UI/Sprites/ui panel for hover effect.png", "Assets/UI/Sprites/Button Hover Background.png"),
+        ("Assets/UI/Sprites/arrow-left.png", "Assets/UI/Sprites/Arrow Left Icon.png"),
+        ("Assets/UI/Sprites/arrow-right.png", "Assets/UI/Sprites/Arrow Right Icon.png")
     };
 
     private static readonly (string From, string To)[] ModelMoves =
@@ -166,6 +170,12 @@ public static class ProjectAssetOrganization
             return;
 
         if (AssetDatabase.LoadMainAssetAtPath(from) == null && !AssetDatabase.IsValidFolder(from))
+            return;
+
+        // macOS paths ignore case: an old lowercase source ("conveyor.fbx")
+        // must not match a newer asset that only differs in case ("Conveyor.fbx").
+        string actual = AssetDatabase.GUIDToAssetPath(AssetDatabase.AssetPathToGUID(from));
+        if (!string.Equals(actual, from, StringComparison.Ordinal))
             return;
 
         string error = AssetDatabase.MoveAsset(from, to);

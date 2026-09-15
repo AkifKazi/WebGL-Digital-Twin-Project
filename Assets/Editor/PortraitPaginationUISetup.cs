@@ -16,8 +16,8 @@ public static class PortraitPaginationUISetup
     private const string PanelPath = "Assets/UI/Sprites/Panel Background.png";
     private const string RestingPath = "Assets/UI/Sprites/Solid UI Fill.png";
     private const string PressedPath = "Assets/UI/Sprites/Compact Button Background.png";
-    private const string PreviousIconPath = "Assets/UI/Sprites/arrow-left.png";
-    private const string NextIconPath = "Assets/UI/Sprites/arrow-right.png";
+    private const string PreviousIconPath = "Assets/UI/Sprites/Arrow Left Icon.png";
+    private const string NextIconPath = "Assets/UI/Sprites/Arrow Right Icon.png";
     private const float PortraitSpacing = 26f;
     private const float MinimumArrowWidth = 96f;
     private const float InteractionWidth = 96f;

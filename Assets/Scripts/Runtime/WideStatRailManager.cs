@@ -5,6 +5,13 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>What the wide layout's secondary rails, the ones beside the model, are for.</summary>
+public enum SecondaryRailUse
+{
+    DetailPanel,
+    TelemetryCards
+}
+
 [DefaultExecutionOrder(-100)]
 public class WideStatRailManager : MonoBehaviour
 {
@@ -23,6 +30,13 @@ public class WideStatRailManager : MonoBehaviour
     public bool CanShowNextPage => CurrentPageIndex + 1 < PageCount;
     public bool HasSecondaryRailCards =>
         innerLeftBindings.Count > 0 || innerRightBindings.Count > 0;
+
+    /// <summary>True while the secondary rails are kept free of cards for the detail panel.</summary>
+    public bool SecondaryRailsReserved => reservedRailWidthMultiplier > 0f;
+
+    // Cards only go to the secondary rails while nothing has reserved them.
+    private RectTransform InnerLeftCards => SecondaryRailsReserved ? null : innerLeftCardContainer;
+    private RectTransform InnerRightCards => SecondaryRailsReserved ? null : innerRightCardContainer;
 
     [Header("References")]
     [SerializeField] private Camera worldCamera;
@@ -109,6 +123,25 @@ public class WideStatRailManager : MonoBehaviour
 
     private readonly List<PresentationPosition> innerLeftSources = new();
     private readonly List<PresentationPosition> innerRightSources = new();
+
+    private float reservedRailWidthMultiplier;
+    private bool layoutBuilt;
+
+    /// <summary>
+    /// Keeps the secondary rails free of cards and widens them to
+    /// <paramref name="widthMultiplier"/> times the outer rail width, as room
+    /// for the detail panel; cards that no longer fit move to further pages.
+    /// Releasing hands the rails back to cards. Rebuilds the layout on change.
+    /// </summary>
+    public void ReserveSecondaryRails(bool reserve, float widthMultiplier = 1f)
+    {
+        float value = reserve ? Mathf.Max(1f, widthMultiplier) : 0f;
+        if (Mathf.Approximately(value, reservedRailWidthMultiplier))
+            return;
+        reservedRailWidthMultiplier = value;
+        if (layoutBuilt && isActiveAndEnabled)
+            RebuildLayout();
+    }
 
     private IEnumerator Start()
     {
@@ -296,6 +329,7 @@ public class WideStatRailManager : MonoBehaviour
         InitialiseRailPositions(innerLeftBindings, innerLeftCardContainer);
         InitialiseRailPositions(innerRightBindings, innerRightCardContainer);
 
+        layoutBuilt = true;
         LayoutRebuilt?.Invoke();
         PaginationChanged?.Invoke(CurrentPageIndex, PageCount);
     }
@@ -337,17 +371,20 @@ public class WideStatRailManager : MonoBehaviour
             minimumRailWidth,
             maximumRailWidth);
 
+        float secondaryRailWidth = resolvedRailWidth *
+            (SecondaryRailsReserved ? reservedRailWidthMultiplier : 1f);
+
         ConfigureVerticalRail(leftCardContainer.parent as RectTransform, 0f, resolvedRailWidth, true);
         ConfigureVerticalRail(
             innerLeftCardContainer?.parent as RectTransform,
             resolvedRailWidth,
-            resolvedRailWidth,
+            secondaryRailWidth,
             true);
         ConfigureVerticalRail(rightCardContainer.parent as RectTransform, 0f, resolvedRailWidth, false);
         ConfigureVerticalRail(
             innerRightCardContainer?.parent as RectTransform,
             resolvedRailWidth,
-            resolvedRailWidth,
+            secondaryRailWidth,
             false);
 
         RectTransform stage = content.Cast<Transform>()
@@ -390,8 +427,8 @@ public class WideStatRailManager : MonoBehaviour
             RectTransform otherOuterContainer = preferred == StatRailSide.Left ? rightCardContainer : leftCardContainer;
             List<PresentationPosition> preferredInner = preferred == StatRailSide.Left ? innerLeftSources : innerRightSources;
             List<PresentationPosition> otherInner = preferred == StatRailSide.Left ? innerRightSources : innerLeftSources;
-            RectTransform preferredInnerContainer = preferred == StatRailSide.Left ? innerLeftCardContainer : innerRightCardContainer;
-            RectTransform otherInnerContainer = preferred == StatRailSide.Left ? innerRightCardContainer : innerLeftCardContainer;
+            RectTransform preferredInnerContainer = preferred == StatRailSide.Left ? InnerLeftCards : InnerRightCards;
+            RectTransform otherInnerContainer = preferred == StatRailSide.Left ? InnerRightCards : InnerLeftCards;
 
             if (TryAllocate(candidate, preferredOuter, preferredOuterContainer) ||
                 TryAllocate(candidate, otherOuter, otherOuterContainer) ||
@@ -463,11 +500,11 @@ public class WideStatRailManager : MonoBehaviour
             ? allocation.InnerRight
             : allocation.InnerLeft;
         RectTransform preferredInnerContainer = preferred == StatRailSide.Left
-            ? innerLeftCardContainer
-            : innerRightCardContainer;
+            ? InnerLeftCards
+            : InnerRightCards;
         RectTransform otherInnerContainer = preferred == StatRailSide.Left
-            ? innerRightCardContainer
-            : innerLeftCardContainer;
+            ? InnerRightCards
+            : InnerLeftCards;
 
         bool allocated =
             TryAllocate(candidate, preferredOuter, preferredOuterContainer) ||
@@ -548,6 +585,19 @@ public class WideStatRailManager : MonoBehaviour
             out card
         );
     }
+
+    /// <summary>The outer (primary) or inner (overflow) rail on one side.</summary>
+    public RectTransform GetRail(StatRailSide side, bool inner)
+    {
+        RectTransform container = side == StatRailSide.Left
+            ? inner ? innerLeftCardContainer : leftCardContainer
+            : inner ? innerRightCardContainer : rightCardContainer;
+        return container != null ? container.parent as RectTransform : null;
+    }
+
+    /// <summary>True when the card is currently shown on one of this manager's rails.</summary>
+    public bool OwnsCard(PerformanceStatCardView card) =>
+        card != null && activeCards.ContainsValue(card);
 
     private StatRailSide DetermineSide(
     TelemetryCardPresentation presentation,

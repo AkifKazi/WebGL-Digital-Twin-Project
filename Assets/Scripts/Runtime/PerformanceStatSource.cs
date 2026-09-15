@@ -91,6 +91,14 @@ public sealed class PerformanceStatSource : MonoBehaviour
     public ulong SequenceNumber { get; private set; }
     public string ProviderId { get; private set; } = string.Empty;
 
+    /// <summary>The limits the state is derived from; Disabled when this source's state is set externally.</summary>
+    public TelemetryLimits Limits => new(
+        useAutomaticThresholds ? limitMode : TelemetryLimitMode.Disabled,
+        warningBelow,
+        criticalBelow,
+        warningAbove,
+        criticalAbove);
+
     // The GameObject carrying this component is the sensor location.
     public Transform WorldAnchor => transform;
 
@@ -289,20 +297,8 @@ public sealed class PerformanceStatSource : MonoBehaviour
             return StatVisualState.Unavailable;
         }
 
-        bool checkHigh = limitMode == TelemetryLimitMode.HighOnly ||
-                         limitMode == TelemetryLimitMode.OutsideRange;
-        bool checkLow = limitMode == TelemetryLimitMode.LowOnly ||
-                        limitMode == TelemetryLimitMode.OutsideRange;
-
-        if ((checkHigh && value >= criticalAbove) ||
-            (checkLow && value <= criticalBelow))
-            return StatVisualState.Critical;
-
-        if ((checkHigh && value >= warningAbove) ||
-            (checkLow && value <= warningBelow))
-            return StatVisualState.Warning;
-
-        return StatVisualState.Normal;
+        return new TelemetryLimits(limitMode, warningBelow, criticalBelow, warningAbove, criticalAbove)
+            .Evaluate(value);
     }
 
 #if UNITY_EDITOR

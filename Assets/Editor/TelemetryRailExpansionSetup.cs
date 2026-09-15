@@ -34,10 +34,12 @@ public static class TelemetryRailExpansionSetup
         RectTransform leftOuter = FindDirectChild(content, "Left primary rail");
         RectTransform rightOuter = FindDirectChild(content, "Right primary rail");
 
+        // Named "secondary": by default they hold the telemetry detail panel, and
+        // only hold overflow cards when the panel's controller hands them back.
         RectTransform innerLeft = CreateRail(
-            content, "Left overflow rail", "Left overflow card container", 280f, -1f);
+            content, "Left secondary rail", "Left secondary card container", 280f, -1f);
         RectTransform innerRight = CreateRail(
-            content, "Right overflow rail", "Right overflow card container", 280f, -1f);
+            content, "Right secondary rail", "Right secondary card container", 280f, -1f);
 
         innerLeft.parent.SetSiblingIndex(stage.GetSiblingIndex());
         innerRight.parent.SetSiblingIndex(stage.GetSiblingIndex() + 1);

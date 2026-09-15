@@ -37,6 +37,9 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
 
     public static PerformanceStatCardView ActiveFocusedCard { get; private set; }
 
+    /// <summary>Raised after a clean click on a card has updated its focus.</summary>
+    public static event Action<PerformanceStatCardView> Clicked;
+
     [Header("Text")]
     [SerializeField] private TMP_Text metricName;
     [SerializeField] private TMP_Text valueText;
@@ -107,6 +110,10 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     [SerializeField, Min(0f), Tooltip("Seconds a tapped card stays focused on touch devices, which have no hover state. " +
         "Long enough to read the isolated mechanism in the X-Ray view before focus releases.")]
     private float mobileTapFocusSeconds = 4f;
+    [SerializeField, Tooltip("Legacy behaviour: a card focuses while the pointer is over it. " +
+        "Off, only a click (a press and release that moves less than the drag threshold) " +
+        "focuses a card, so turning the camera across the rails never triggers it.")]
+    private bool focusOnHover;
     [SerializeField, Min(0.05f)] private float focusToRestDuration = 0.5f;
     [SerializeField, Range(0.05f, 1f)] private float unfocusedPeerOpacity = 0.15f;
     [SerializeField, Min(0.02f)] private float peerFocusTransitionDuration = 0.23f;
@@ -118,6 +125,7 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     private RectTransform metricTemplateRoot;
     private bool focused;
     private float tapFocusUntil;
+    private RectTransform connectionPointOverride;
     private Transform presentationAnchor;
     private bool fadingConnectionToRest;
     private float connectionFadeStartedAt;
@@ -148,6 +156,11 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     {
         get
         {
+            // A detail panel opened from this card draws the leader line from
+            // its own model-side edge instead.
+            if (connectionPointOverride != null && connectionPointOverride.gameObject.activeInHierarchy)
+                return connectionPointOverride;
+
             return railSide switch
             {
                 StatRailSide.Left => rightConnectionPoint,
@@ -206,8 +219,9 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     private void OnApplicationFocus(bool hasFocus)
     {
         // Browsers do not always deliver a pointer-exit event when the tab or
-        // window loses focus. Never leave a normal card permanently focused.
-        if (!hasFocus && focused && !IsAlarmState())
+        // window loses focus. Never leave a hover-focused card focused. A card
+        // focused by a click stays focused until it is released explicitly.
+        if (focusOnHover && !hasFocus && focused && !IsAlarmState())
             SetFocused(false);
     }
 
@@ -472,26 +486,63 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
 
     public void OnPointerEnter(PointerEventData eventData)
     {
+        if (!focusOnHover)
+            return;
         tapFocusUntil = 0f;
         SetFocused(true);
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (tapFocusUntil <= 0f)
+        if (focusOnHover && tapFocusUntil <= 0f)
             SetFocused(false);
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        // A mouse hover already owns focus. The timed focus is only for touch,
-        // where there is no persistent hover state and no click-to-lock mode.
-        if (eventData != null && eventData.pointerId < 0)
+        // A press that travelled was a camera drag that happened to end here.
+        if (!UIPointerUtility.IsCleanClick(eventData))
             return;
 
+        bool touch = UIPointerUtility.IsTouch(eventData);
+
+        // Legacy mode: a mouse hover already owns focus.
+        if (focusOnHover && !touch)
+            return;
+
+        if (focused && !focusOnHover)
+        {
+            // A second click on the focused card releases it.
+            ReleaseFocus();
+            Clicked?.Invoke(this);
+            return;
+        }
+
         SetFocused(true);
-        tapFocusUntil = Time.unscaledTime + mobileTapFocusSeconds;
+        // Touch has no hover to end focus, so a tap focuses for a while unless
+        // something (an open detail panel) holds it. A mouse click holds it.
+        tapFocusUntil = touch ? Time.unscaledTime + mobileTapFocusSeconds : 0f;
+        Clicked?.Invoke(this);
     }
+
+    /// <summary>Keeps a tapped card focused until it is released explicitly.</summary>
+    public void HoldFocus() => tapFocusUntil = 0f;
+
+    public void ReleaseFocus()
+    {
+        tapFocusUntil = 0f;
+        SetFocused(false);
+    }
+
+    /// <summary>Releases whichever card is focused.</summary>
+    public static void ClearActiveFocus()
+    {
+        if (ActiveFocusedCard != null)
+            ActiveFocusedCard.ReleaseFocus();
+    }
+
+    /// <summary>Draw this card's leader line from <paramref name="point"/> instead (null restores the card's own).</summary>
+    public void SetConnectionPointOverride(RectTransform point) => connectionPointOverride = point;
 
     private void SetFocused(bool value)
     {
@@ -522,7 +573,16 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
         if (ActiveFocusedCard == card)
             return;
 
+        // Only one card is ever focused. Without this, clicking a second card
+        // left the first one focused (full-opacity trail and leader line) with
+        // nothing left to release it.
+        PerformanceStatCardView previous = ActiveFocusedCard;
         ActiveFocusedCard = card;
+        if (previous != null && card != null && previous.focused)
+        {
+            previous.tapFocusUntil = 0f;
+            previous.SetFocused(false);
+        }
         ActiveFocusChanged?.Invoke(card);
     }
 

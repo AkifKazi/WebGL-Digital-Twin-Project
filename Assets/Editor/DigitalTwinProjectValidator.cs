@@ -62,6 +62,7 @@ public static class DigitalTwinProjectValidator
         ValidateCamera(result);
         ValidateAdaptiveQuality(result);
         ValidateConnectionHealth(result);
+        ValidateDetailPanel(result);
         ValidateUiFonts(result);
 
         foreach (string warning in result.Warnings)
@@ -604,6 +605,36 @@ public static class DigitalTwinProjectValidator
         if (views.Length > 0)
             result.Errors.Add(
                 $"Connection-health top-bar UI should remain absent; found {views.Length} view(s).");
+    }
+
+    private static void ValidateDetailPanel(ValidationResult result)
+    {
+        TelemetryDetailPanelController[] controllers =
+            UnityEngine.Object.FindObjectsByType<TelemetryDetailPanelController>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+        if (controllers.Length == 0)
+        {
+            result.Warnings.Add(
+                "The telemetry detail panel is not set up (Tools/Digital Twin/Set Up Telemetry Detail Panel).");
+            return;
+        }
+
+        foreach (TelemetryDetailPanelController controller in controllers)
+        {
+            if (controller.SecondaryRails != SecondaryRailUse.DetailPanel)
+                continue;
+            SerializedObject data = new(controller);
+            if (data.FindProperty("railManager").objectReferenceValue == null)
+                result.Errors.Add("The telemetry detail panel has no rail manager.");
+            if (data.FindProperty("panelPrefab").objectReferenceValue == null)
+                result.Errors.Add("The telemetry detail panel has no panel prefab.");
+            if (data.FindProperty("historyProvider").objectReferenceValue is not ITelemetryHistoryProvider)
+                result.Errors.Add("The telemetry detail panel needs a history provider (Telemetry History Recorder).");
+            UnityEngine.Object insight = data.FindProperty("insightProvider").objectReferenceValue;
+            if (insight != null && insight is not ITelemetryInsightProvider)
+                result.Errors.Add("The detail panel's insight provider does not implement ITelemetryInsightProvider.");
+        }
     }
 
     private static void ValidatePaginationButton(
