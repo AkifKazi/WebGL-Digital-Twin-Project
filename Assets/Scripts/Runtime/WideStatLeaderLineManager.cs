@@ -19,8 +19,11 @@ public class WideStatLeaderLineManager : MonoBehaviour
     private readonly Stack<StatLeaderLineView>
         linePool = new();
 
+    private readonly List<PerformanceStatSource> watchedSources = new();
+
     private bool restingOpacityInitialized;
     private float previousRestingOpacity;
+    private bool drawOrderDirty;
 
     private void OnEnable()
     {
@@ -40,6 +43,8 @@ public class WideStatLeaderLineManager : MonoBehaviour
     {
         if (railManager != null)
             railManager.LayoutRebuilt -= RebuildLines;
+
+        UnwatchSources();
     }
 
     public void RebuildLines()
@@ -106,14 +111,75 @@ public class WideStatLeaderLineManager : MonoBehaviour
                 !restingOpacityInitialized);
 
             generatedLines.Add(line);
+            WatchState(source);
         }
 
         previousRestingOpacity = desiredRestingOpacity;
         restingOpacityInitialized = true;
+        ApplyDrawOrder();
+    }
+
+    /// <summary>
+    /// Draws the alarming lines and their anchors over the calm ones, critical
+    /// above warning. Without this the anchors stack in whatever order the cards
+    /// were built in, and a yellow anchor can sit over a red one.
+    /// </summary>
+    private void ApplyDrawOrder()
+    {
+        generatedLines.Sort((first, second) =>
+            Severity(first.Source).CompareTo(Severity(second.Source)));
+
+        for (int i = 0; i < generatedLines.Count; i++)
+            generatedLines[i].transform.SetSiblingIndex(i);
+    }
+
+    private static int Severity(PerformanceStatSource source) => source == null
+        ? 0
+        : source.VisualState switch
+        {
+            StatVisualState.Critical => 3,
+            StatVisualState.Warning => 2,
+            StatVisualState.Unavailable => 1,
+            _ => 0
+        };
+
+    private void WatchState(PerformanceStatSource source)
+    {
+        if (source == null || watchedSources.Contains(source))
+            return;
+
+        watchedSources.Add(source);
+        source.Changed += HandleSourceChanged;
+    }
+
+    private void UnwatchSources()
+    {
+        foreach (PerformanceStatSource source in watchedSources)
+        {
+            if (source != null)
+                source.Changed -= HandleSourceChanged;
+        }
+
+        watchedSources.Clear();
+    }
+
+    // An alarm can start at any moment. Sorting waits for the end of the frame,
+    // so a burst of readings reorders the lines once rather than per reading.
+    private void HandleSourceChanged(PerformanceStatSource source) => drawOrderDirty = true;
+
+    private void LateUpdate()
+    {
+        if (!drawOrderDirty)
+            return;
+
+        drawOrderDirty = false;
+        ApplyDrawOrder();
     }
 
     private void ClearLines()
     {
+        UnwatchSources();
+
         foreach (StatLeaderLineView line in generatedLines)
         {
             if (line != null)

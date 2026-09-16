@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Releases the focused telemetry card when the user clicks (or taps) anything
@@ -17,31 +18,59 @@ public sealed class TelemetryCardFocusReleaser : MonoBehaviour
     public static event Action Dismissed;
 
     private readonly List<RaycastResult> raycastResults = new();
+    private InputAction pointerPress;
+    private InputAction escape;
     private bool pressActive;
     private bool pressOnOwnUI;
     private Vector2 pressPosition;
 
-    private void Update()
+    // Input actions report every press and release as it happens. Polling
+    // "pressed this frame" missed quick clicks and trackpad taps, whose press
+    // and release land in the same frame, so the card stayed focused.
+    private void OnEnable()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
-            Dismiss();
+        // The mouse button, or on a phone the primary touch. A pass-through
+        // action reports a button's press as "started" and its release as
+        // "canceled"; listening only to "performed" missed both, which is why an
+        // outside click never released the card in the player.
+        pointerPress = new InputAction("Pointer Press", InputActionType.PassThrough, "<Pointer>/press");
+        pointerPress.started += HandlePointerPress;
+        pointerPress.performed += HandlePointerPress;
+        pointerPress.canceled += HandlePointerPress;
+        pointerPress.Enable();
 
-        if (Input.touchCount > 0)
-        {
-            Touch touch = Input.GetTouch(0);
-            if (touch.phase == TouchPhase.Began)
-                BeginPress(touch.position);
-            else if (touch.phase == TouchPhase.Ended)
-                EndPress(touch.position);
-            else if (touch.phase == TouchPhase.Canceled)
-                pressActive = false;
+        escape = new InputAction("Dismiss", InputActionType.Button, "<Keyboard>/escape");
+        escape.performed += HandleEscape;
+        escape.Enable();
+    }
+
+    private void OnDisable()
+    {
+        pointerPress?.Dispose();
+        escape?.Dispose();
+        pointerPress = null;
+        escape = null;
+        pressActive = false;
+    }
+
+    private void HandleEscape(InputAction.CallbackContext context) => Dismiss();
+
+    private void HandlePointerPress(InputAction.CallbackContext context)
+    {
+        if (context.control.device is not Pointer pointer)
             return;
-        }
 
-        if (Input.GetMouseButtonDown(0))
-            BeginPress(Input.mousePosition);
-        else if (Input.GetMouseButtonUp(0))
-            EndPress(Input.mousePosition);
+        // The same handler serves press and release, so the button's own value
+        // decides which this is rather than which callback delivered it.
+        Vector2 position = pointer.position.ReadValue();
+        bool down = context.control is UnityEngine.InputSystem.Controls.ButtonControl button
+            ? button.isPressed
+            : context.ReadValueAsButton();
+
+        if (down)
+            BeginPress(position);
+        else
+            EndPress(position);
     }
 
     private void BeginPress(Vector2 position)

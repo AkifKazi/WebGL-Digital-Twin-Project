@@ -127,40 +127,32 @@ public sealed class PerformanceStatSourceEditor : DigitalTwinComponentEditor
 [CustomEditor(typeof(AdaptiveQualityController))]
 public sealed class AdaptiveQualityControllerEditor : DigitalTwinComponentEditor
 {
-    private bool showDesktopAdaptive;
+    private bool showPresets;
 
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
         DrawScriptReference();
         EditorGUILayout.HelpBox(
-            "Mobile WebGL is deliberately locked to the Mobile preset and 30 FPS by default to " +
-            "reduce heat and battery usage. Desktop WebGL remains adaptive.",
+            "Every device starts on the light preset. On a desktop browser the HD button raises " +
+            "it and the choice is remembered in the browser; phones stay light at 30 FPS. The " +
+            "preset is never changed automatically.",
             MessageType.Info);
 
         EditorGUILayout.LabelField("Mobile WebGL", EditorStyles.boldLabel);
-        Draw("lockMobileBrowserToLowQuality", "Lock to Mobile Quality");
+        Draw("lockMobileBrowserToLowQuality", "Lock to Light Preset");
         Draw("mobileBrowserTargetFrameRate", "Target Frame Rate");
 
         EditorGUILayout.Space();
-        showDesktopAdaptive = EditorGUILayout.Foldout(
-            showDesktopAdaptive,
-            "Advanced: Desktop Adaptive Quality",
-            true);
-        if (showDesktopAdaptive)
+        EditorGUILayout.LabelField("Behaviour", EditorStyles.boldLabel);
+        Draw("rememberChoice", "Remember HD Choice");
+
+        EditorGUILayout.Space();
+        showPresets = EditorGUILayout.Foldout(showPresets, "Advanced: Preset Names", true);
+        if (showPresets)
         {
-            Draw("highQualityName", "High Preset");
-            Draw("mediumQualityName", "Starting Preset");
-            Draw("lowQualityName", "Fallback Preset");
-            Draw("startupDelay");
-            Draw("sampleDuration");
-            Draw("switchCooldown");
-            Draw("mediumToLowFps");
-            Draw("highToMediumFps");
-            Draw("mediumToHighFps");
-            Draw("allowAutomaticUpgrade");
-            Draw("upgradeSamplesRequired");
-            Draw("disableAutomaticChangesInDevelopmentBuild");
+            Draw("highQualityName", "HD Preset");
+            Draw("lowQualityName", "Light Preset");
             Draw("logDecisions");
         }
 

@@ -92,6 +92,14 @@ public class OrbitCameraController : MonoBehaviour
     public bool smoothMotion = true;
     public float smoothSpeed = 12f;
 
+    [Header("Framing")]
+    [Tooltip("Free space kept at the left and right when the camera pulls back to show a point, " +
+             "as a share of the screen. The telemetry rails sit in this band.")]
+    [Range(0f, 0.45f)] public float framingMarginX = 0.22f;
+
+    [Tooltip("Free space kept at the top and bottom when the camera pulls back to show a point.")]
+    [Range(0f, 0.45f)] public float framingMarginY = 0.14f;
+
     [Header("Debug")]
     public bool showDebug = false;
 
@@ -526,6 +534,74 @@ public class OrbitCameraController : MonoBehaviour
         desiredDistance += buttonZoomSpeed * 0.25f;
         ClampValues();
         PublishZoomAvailability(false);
+    }
+
+    /// <summary>
+    /// Pulls the camera back just far enough for <paramref name="worldPoint"/> to
+    /// sit inside the view, clear of the telemetry rails. Never moves closer and
+    /// never turns the camera, so the view the user set is kept; the existing
+    /// smoothing makes the move gentle. False when nothing had to move.
+    /// </summary>
+    public bool EnsureWorldPointVisible(Vector3 worldPoint)
+    {
+        if (target == null || introPlaying)
+            return false;
+
+        Camera view = GetComponent<Camera>();
+        if (view == null || IsPointFramed(worldPoint, desiredDistance, view))
+            return false;
+
+        // The nearest distance that frames the point: halve the gap a few times
+        // rather than stepping out in fixed jumps, so the pull-back is minimal.
+        float near = desiredDistance;
+        float far = maxDistance;
+        if (!IsPointFramed(worldPoint, far, view))
+        {
+            desiredDistance = far;
+            ClampValues();
+            PublishZoomAvailability(false);
+            return true;
+        }
+
+        for (int i = 0; i < 12 && far - near > 0.05f; i++)
+        {
+            float middle = (near + far) * 0.5f;
+            if (IsPointFramed(worldPoint, middle, view))
+                far = middle;
+            else
+                near = middle;
+        }
+
+        desiredDistance = far;
+        ClampValues();
+        PublishZoomAvailability(false);
+        return true;
+    }
+
+    /// <summary>True when the point sits inside the margins at the given orbit distance.</summary>
+    private bool IsPointFramed(Vector3 worldPoint, float distance, Camera view)
+    {
+        Vector3 center = target.position + targetOffset;
+        Quaternion rotation = Quaternion.Euler(desiredPitch, desiredYaw, 0f);
+        Vector3 position = center - rotation * Vector3.forward * distance;
+        Vector3 forward = (center - position).normalized;
+
+        Vector3 offset = worldPoint - position;
+        float depth = Vector3.Dot(offset, forward);
+        if (depth <= view.nearClipPlane)
+            return false;
+
+        Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+        if (right.sqrMagnitude < 0.0001f)
+            right = rotation * Vector3.right;
+        Vector3 up = Vector3.Cross(forward, right);
+
+        float halfHeight = depth * Mathf.Tan(view.fieldOfView * 0.5f * Mathf.Deg2Rad);
+        float halfWidth = halfHeight * view.aspect;
+        float x = Vector3.Dot(offset, right) / Mathf.Max(halfWidth, 0.0001f);
+        float y = Vector3.Dot(offset, up) / Mathf.Max(halfHeight, 0.0001f);
+
+        return Mathf.Abs(x) <= 1f - framingMarginX && Mathf.Abs(y) <= 1f - framingMarginY;
     }
 
     private void PublishZoomAvailability(bool force)

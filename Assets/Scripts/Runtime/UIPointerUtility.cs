@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 
-/// <summary>Pointer checks shared by the cards, the detail panel and the hover wash.</summary>
+/// <summary>Pointer checks shared by the cards, the detail panel and the control hover states.</summary>
 public static class UIPointerUtility
 {
     /// <summary>Movement in pixels beyond which a press counts as a drag (the EventSystem setting).</summary>

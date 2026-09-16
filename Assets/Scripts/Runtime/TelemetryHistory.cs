@@ -78,7 +78,9 @@ public struct TelemetryHistoryBucket
     public int SampleCount;
     public float Min;
     public float Max;
-    public float Sum;
+    // Double: a week-long bucket sums hundreds of thousands of samples, and a
+    // float sum would round small readings away.
+    public double Sum;
     public float Last;
     public float NormalSeconds;
     public float WarningSeconds;
@@ -86,7 +88,7 @@ public struct TelemetryHistoryBucket
     public float UnavailableSeconds;
 
     public bool HasValue => SampleCount > 0;
-    public float Mean => SampleCount > 0 ? Sum / SampleCount : 0f;
+    public float Mean => SampleCount > 0 ? (float)(Sum / SampleCount) : 0f;
     public float CoveredSeconds => NormalSeconds + WarningSeconds + CriticalSeconds + UnavailableSeconds;
     public bool HasData => HasValue || CoveredSeconds > 0f;
 

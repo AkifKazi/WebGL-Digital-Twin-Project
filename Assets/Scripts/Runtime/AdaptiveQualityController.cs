@@ -3,39 +3,27 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 
 /// <summary>
-/// Chooses between named Unity quality levels using a smoothed FPS sample.
-/// Designed for infrequent quality changes rather than frame-by-frame scaling.
+/// Chooses the graphics preset. Every device starts on the lightest preset, so
+/// a weak phone or laptop is never asked to render more than it can. On a
+/// desktop browser the viewer can turn HD on, and that choice is remembered in
+/// the browser; phones stay light, because a preset chosen on a desktop must
+/// never make a phone render at PC quality.
+///
+/// The preset is never changed behind the viewer's back: an earlier version
+/// sampled the frame rate and stepped the quality down mid-session, which read
+/// as the picture changing at random.
 /// </summary>
 public sealed class AdaptiveQualityController : MonoBehaviour
 {
+    /// <summary>Raised when the preset changes, so controls can show the new state.</summary>
+    public event Action QualityChanged;
+
     [Header("Quality level names")]
     [SerializeField] private string highQualityName = "PC";
-    [SerializeField] private string mediumQualityName = "WebGL";
     [SerializeField] private string lowQualityName = "Mobile";
 
-    [Header("Sampling")]
-    [SerializeField, Min(0f)] private float startupDelay = 10f;
-    [SerializeField, Min(1f)] private float sampleDuration = 5f;
-    [SerializeField, Min(0f)] private float switchCooldown = 10f;
-
-    [Header("Thresholds")]
-    [Tooltip("Medium changes to Low below this average FPS.")]
-    [SerializeField, Min(1f)] private float mediumToLowFps = 25f;
-
-    [Tooltip("High changes to Medium below this average FPS.")]
-    [SerializeField, Min(1f)] private float highToMediumFps = 45f;
-
-    [Tooltip("Medium can change to High above this average FPS.")]
-    [SerializeField, Min(1f)] private float mediumToHighFps = 55f;
-
-    [Header("Behaviour")]
-    [SerializeField] private bool allowAutomaticUpgrade = false;
-    [SerializeField, Min(1)] private int upgradeSamplesRequired = 3;
-    [SerializeField] private bool disableAutomaticChangesInDevelopmentBuild = true;
-    [SerializeField] private bool logDecisions = true;
-
     [Header("Mobile WebGL")]
-    [Tooltip("Mobile browsers remain on the low-quality preset instead of participating in adaptive quality.")]
+    [Tooltip("Mobile browsers stay on the light preset, whatever is stored, and HD is not offered.")]
 #pragma warning disable CS0414 // Read only in WebGL player builds, so editor compiles see it as unused.
     [SerializeField] private bool lockMobileBrowserToLowQuality = true;
 #pragma warning restore CS0414
@@ -43,252 +31,97 @@ public sealed class AdaptiveQualityController : MonoBehaviour
     [Tooltip("Frame-rate limit used by mobile browsers. Desktop WebGL remains browser driven.")]
     [SerializeField, Range(15, 60)] private int mobileBrowserTargetFrameRate = 30;
 
+    [Header("Behaviour")]
+    [Tooltip("Remembers the viewer's HD choice in the browser, so a refresh keeps it.")]
+    [SerializeField] private bool rememberChoice = true;
+
+    [SerializeField] private bool logDecisions = true;
+
     private const string PreferenceKey = "GraphicsQualityMode";
-    private const string AutoMode = "Auto";
+    private const string HighMode = "High";
+    private const string LowMode = "Low";
 
     private int highIndex = -1;
-    private int mediumIndex = -1;
     private int lowIndex = -1;
-
-    private float warmupRemaining;
-    private float cooldownRemaining;
-    private float sampleTime;
-    private int sampleFrames;
-    private int successfulUpgradeSamples;
-    private bool automaticMode;
-    private bool mobileBrowserQualityLocked;
+    private bool mobileBrowser;
+    private bool highQuality;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")]
     private static extern int DigitalTwin_IsMobileBrowser();
 #endif
 
-    public float LastAverageFps { get; private set; }
+    /// <summary>True on a desktop browser, where HD can be offered.</summary>
+    public bool IsDesktop => !mobileBrowser;
+
+    /// <summary>True while the high preset is running.</summary>
+    public bool HighQualityEnabled => highQuality;
 
     private void Awake()
     {
-        ResolveQualityIndices();
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-        mobileBrowserQualityLocked =
-            lockMobileBrowserToLowQuality && DigitalTwin_IsMobileBrowser() != 0;
-
-        Application.targetFrameRate = mobileBrowserQualityLocked
-            ? mobileBrowserTargetFrameRate
-            : -1;
-#endif
-
-        if (mobileBrowserQualityLocked)
-        {
-            // This is deliberately session-only. A quality preference selected on
-            // desktop must not make a phone render at PC quality, and using a phone
-            // must not overwrite that desktop preference.
-            automaticMode = false;
-            ApplyQuality(lowIndex, lowQualityName);
-
-            if (logDecisions)
-            {
-                Debug.Log(
-                    $"Adaptive quality: mobile browser locked to {lowQualityName} " +
-                    $"at {mobileBrowserTargetFrameRate} FPS.");
-            }
-
-            warmupRemaining = startupDelay;
-            return;
-        }
-
-        string savedMode = PlayerPrefs.GetString(PreferenceKey, AutoMode);
-        automaticMode = string.Equals(savedMode, AutoMode, StringComparison.OrdinalIgnoreCase);
-
-        if (automaticMode)
-        {
-            ApplyQuality(mediumIndex, mediumQualityName);
-        }
-        else
-        {
-            SetManualQuality(savedMode, savePreference: false);
-        }
-
-        warmupRemaining = startupDelay;
-    }
-
-    private void Update()
-    {
-        if (!automaticMode || !Application.isFocused)
-        {
-            ResetSample();
-            return;
-        }
-
-        if (disableAutomaticChangesInDevelopmentBuild && Debug.isDebugBuild)
-            return;
-
-        float deltaTime = Time.unscaledDeltaTime;
-
-        if (warmupRemaining > 0f)
-        {
-            warmupRemaining -= deltaTime;
-            return;
-        }
-
-        if (cooldownRemaining > 0f)
-        {
-            cooldownRemaining -= deltaTime;
-            return;
-        }
-
-        sampleTime += deltaTime;
-        sampleFrames++;
-
-        if (sampleTime < sampleDuration)
-            return;
-
-        LastAverageFps = sampleFrames / Mathf.Max(sampleTime, 0.001f);
-        EvaluateQuality(LastAverageFps);
-        ResetSample();
-    }
-
-    public void SetAuto()
-    {
-        if (KeepMobileBrowserLocked())
-            return;
-
-        automaticMode = true;
-        PlayerPrefs.SetString(PreferenceKey, AutoMode);
-        PlayerPrefs.Save();
-
-        ApplyQuality(mediumIndex, mediumQualityName);
-        warmupRemaining = startupDelay;
-        cooldownRemaining = 0f;
-        successfulUpgradeSamples = 0;
-        ResetSample();
-    }
-
-    public void SetHigh()
-    {
-        if (KeepMobileBrowserLocked())
-            return;
-
-        SetManualQuality(highQualityName, savePreference: true);
-    }
-
-    public void SetMedium()
-    {
-        if (KeepMobileBrowserLocked())
-            return;
-
-        SetManualQuality(mediumQualityName, savePreference: true);
-    }
-
-    public void SetLow()
-    {
-        if (KeepMobileBrowserLocked())
-            return;
-
-        SetManualQuality(lowQualityName, savePreference: true);
-    }
-
-    private bool KeepMobileBrowserLocked()
-    {
-        if (!mobileBrowserQualityLocked)
-            return false;
-
-        automaticMode = false;
-        ApplyQuality(lowIndex, lowQualityName);
-        Application.targetFrameRate = mobileBrowserTargetFrameRate;
-        return true;
-    }
-
-    private void EvaluateQuality(float averageFps)
-    {
-        int currentIndex = QualitySettings.GetQualityLevel();
-
-        if (currentIndex == highIndex && averageFps < highToMediumFps)
-        {
-            ApplyAutomaticQuality(mediumIndex, mediumQualityName, averageFps);
-            return;
-        }
-
-        if (currentIndex == mediumIndex && averageFps < mediumToLowFps)
-        {
-            ApplyAutomaticQuality(lowIndex, lowQualityName, averageFps);
-            return;
-        }
-
-        if (!allowAutomaticUpgrade || currentIndex != mediumIndex)
-        {
-            successfulUpgradeSamples = 0;
-            return;
-        }
-
-        successfulUpgradeSamples = averageFps >= mediumToHighFps
-            ? successfulUpgradeSamples + 1
-            : 0;
-
-        if (successfulUpgradeSamples >= upgradeSamplesRequired)
-        {
-            ApplyAutomaticQuality(highIndex, highQualityName, averageFps);
-            successfulUpgradeSamples = 0;
-        }
-    }
-
-    private void ApplyAutomaticQuality(int index, string levelName, float measuredFps)
-    {
-        if (logDecisions)
-        {
-            Debug.Log($"Adaptive quality: {measuredFps:0.0} FPS, switching to {levelName}.");
-        }
-
-        ApplyQuality(index, levelName);
-        cooldownRemaining = switchCooldown;
-        successfulUpgradeSamples = 0;
-    }
-
-    private void SetManualQuality(string levelName, bool savePreference)
-    {
-        int index = FindQualityIndex(levelName);
-        if (index < 0)
-        {
-            Debug.LogWarning($"Quality level '{levelName}' is unavailable in this build.");
-            return;
-        }
-
-        automaticMode = false;
-        ApplyQuality(index, levelName);
-
-        if (savePreference)
-        {
-            PlayerPrefs.SetString(PreferenceKey, levelName);
-            PlayerPrefs.Save();
-        }
-    }
-
-    private void ApplyQuality(int index, string levelName)
-    {
-        if (index < 0)
-        {
-            Debug.LogWarning($"Quality level '{levelName}' is unavailable in this build.");
-            return;
-        }
-
-        if (QualitySettings.GetQualityLevel() != index)
-        {
-            // Changes are deliberately infrequent, so fully apply the new preset.
-            QualitySettings.SetQualityLevel(index, true);
-        }
-    }
-
-    private void ResolveQualityIndices()
-    {
         highIndex = FindQualityIndex(highQualityName);
-        mediumIndex = FindQualityIndex(mediumQualityName);
         lowIndex = FindQualityIndex(lowQualityName);
-
-        if (highIndex < 0 || mediumIndex < 0 || lowIndex < 0)
+        if (highIndex < 0 || lowIndex < 0)
         {
             Debug.LogWarning(
-                "Adaptive quality requires PC, WebGL and Mobile quality levels to be enabled for this platform.");
+                $"Quality presets '{highQualityName}' and '{lowQualityName}' must both be enabled for this platform.",
+                this);
         }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        mobileBrowser = lockMobileBrowserToLowQuality && DigitalTwin_IsMobileBrowser() != 0;
+        Application.targetFrameRate = mobileBrowser ? mobileBrowserTargetFrameRate : -1;
+#endif
+
+        // The light preset is the starting point everywhere; only a desktop
+        // viewer's stored choice can raise it.
+        bool wantsHigh = !mobileBrowser && rememberChoice &&
+                         string.Equals(PlayerPrefs.GetString(PreferenceKey, LowMode), HighMode,
+                             StringComparison.OrdinalIgnoreCase);
+        Apply(wantsHigh);
+
+        if (logDecisions)
+        {
+            Debug.Log(
+                $"Graphics quality: {(mobileBrowser ? "mobile browser, light preset locked" : highQuality ? "HD" : "light")}.",
+                this);
+        }
+    }
+
+    /// <summary>Turns HD on or off. Ignored on phones, which stay on the light preset.</summary>
+    public void SetHighQuality(bool enabled)
+    {
+        if (mobileBrowser && enabled)
+            return;
+        if (enabled == highQuality)
+            return;
+
+        Apply(enabled);
+
+        if (rememberChoice && !mobileBrowser)
+        {
+            PlayerPrefs.SetString(PreferenceKey, enabled ? HighMode : LowMode);
+            PlayerPrefs.Save();
+        }
+
+        if (logDecisions)
+            Debug.Log($"Graphics quality: {(enabled ? "HD" : "light")} chosen.", this);
+    }
+
+    /// <summary>Flips between HD and the light preset; for the HD button.</summary>
+    public void ToggleHighQuality() => SetHighQuality(!highQuality);
+
+    private void Apply(bool high)
+    {
+        highQuality = high && !mobileBrowser;
+        int index = highQuality ? highIndex : lowIndex;
+        if (index >= 0 && QualitySettings.GetQualityLevel() != index)
+        {
+            // Changes are rare and deliberate, so the preset is applied in full.
+            QualitySettings.SetQualityLevel(index, true);
+        }
+
+        QualityChanged?.Invoke();
     }
 
     private static int FindQualityIndex(string levelName)
@@ -301,11 +134,5 @@ public sealed class AdaptiveQualityController : MonoBehaviour
         }
 
         return -1;
-    }
-
-    private void ResetSample()
-    {
-        sampleTime = 0f;
-        sampleFrames = 0;
     }
 }

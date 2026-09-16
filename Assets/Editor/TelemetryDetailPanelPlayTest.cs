@@ -119,6 +119,9 @@ public static class TelemetryDetailPanelPlayTest
                 Expect(controller.OpenPanels.Count == 1, "the click on another card moved the panel instead of opening a second");
                 Expect(!leftCards[0].IsFocused && leftCards[Mathf.Min(3, leftCards.Count - 1)].IsFocused,
                     "only the newly clicked card is focused");
+                // Queued input events do not reach input actions in this batch
+                // play mode, so the gesture is classified directly here. The
+                // real click is checked in the browser build instead.
                 releaser.HandlePointerGesture(OutsidePoint, OutsidePoint);
                 Expect(controller.OpenPanels.Count == 0, "an outside click closed the panel");
                 Expect(PerformanceStatCardView.ActiveFocusedCard == null && AllCards().All(card => !card.IsFocused),

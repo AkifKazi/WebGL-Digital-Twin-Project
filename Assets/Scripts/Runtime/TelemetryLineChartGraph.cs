@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -215,9 +216,28 @@ public sealed class TelemetryLineChartGraph : TelemetryGraphView
             TextMeshProUGUI label = xLabels[i];
             label.rectTransform.anchorMin = label.rectTransform.anchorMax = new Vector2(Guides[i], 0f);
             label.rectTransform.anchoredPosition = new Vector2(0f, -5f);
-            DateTimeOffset time = DateTimeOffset.FromUnixTimeMilliseconds(start + (long)(spanMs * Guides[i])).ToLocalTime();
+            DateTimeOffset time = ToViewerTime(start + (long)(spanMs * Guides[i]));
             label.text = time.ToString(format, CultureInfo.InvariantCulture).ToUpperInvariant();
         }
+    }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [DllImport("__Internal")]
+    private static extern int DigitalTwin_GetTimezoneOffsetMinutes(double unixMilliseconds);
+#endif
+
+    /// <summary>
+    /// The viewer's local time. A WebGL player's .NET runtime can report UTC
+    /// as local, so in the browser the offset comes from JavaScript instead.
+    /// </summary>
+    private static DateTimeOffset ToViewerTime(long unixMilliseconds)
+    {
+        DateTimeOffset utc = DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds);
+#if UNITY_WEBGL && !UNITY_EDITOR
+        return utc.ToOffset(TimeSpan.FromMinutes(-DigitalTwin_GetTimezoneOffsetMinutes(unixMilliseconds)));
+#else
+        return utc.ToLocalTime();
+#endif
     }
 
     private static float NiceStep(float raw)

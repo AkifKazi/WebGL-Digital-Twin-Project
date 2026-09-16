@@ -126,12 +126,15 @@ public class WideStatRailManager : MonoBehaviour
 
     private float reservedRailWidthMultiplier;
     private bool layoutBuilt;
+    private bool rebuildPending;
 
     /// <summary>
     /// Keeps the secondary rails free of cards and widens them to
     /// <paramref name="widthMultiplier"/> times the outer rail width, as room
     /// for the detail panel; cards that no longer fit move to further pages.
-    /// Releasing hands the rails back to cards. Rebuilds the layout on change.
+    /// Releasing hands the rails back to cards. A change rebuilds the layout
+    /// on this manager's next frame, never inside the caller's own enable,
+    /// disable or teardown.
     /// </summary>
     public void ReserveSecondaryRails(bool reserve, float widthMultiplier = 1f)
     {
@@ -139,8 +142,7 @@ public class WideStatRailManager : MonoBehaviour
         if (Mathf.Approximately(value, reservedRailWidthMultiplier))
             return;
         reservedRailWidthMultiplier = value;
-        if (layoutBuilt && isActiveAndEnabled)
-            RebuildLayout();
+        rebuildPending = layoutBuilt;
     }
 
     private IEnumerator Start()
@@ -155,6 +157,9 @@ public class WideStatRailManager : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (rebuildPending)
+            RebuildLayout();
+
         ReconcileCardHeights(leftBindings, leftCardContainer);
         ReconcileCardHeights(rightBindings, rightCardContainer);
         ReconcileCardHeights(innerLeftBindings, innerLeftCardContainer);
@@ -205,6 +210,7 @@ public class WideStatRailManager : MonoBehaviour
 
     public void RebuildLayout()
     {
+        rebuildPending = false;
         ClearGeneratedCards();
         UnsubscribeFromSources();
 

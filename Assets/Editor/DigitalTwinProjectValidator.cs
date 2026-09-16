@@ -63,6 +63,7 @@ public static class DigitalTwinProjectValidator
         ValidateAdaptiveQuality(result);
         ValidateConnectionHealth(result);
         ValidateDetailPanel(result);
+        ValidateControlStates(result);
         ValidateUiFonts(result);
 
         foreach (string warning in result.Warnings)
@@ -634,6 +635,39 @@ public static class DigitalTwinProjectValidator
             UnityEngine.Object insight = data.FindProperty("insightProvider").objectReferenceValue;
             if (insight != null && insight is not ITelemetryInsightProvider)
                 result.Errors.Add("The detail panel's insight provider does not implement ITelemetryInsightProvider.");
+        }
+    }
+
+    /// <summary>
+    /// Outside clicks must be able to release a focused card, and every bottom
+    /// control and pagination button keeps its idle, hover and pressed looks apart.
+    /// </summary>
+    private static void ValidateControlStates(ValidationResult result)
+    {
+        UnityEngine.EventSystems.EventSystem system =
+            UnityEngine.Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>(FindObjectsInactive.Include);
+        if (system != null && !system.TryGetComponent(out TelemetryCardFocusReleaser _))
+            result.Errors.Add("The EventSystem has no Telemetry Card Focus Releaser, so an outside click would leave a card focused.");
+
+        foreach (Button button in UnityEngine.Object.FindObjectsByType<Button>(FindObjectsInactive.Include))
+        {
+            if (!HasAncestor(button.transform, "Bottom controls") &&
+                !HasAncestor(button.transform, "Telemetry Pagination Controls"))
+                continue;
+
+            string path = GetPath(button.transform);
+            if (!button.TryGetComponent(out UIHoverSprite hover))
+            {
+                result.Warnings.Add($"Control '{path}' has no hover state (UI Hover Sprite).");
+                continue;
+            }
+            if (new SerializedObject(hover).FindProperty("hoverSprite").objectReferenceValue == null)
+                result.Errors.Add($"Control '{path}' has a hover state with no hover sprite.");
+
+            SpriteState state = button.spriteState;
+            if (button.transition == Selectable.Transition.SpriteSwap &&
+                state.highlightedSprite != null && state.highlightedSprite == state.pressedSprite)
+                result.Errors.Add($"Control '{path}' shows its pressed sprite on hover.");
         }
     }
 
