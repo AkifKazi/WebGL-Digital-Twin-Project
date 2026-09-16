@@ -69,7 +69,7 @@ MonoBehaviour:
     warningAbove: 80
     criticalAbove: 95
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.697, z: 0}
+    localPosition: {x: 0, y: 0.7, z: 0}
     wideRail: 2
     portraitRail: 0
     displayPriority: 80
@@ -88,7 +88,7 @@ MonoBehaviour:
     warningAbove: 1550
     criticalAbove: 1650
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.697, z: 0}
+    localPosition: {x: 0, y: 0.7, z: 0}
     wideRail: 1
     portraitRail: 0
     displayPriority: 70
@@ -107,7 +107,7 @@ MonoBehaviour:
     warningAbove: 7.1
     criticalAbove: 11
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.82, z: 0}
+    localPosition: {x: 0, y: 0.369, z: 0}
     wideRail: 2
     portraitRail: 2
     displayPriority: 100
@@ -126,7 +126,7 @@ MonoBehaviour:
     warningAbove: 21
     criticalAbove: 23
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.61, z: 0}
+    localPosition: {x: 0, y: 0.7, z: 0}
     wideRail: 1
     portraitRail: 2
     displayPriority: 60
@@ -145,7 +145,7 @@ MonoBehaviour:
     warningAbove: 42
     criticalAbove: 48
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.58, z: 0}
+    localPosition: {x: 0, y: 0.7, z: 0}
     wideRail: 2
     portraitRail: 2
     displayPriority: 50
@@ -164,7 +164,7 @@ MonoBehaviour:
     warningAbove: 85
     criticalAbove: 95
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 2.05, z: 0}
+    localPosition: {x: 0, y: 2, z: 0}
     wideRail: 1
     portraitRail: 1
     displayPriority: 90
@@ -183,7 +183,7 @@ MonoBehaviour:
     warningAbove: 75
     criticalAbove: 90
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.79, z: 0}
+    localPosition: {x: 0, y: 1.075, z: 0}
     wideRail: 2
     portraitRail: 2
     displayPriority: 85
@@ -202,7 +202,7 @@ MonoBehaviour:
     warningAbove: 51
     criticalAbove: 53
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.65, z: 0}
+    localPosition: {x: 0, y: 0.7, z: 0}
     wideRail: 1
     portraitRail: 2
     displayPriority: 45
@@ -221,7 +221,7 @@ MonoBehaviour:
     warningAbove: 90
     criticalAbove: 100
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.63, z: 0}
+    localPosition: {x: 0, y: 0.7, z: 0}
     wideRail: 2
     portraitRail: 2
     displayPriority: 65
@@ -240,7 +240,7 @@ MonoBehaviour:
     warningAbove: 1.25
     criticalAbove: 1.45
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.38, z: -2}
+    localPosition: {x: 3.1, y: 0.61863244, z: 1.9622246}
     wideRail: 1
     portraitRail: 0
     displayPriority: 35
@@ -259,7 +259,7 @@ MonoBehaviour:
     warningAbove: 108.8
     criticalAbove: 121.6
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 2.04, z: 0}
+    localPosition: {x: 0, y: 2, z: 0}
     wideRail: 2
     portraitRail: 1
     displayPriority: 75
@@ -278,7 +278,7 @@ MonoBehaviour:
     warningAbove: 10
     criticalAbove: 14
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 2.18, z: 0}
+    localPosition: {x: 0, y: 2, z: 0}
     wideRail: 1
     portraitRail: 1
     displayPriority: 58
@@ -297,7 +297,7 @@ MonoBehaviour:
     warningAbove: 45
     criticalAbove: 55
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 2.2, z: 0}
+    localPosition: {x: 0, y: 2, z: 0}
     wideRail: 2
     portraitRail: 1
     displayPriority: 52
@@ -354,7 +354,7 @@ MonoBehaviour:
     warningAbove: 22
     criticalAbove: 25
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.42, z: 2}
+    localPosition: {x: 3.1, y: 0.61863244, z: 1.9622246}
     wideRail: 1
     portraitRail: 2
     displayPriority: 73
@@ -373,7 +373,7 @@ MonoBehaviour:
     warningAbove: 70
     criticalAbove: 85
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.43, z: 2}
+    localPosition: {x: -1.171, y: 0.491, z: 1.9622246}
     wideRail: 2
     portraitRail: 2
     displayPriority: 78
@@ -392,7 +392,7 @@ MonoBehaviour:
     warningAbove: 19
     criticalAbove: 23
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.48, z: 2}
+    localPosition: {x: -1.171, y: 0.491, z: 1.9622246}
     wideRail: 2
     portraitRail: 2
     displayPriority: 62
@@ -411,7 +411,7 @@ MonoBehaviour:
     warningAbove: 0.8
     criticalAbove: 1.2
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.38, z: -2}
+    localPosition: {x: -1.171, y: 0.491, z: 1.9622246}
     wideRail: 1
     portraitRail: 2
     displayPriority: 88
@@ -430,7 +430,7 @@ MonoBehaviour:
     warningAbove: 4.5
     criticalAbove: 7.1
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.55, z: 0}
+    localPosition: {x: 0, y: 1.742, z: 0}
     wideRail: 1
     portraitRail: 2
     displayPriority: 76
@@ -487,7 +487,7 @@ MonoBehaviour:
     warningAbove: 420
     criticalAbove: 440
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.66, z: 0}
+    localPosition: {x: 0, y: 0.7, z: 0}
     wideRail: 2
     portraitRail: 2
     displayPriority: 66
@@ -506,7 +506,7 @@ MonoBehaviour:
     warningAbove: 1
     criticalAbove: 1
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.72, z: 0}
+    localPosition: {x: 0, y: 0.7, z: 0}
     wideRail: 2
     portraitRail: 2
     displayPriority: 54
@@ -525,7 +525,7 @@ MonoBehaviour:
     warningAbove: 1080
     criticalAbove: 1150
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 1.02, z: 0}
+    localPosition: {x: 0, y: 1.117, z: 0}
     wideRail: 2
     portraitRail: 1
     displayPriority: 58
@@ -544,7 +544,7 @@ MonoBehaviour:
     warningAbove: 190
     criticalAbove: 220
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 0.98, z: 0}
+    localPosition: {x: 0, y: 0.352, z: 0}
     wideRail: 2
     portraitRail: 1
     displayPriority: 57
@@ -563,7 +563,7 @@ MonoBehaviour:
     warningAbove: 4.5
     criticalAbove: 7.1
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 1.06, z: 0}
+    localPosition: {x: 0, y: 1.106, z: 0}
     wideRail: 2
     portraitRail: 1
     displayPriority: 59
@@ -573,7 +573,7 @@ MonoBehaviour:
     objectName: Screen Blinding
     category: Upper Mixer
     label: SCREEN BLINDING
-    unit: %
+    unit: '%'
     valueFormat: 0.0
     initialValue: 6.4
     limitMode: 0
@@ -582,7 +582,7 @@ MonoBehaviour:
     warningAbove: 18
     criticalAbove: 30
     staleAfterSeconds: 5
-    localPosition: {x: 0, y: 1.12, z: 0}
+    localPosition: {x: 0, y: 1.742, z: 0}
     wideRail: 2
     portraitRail: 1
     displayPriority: 56
@@ -664,14 +664,27 @@ MonoBehaviour:
     displayName: Lower Rotor
     objectPaths:
     - Vibratory Drive/Lower Rotor
-    sensorIds: []
+    sensorIds:
+    - MIX-01.ROTOR.SPEED
+    - MIX-01.ROTOR.TORQUE
+    - MIX-01.ROTOR.IMBALANCE
     sensorCategories: []
-  - id: SCREEN_DECKS
-    displayName: Screen Decks
+  - id: SCREEN_DECK
+    displayName: Screen Deck
     objectPaths:
-    - Hopper Assembly/Full Model/Screen Decks and Discharge
+    - Hopper Assembly/Full Model/Screen Mesh
+    - Hopper Assembly/Full Model/Screen Mesh Frame
     sensorIds:
     - MIX-01.SCREEN.BLINDING
+    sensorCategories: []
+  - id: DISCHARGE_OUTLETS
+    displayName: Discharge Outlets
+    objectPaths:
+    - Hopper Assembly/Full Model/Outlet Chute - Filtered
+    - Hopper Assembly/Full Model/Outlet Rim - Filtered
+    - Hopper Assembly/Full Model/Outlet Chute - Coarse
+    - Hopper Assembly/Full Model/Outlet Rim - Coarse
+    sensorIds:
     - FEED-01.FLOW.OUT
     sensorCategories: []
   - id: CONVEYOR_BELTS

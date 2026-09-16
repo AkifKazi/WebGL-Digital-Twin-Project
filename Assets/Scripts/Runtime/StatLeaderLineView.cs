@@ -32,6 +32,19 @@ public class StatLeaderLineView : MonoBehaviour
     [Tooltip("Fade duration when secondary-rail occupancy changes the resting line opacity.")]
     [SerializeField, Min(0.05f)] private float secondaryRailOpacityTransitionDuration = 1f;
 
+    [Header("Reversed Lines")]
+    [Tooltip("Opacity of a line that doubles back across its own card, because the sensor sits " +
+             "on the card's side of the connection point. Keeps the line off the card's text.")]
+    [SerializeField, Range(0f, 1f)] private float reversedLineOpacity = 0.05f;
+    [Tooltip("Seconds a line takes to fade when it turns back across its card, and to return.")]
+    [SerializeField, Min(0.01f)] private float reversedLineFadeDuration = 0.7f;
+    [Tooltip("How far past the connection point, in canvas units, the sensor has to move before " +
+             "the line changes direction. Stops the fade flickering at the edge.")]
+    [SerializeField, Min(0f)] private float reversedDirectionMargin = 12f;
+    [Tooltip("Off: warning and critical lines fade like the others when they turn back across " +
+             "their card. On: they stay at full opacity.")]
+    [SerializeField] private bool keepAlarmLinesOpaqueWhenReversed;
+
     private PerformanceStatSource source;
     private PerformanceStatCardView card;
     private Camera worldCamera;
@@ -62,6 +75,12 @@ public class StatLeaderLineView : MonoBehaviour
     private float peerPresentationTargetAlpha = 1f;
     private float peerPresentationTransitionStartedAt;
     private bool peerPresentationTransitioning;
+    private bool lineReversed;
+    private bool directionKnown;
+    private float directionOpacity = 1f;
+    private float directionStartOpacity = 1f;
+    private float directionTargetOpacity = 1f;
+    private float directionTransitionStartedAt;
 
     private static readonly int RevealDistanceId = Shader.PropertyToID("_RevealDistance");
     private static readonly int SegmentStartDistanceId = Shader.PropertyToID("_SegmentStartDistance");
@@ -77,6 +96,8 @@ public class StatLeaderLineView : MonoBehaviour
     public float EmptySecondaryRailsRestingOpacity => emptySecondaryRailsRestingOpacity;
     public float SecondaryRailOpacityTransitionDuration =>
         secondaryRailOpacityTransitionDuration;
+    public bool IsReversed => lineReversed;
+    public float DirectionOpacity => directionOpacity;
 
     private void Awake()
     {
@@ -130,6 +151,7 @@ public class StatLeaderLineView : MonoBehaviour
         else
             SetPresentationOpacityInstant(activeRestingLineOpacity, restingAnchorOpacity);
         fadingToRest = false;
+        directionKnown = false;
         ApplyPeerPresentationInstant(ResolvePeerPresentationAlpha());
         CacheImages();
         CreateRuntimeMaterials();
@@ -254,6 +276,7 @@ public class StatLeaderLineView : MonoBehaviour
         }
 
         DrawElbow(cardPoint, sensorPoint);
+        UpdateDirectionPresentation(cardPoint, sensorPoint);
         RefreshColor();
         SetGeometryVisible(true);
     }
@@ -429,17 +452,21 @@ public class StatLeaderLineView : MonoBehaviour
             ? card.StateColor
             : defaultColor;
 
+        // Focus, rail occupancy and direction each scale the line on their own,
+        // so a reversed line still dims further when another card has focus.
+        float lineOpacity = presentationLineOpacity * directionOpacity;
+
         if (horizontalImage != null)
         {
             Color color = lineColor;
-            color.a *= presentationLineOpacity;
+            color.a *= lineOpacity;
             horizontalImage.color = color;
         }
 
         if (angledImage != null)
         {
             Color color = lineColor;
-            color.a *= presentationLineOpacity;
+            color.a *= lineOpacity;
             angledImage.color = color;
         }
 
@@ -470,6 +497,56 @@ public class StatLeaderLineView : MonoBehaviour
             : defaultColor;
 
         ApplyAnchorColor(lineColor);
+    }
+
+    /// <summary>
+    /// A line leaves its card away from the rail: rightwards from the left rail,
+    /// leftwards from the right, down from the top and up from the bottom. When
+    /// the sensor sits behind the connection point the line runs back across the
+    /// card, and fades so the card stays readable.
+    /// </summary>
+    private void UpdateDirectionPresentation(Vector2 cardPoint, Vector2 sensorPoint)
+    {
+        Vector2 outward = card.RailSide switch
+        {
+            StatRailSide.Left => Vector2.right,
+            StatRailSide.Right => Vector2.left,
+            StatRailSide.Top => Vector2.down,
+            _ => Vector2.up
+        };
+        float travel = Vector2.Dot(sensorPoint - cardPoint, outward);
+
+        if (!directionKnown)
+            lineReversed = travel < 0f;
+        else if (lineReversed && travel > reversedDirectionMargin)
+            lineReversed = false;
+        else if (!lineReversed && travel < -reversedDirectionMargin)
+            lineReversed = true;
+
+        bool fade = lineReversed && !(keepAlarmLinesOpaqueWhenReversed && IsAlarmState());
+        float target = fade ? reversedLineOpacity : 1f;
+
+        if (!directionKnown)
+        {
+            // A freshly bound line takes its direction without animating.
+            directionKnown = true;
+            directionOpacity = directionStartOpacity = directionTargetOpacity = target;
+            return;
+        }
+
+        if (!Mathf.Approximately(target, directionTargetOpacity))
+        {
+            directionStartOpacity = directionOpacity;
+            directionTargetOpacity = target;
+            directionTransitionStartedAt = Time.unscaledTime;
+        }
+
+        float progress = Mathf.Clamp01(
+            (Time.unscaledTime - directionTransitionStartedAt) / reversedLineFadeDuration);
+        directionOpacity = Mathf.Lerp(
+            directionStartOpacity,
+            directionTargetOpacity,
+            Mathf.SmoothStep(0f, 1f, progress));
     }
 
     private void HandleCardFocusChanged(PerformanceStatCardView changedCard, bool focused)

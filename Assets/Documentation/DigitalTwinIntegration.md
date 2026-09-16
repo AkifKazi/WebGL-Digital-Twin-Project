@@ -230,6 +230,17 @@ tuning. With secondary rails occupied, normal lines use the lower resting opacit
 secondary rails are empty they transition to the higher resting opacity. Hover/tap focus
 is immediate, while warning and critical presentations remain fully emphasized.
 
+A line whose sensor sits behind its card's connection point would run back across the
+card, so it fades to **Reversed Line Opacity** (5%) over 0.7 seconds and returns the same
+way once the sensor is in front again. This multiplies the focus and resting opacity rather
+than replacing it. Warning and critical lines fade too unless **Keep Alarm Lines Opaque
+When Reversed** is ticked on the leader-line prefab.
+
+The **Secondary Rails** setting on the telemetry detail panel controller defaults to
+**Off**: there are no inner rails and cards use the primary rails and further pages. Choose
+**Detail Panel** to turn on the extra-info panel, or **Telemetry Cards** to fill the inner
+rails with cards.
+
 ## Responsive rail allocation
 
 The outer rails are always evaluated first. A presentation that does not fit

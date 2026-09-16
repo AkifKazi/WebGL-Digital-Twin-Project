@@ -10,9 +10,9 @@ using UnityEngine.UI;
 
 /// <summary>
 /// The showcase polish pass: the HD control beside the zoom buttons, the X-Ray
-/// segment's own icon, telemetry anchors tidied onto the rollers nearest the
-/// machine, both rotors answering the rotor sensors, and the hand-placed rotor
-/// and vibration components folded into the list-driven ones. Safe to run again.
+/// segment's own icon, both rotors answering the rotor sensors, and the
+/// hand-placed rotor and vibration components folded into the list-driven ones.
+/// Telemetry anchors are left where they have been placed. Safe to run again.
 /// </summary>
 public static class ShowcasePolishSetup
 {
@@ -25,20 +25,19 @@ public static class ShowcasePolishSetup
     private const string XRayIconPath = "Assets/UI/Sprites/XRay Icon.png";
     private const string ControlName = "Graphics Quality Control";
 
-    // Matches the zoom controls: a 68 tall panel, 4 inside it, a 48 px icon.
+    // Matches the zoom controls: a 68 tall panel, 4 inside it, a 48 px icon. The
+    // bottom row does not size its children's height, so the panel sets its own.
     private const float ControlHeight = 68f;
-    private const float ControlWidth = 88f;
+    private const float ControlWidth = 104f;
     private const float IconSize = 48f;
+
+    // White at rest like the zoom icons, cyan while HD is on.
+    private static readonly Color IconOnColor = new(0.212f, 0.929f, 1f, 1f);
+    private static readonly Color IconOffColor = Color.white;
 
     private static readonly string[] RotorSensorIds =
     {
         "MIX-01.ROTOR.SPEED", "MIX-01.ROTOR.TORQUE", "MIX-01.ROTOR.IMBALANCE"
-    };
-
-    private static readonly string[] ConveyorSensorIds =
-    {
-        "FEED-01.SLIP", "FEED-01.BELT.SPEED", "FEED-01.BEARING.TEMP",
-        "FEED-01.BELT.TENSION", "FEED-01.DRIVE.CURRENT"
     };
 
     [MenuItem("Tools/Digital Twin/Set Up Showcase Polish")]
@@ -48,7 +47,6 @@ public static class ShowcasePolishSetup
 
         int controls = ConfigureQualityControls();
         int icons = ConfigureXRayIcons();
-        int anchors = TidyConveyorAnchors();
         int groups = ShareRotorSensors();
         int spinners = MigrateSpinners();
         int vibrators = MigrateVibrators();
@@ -57,7 +55,7 @@ public static class ShowcasePolishSetup
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         AssetDatabase.SaveAssets();
-        Debug.Log($"SHOWCASE_POLISH controls={controls} xrayIcons={icons} anchors={anchors} " +
+        Debug.Log($"SHOWCASE_POLISH controls={controls} xrayIcons={icons} " +
                   $"rotorGroups={groups} spinners={spinners} vibrators={vibrators} framer={framer}");
     }
 
@@ -110,8 +108,10 @@ public static class ShowcasePolishSetup
 
             LayoutElement size = Ensure<LayoutElement>(control.gameObject);
             size.minWidth = size.preferredWidth = ControlWidth;
-            size.preferredHeight = ControlHeight;
+            size.minHeight = size.preferredHeight = ControlHeight;
             size.flexibleWidth = 0f;
+            size.flexibleHeight = 0f;
+            control.sizeDelta = new Vector2(ControlWidth, ControlHeight);
 
             RectTransform buttonRect = control.Find("HD Button") as RectTransform
                                        ?? CreateUIObject("HD Button", control);
@@ -151,6 +151,8 @@ public static class ShowcasePolishSetup
             toggle.FindProperty("idleSprite").objectReferenceValue = idle;
             toggle.FindProperty("selectedSprite").objectReferenceValue = pressed;
             toggle.FindProperty("controlRoot").objectReferenceValue = control.gameObject;
+            toggle.FindProperty("onIconColor").colorValue = IconOnColor;
+            toggle.FindProperty("offIconColor").colorValue = IconOffColor;
             toggle.ApplyModifiedPropertiesWithoutUndo();
 
             built++;
@@ -179,87 +181,8 @@ public static class ShowcasePolishSetup
     }
 
     // -----------------------------------------------------------------------
-    // Anchors and parts
+    // Rotor parts
     // -----------------------------------------------------------------------
-
-    /// <summary>
-    /// Moves the conveyor sensors onto the rollers nearest the machine, where a
-    /// viewer is looking, and stacks them on one line like the motor's anchors.
-    /// </summary>
-    private static int TidyConveyorAnchors()
-    {
-        Transform machine = FindFirst("Vibratory Drive") ?? FindFirst("Hopper Assembly");
-        if (machine == null)
-            return 0;
-
-        List<PerformanceStatSource> sensors = UnityEngine.Object
-            .FindObjectsByType<PerformanceStatSource>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-            .Where(sensor => ConveyorSensorIds.Contains(sensor.StatId))
-            .ToList();
-        if (sensors.Count == 0)
-            return 0;
-
-        List<Renderer> belts = FindAll("Belt")
-            .Select(belt => belt.GetComponent<Renderer>())
-            .Where(renderer => renderer != null)
-            .ToList();
-        if (belts.Count == 0)
-            return 0;
-
-        int moved = 0;
-        foreach (IGrouping<Renderer, PerformanceStatSource> group in sensors.GroupBy(sensor => Nearest(belts, sensor.transform.position)))
-        {
-            Bounds bounds = group.Key.bounds;
-            Vector3 point = NearRollerPoint(bounds, machine.position);
-
-            // Same spot for every sensor on this conveyor, stacked upwards, so the
-            // anchors read as one instrument cluster rather than scattered dots.
-            int index = 0;
-            foreach (PerformanceStatSource sensor in group.OrderBy(sensor => sensor.transform.position.y))
-            {
-                // Just clear of the belt surface, stepping up gently: higher than
-                // this and the anchors read as floating above the conveyor.
-                Vector3 target = point + Vector3.up * (0.09f * index);
-                if ((sensor.transform.position - target).sqrMagnitude > 0.0001f)
-                {
-                    sensor.transform.position = target;
-                    EditorUtility.SetDirty(sensor.transform);
-                    moved++;
-                }
-
-                Debug.Log($"SHOWCASE_POLISH anchor {sensor.StatId} -> {sensor.transform.position} " +
-                          $"(local {sensor.transform.localPosition})");
-                index++;
-            }
-        }
-
-        return moved;
-    }
-
-    /// <summary>A point over the belt one fifth in from its machine-side end, at roller height.</summary>
-    private static Vector3 NearRollerPoint(Bounds bounds, Vector3 machineCentre)
-    {
-        bool alongX = bounds.size.x >= bounds.size.z;
-        float min = alongX ? bounds.min.x : bounds.min.z;
-        float max = alongX ? bounds.max.x : bounds.max.z;
-        float centre = alongX ? machineCentre.x : machineCentre.z;
-
-        // The end nearest the machine, then a step along the belt so the anchor
-        // sits over the rollers rather than on the lip of the discharge.
-        bool minIsNearer = Mathf.Abs(min - centre) <= Mathf.Abs(max - centre);
-        float end = minIsNearer ? min : max;
-        float along = Mathf.Lerp(end, minIsNearer ? max : min, 0.16f);
-
-        // Resting on the belt surface, not hanging above it.
-        float height = bounds.max.y + 0.06f;
-
-        return alongX
-            ? new Vector3(along, height, bounds.center.z)
-            : new Vector3(bounds.center.x, height, along);
-    }
-
-    private static Renderer Nearest(List<Renderer> renderers, Vector3 point) =>
-        renderers.OrderBy(renderer => renderer.bounds.SqrDistance(point)).First();
 
     /// <summary>
     /// A rotor reading describes both rotors turning together, so both light up.

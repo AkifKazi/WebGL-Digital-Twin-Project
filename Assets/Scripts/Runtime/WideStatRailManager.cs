@@ -8,8 +8,10 @@ using UnityEngine.UI;
 /// <summary>What the wide layout's secondary rails, the ones beside the model, are for.</summary>
 public enum SecondaryRailUse
 {
-    DetailPanel,
-    TelemetryCards
+    // Values are stored in scenes: keep them when adding options.
+    [InspectorName("Detail Panel (extra info)")] DetailPanel = 0,
+    [InspectorName("Telemetry Cards")] TelemetryCards = 1,
+    [InspectorName("Off (primary rails only)")] Off = 2
 }
 
 [DefaultExecutionOrder(-100)]

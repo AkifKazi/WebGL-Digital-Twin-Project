@@ -39,7 +39,7 @@ public sealed class QualityToggleControl : MonoBehaviour
 
     [Header("Colours")]
     [SerializeField] private Color onIconColor = new(0.212f, 0.929f, 1f, 1f);
-    [SerializeField] private Color offIconColor = new(0.408f, 0.651f, 0.686f, 1f);
+    [SerializeField] private Color offIconColor = Color.white;
     [SerializeField] private Color onTextColor = new(0.918f, 0.992f, 1f, 1f);
     [SerializeField] private Color offTextColor = new(0.408f, 0.651f, 0.686f, 1f);
 

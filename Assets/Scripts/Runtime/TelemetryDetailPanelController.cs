@@ -14,12 +14,12 @@ using UnityEngine.Serialization;
 public sealed class TelemetryDetailPanelController : MonoBehaviour
 {
     [Header("Feature")]
-    [Tooltip("What the secondary rails beside the model are for. Detail Panel: they are widened " +
-             "and kept for this panel, and cards that do not fit the outer rails move to further " +
-             "pages. Telemetry Cards: they hold cards as before and the panel is off. Until the " +
-             "references below and a ready history provider are in place, the panel stays off and " +
-             "the rails go back to cards.")]
-    [SerializeField] private SecondaryRailUse secondaryRails = SecondaryRailUse.DetailPanel;
+    [Tooltip("What the secondary rails beside the model are for. Off (the default): no secondary " +
+             "rails and no detail panel; cards stay on the primary rails and further pages. Detail " +
+             "Panel: the rails are widened and kept for the extra-info panel. Telemetry Cards: they " +
+             "hold cards and the panel is off. Until the references below and a ready history " +
+             "provider are in place, Detail Panel falls back to cards.")]
+    [SerializeField] private SecondaryRailUse secondaryRails = SecondaryRailUse.Off;
 
     [Tooltip("Width of a secondary rail kept for the panel, as a multiple of the outer rail width.")]
     [FormerlySerializedAs("widthMultiplier")]
@@ -130,7 +130,13 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
     {
         bool ready = IsReady;
         if (railManager != null)
-            railManager.ReserveSecondaryRails(ready, railWidthMultiplier);
+        {
+            // Off keeps the secondary rails empty at their normal width, so they hide.
+            if (secondaryRails == SecondaryRailUse.Off)
+                railManager.ReserveSecondaryRails(true);
+            else
+                railManager.ReserveSecondaryRails(ready, railWidthMultiplier);
+        }
         if (!ready)
         {
             for (int i = panels.Count - 1; i >= 0; i--)

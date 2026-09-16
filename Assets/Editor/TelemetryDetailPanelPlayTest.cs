@@ -14,7 +14,8 @@ using UnityEngine.UI;
 /// states. Clicks through the behaviour (open, glide, release on an outside
 /// click, pin into a second panel, a camera drag that must change nothing, the
 /// range buttons, hover on idle, selected and pressed controls, handing the
-/// secondary rails back to cards) and saves a 1920x1080 capture of each step,
+/// secondary rails back to cards, then turning them off, with reversed leader
+/// lines fading and the HD control sized like the zoom panel) and saves a 1920x1080 capture of each step,
 /// UI included, to Logs/DetailPanelTest. Exits the editor when done. Never
 /// saves the scene.
 ///
@@ -45,6 +46,8 @@ public static class TelemetryDetailPanelPlayTest
     private static Button xray;
     private static Button section;
     private static int failures;
+    private static StatLeaderLineView reversalLine;
+    private static Vector3 reversalAnchorHome;
 
     // Entering play mode reloads scripts; this re-attaches the test afterwards.
     static TelemetryDetailPanelPlayTest()
@@ -275,6 +278,75 @@ public static class TelemetryDetailPanelPlayTest
                 Capture("16-back-to-detail-panel");
                 Expect(rails.SecondaryRailsReserved && !rails.HasSecondaryRailCards,
                     "switching back keeps the rails for the panel again");
+                SetSecondaryRails(SecondaryRailUse.Off);
+                Next(1.5f);
+                break;
+
+            case 19:
+            {
+                Capture("17-secondary-rails-off");
+                FindCards();
+                RectTransform innerLeft = rails.GetRail(StatRailSide.Left, true);
+                RectTransform innerRight = rails.GetRail(StatRailSide.Right, true);
+                Expect(rails.SecondaryRailsReserved && !rails.HasSecondaryRailCards &&
+                       (innerLeft == null || !innerLeft.gameObject.activeInHierarchy) &&
+                       (innerRight == null || !innerRight.gameObject.activeInHierarchy),
+                    "Off leaves no secondary rails, only the primary ones");
+                Click(leftCards[0]);
+                Expect(controller.OpenPanels.Count == 0, "with the rails off a click opens no panel");
+                releaser.HandlePointerGesture(OutsidePoint, OutsidePoint);
+                CheckQualityControlSize();
+                Next(1.5f);
+                break;
+            }
+
+            case 20:
+            {
+                Capture("18-reversed-lines");
+                StatLeaderLineView[] lines = Object.FindObjectsByType<StatLeaderLineView>(FindObjectsSortMode.None)
+                    .Where(line => line.Card != null)
+                    .ToArray();
+                int reversed = lines.Count(line => line.IsReversed);
+                Debug.Log($"DETAIL_PANEL_TEST leader lines={lines.Length} reversed={reversed}: " +
+                          string.Join(", ", lines.Where(line => line.IsReversed).Select(line => line.Source.MetricName)));
+                Expect(lines.Where(line => line.IsReversed).All(line => line.DirectionOpacity <= 0.051f),
+                    "lines turning back across their card fade to 5%");
+                Expect(lines.Where(line => !line.IsReversed).All(line => line.DirectionOpacity >= 0.999f),
+                    "lines leaving their card keep their opacity");
+
+                // Pull a left-rail sensor behind its card (play mode only; the
+                // scene is never saved) so the line has to turn back across it.
+                reversalLine = lines.FirstOrDefault(line => line.Card.RailSide == StatRailSide.Left &&
+                                                            line.Card.VisualState is StatVisualState.Warning or StatVisualState.Critical)
+                               ?? lines.First(line => line.Card.RailSide == StatRailSide.Left);
+                Transform anchor = reversalLine.Card.WorldAnchor;
+                reversalAnchorHome = anchor.position;
+                Vector3 onScreen = captureCamera.WorldToScreenPoint(reversalAnchorHome);
+                anchor.position = captureCamera.ScreenToWorldPoint(new Vector3(60f, onScreen.y, onScreen.z));
+                Next(0.35f);
+                break;
+            }
+
+            case 21:
+                Debug.Log($"DETAIL_PANEL_TEST reversing '{reversalLine.Source.MetricName}' state={reversalLine.Card.VisualState} " +
+                          $"reversed={reversalLine.IsReversed} opacity={reversalLine.DirectionOpacity:F3}");
+                Expect(reversalLine.IsReversed && reversalLine.DirectionOpacity < 0.95f && reversalLine.DirectionOpacity > 0.06f,
+                    "a line turning back across its card is part way through its fade");
+                Next(0.6f);
+                break;
+
+            case 22:
+                Capture("19-reversed-line-faded");
+                Expect(reversalLine.IsReversed && reversalLine.DirectionOpacity <= 0.051f,
+                    "after 0.7 s the reversed line (warning or critical included) is at 5%");
+                reversalLine.Card.WorldAnchor.position = reversalAnchorHome;
+                Next(1f);
+                break;
+
+            case 23:
+                Capture("20-reversed-line-restored");
+                Expect(!reversalLine.IsReversed && reversalLine.DirectionOpacity >= 0.999f,
+                    "back in front of its card the line returns to its usual opacity");
                 Finish(failures == 0 ? "passed" : $"failed={failures}");
                 break;
         }
@@ -305,6 +377,9 @@ public static class TelemetryDetailPanelPlayTest
         controller = Object.FindFirstObjectByType<TelemetryDetailPanelController>();
         releaser = Object.FindFirstObjectByType<TelemetryCardFocusReleaser>();
         rails = Object.FindFirstObjectByType<WideStatRailManager>();
+        // The scene ships with the secondary rails off; the panel steps need them on.
+        if (controller != null)
+            SetSecondaryRails(SecondaryRailUse.DetailPanel);
         Debug.Log($"DETAIL_PANEL_TEST screen={Screen.width}x{Screen.height} controller={(controller != null)} " +
                   $"ready={(controller != null && controller.IsReady)} releaser={(releaser != null)}");
         if (rails != null)
@@ -365,6 +440,23 @@ public static class TelemetryDetailPanelPlayTest
         Debug.Log($"DETAIL_PANEL_TEST {label} interactable={button.IsInteractable()} hover={(button.TryGetComponent(out UIHoverSprite hover) && hover != null)}");
         if (button.IsInteractable())
             Enter(button.gameObject);
+    }
+
+    private static void CheckQualityControlSize()
+    {
+        RectTransform hd = Object.FindObjectsByType<QualityToggleControl>(FindObjectsSortMode.None)
+            .Select(control => (RectTransform)control.transform)
+            .FirstOrDefault(rect => rect.gameObject.activeInHierarchy);
+        Transform zoom = hd != null ? hd.parent.Find("Camera Zoom Controls") : null;
+        if (hd == null || zoom == null)
+        {
+            Debug.Log("DETAIL_PANEL_TEST HD control not shown here; size not checked");
+            return;
+        }
+        Debug.Log($"DETAIL_PANEL_TEST HD {hd.rect.size} zoom {((RectTransform)zoom).rect.size}");
+        Expect(Mathf.Abs(hd.rect.height - ((RectTransform)zoom).rect.height) < 0.5f &&
+               Mathf.Abs(hd.position.y - zoom.position.y) < 0.5f,
+            "the HD control is as tall as the zoom panel and level with it");
     }
 
     private static void SetSecondaryRails(SecondaryRailUse use)
