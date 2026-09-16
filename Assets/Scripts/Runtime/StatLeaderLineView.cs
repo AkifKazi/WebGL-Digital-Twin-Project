@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -34,10 +35,19 @@ public class StatLeaderLineView : MonoBehaviour
 
     [Header("Reversed Lines")]
     [Tooltip("Opacity of a line that doubles back across its own card, because the sensor sits " +
-             "on the card's side of the connection point. Keeps the line off the card's text.")]
+             "on the card's side of the connection point, or that runs across another card. " +
+             "Keeps the line off the cards' text.")]
     [SerializeField, Range(0f, 1f)] private float reversedLineOpacity = 0.05f;
-    [Tooltip("Seconds a line takes to fade when it turns back across its card, and to return.")]
+    [Tooltip("Seconds a line takes to fade when it turns back across its card or crosses " +
+             "another card, and to return.")]
     [SerializeField, Min(0.01f)] private float reversedLineFadeDuration = 0.7f;
+    [Tooltip("Also fade a line where it runs across another card, not only when it doubles " +
+             "back across its own.")]
+    [SerializeField] private bool fadeLinesCrossingOtherCards = true;
+    [Tooltip("How far into another card, in canvas units, a line has to cut before it fades, " +
+             "and how far clear it has to be to come back. Stops a line grazing a card edge " +
+             "from flickering.")]
+    [SerializeField, Min(0f)] private float cardCrossingMargin = 6f;
     [Tooltip("How far past the connection point, in canvas units, the sensor has to move before " +
              "the line changes direction. Stops the fade flickering at the edge.")]
     [SerializeField, Min(0f)] private float reversedDirectionMargin = 12f;
@@ -81,6 +91,10 @@ public class StatLeaderLineView : MonoBehaviour
     private float directionStartOpacity = 1f;
     private float directionTargetOpacity = 1f;
     private float directionTransitionStartedAt;
+    private bool crossingCard;
+    private Vector2 lastBendPoint;
+    private IReadOnlyList<PerformanceStatCardView> cardsToAvoid;
+    private static readonly Vector3[] CardCorners = new Vector3[4];
 
     private static readonly int RevealDistanceId = Shader.PropertyToID("_RevealDistance");
     private static readonly int SegmentStartDistanceId = Shader.PropertyToID("_SegmentStartDistance");
@@ -97,6 +111,7 @@ public class StatLeaderLineView : MonoBehaviour
     public float SecondaryRailOpacityTransitionDuration =>
         secondaryRailOpacityTransitionDuration;
     public bool IsReversed => lineReversed;
+    public bool IsCrossingCard => crossingCard;
     public float DirectionOpacity => directionOpacity;
 
     private void Awake()
@@ -152,6 +167,7 @@ public class StatLeaderLineView : MonoBehaviour
             SetPresentationOpacityInstant(activeRestingLineOpacity, restingAnchorOpacity);
         fadingToRest = false;
         directionKnown = false;
+        crossingCard = false;
         ApplyPeerPresentationInstant(ResolvePeerPresentationAlpha());
         CacheImages();
         CreateRuntimeMaterials();
@@ -167,6 +183,7 @@ public class StatLeaderLineView : MonoBehaviour
             card.FocusChanged -= HandleCardFocusChanged;
         source = null;
         card = null;
+        cardsToAvoid = null;
         worldCamera = null;
         canvas = null;
         lineLayer = null;
@@ -191,6 +208,15 @@ public class StatLeaderLineView : MonoBehaviour
     {
         anchorProgress = Mathf.Clamp01(progress);
         ApplyAnchorAppearance();
+    }
+
+    /// <summary>
+    /// The cards laid out with this line. It fades where it runs across any of
+    /// them other than its own. The list is read every frame, not copied.
+    /// </summary>
+    public void SetCardsToAvoid(IReadOnlyList<PerformanceStatCardView> cards)
+    {
+        cardsToAvoid = cards;
     }
 
     public void SetPresentationInstant(bool visible)
@@ -308,6 +334,8 @@ public class StatLeaderLineView : MonoBehaviour
 
             bendPoint = new Vector2(bendX, cardPoint.y);
         }
+
+        lastBendPoint = bendPoint;
 
         horizontalLength = SetLineSegment(horizontalSegment, cardPoint, bendPoint);
         angledLength = SetLineSegment(angledSegment, bendPoint, sensorPoint);
@@ -523,7 +551,11 @@ public class StatLeaderLineView : MonoBehaviour
         else if (!lineReversed && travel < -reversedDirectionMargin)
             lineReversed = true;
 
-        bool fade = lineReversed && !(keepAlarmLinesOpaqueWhenReversed && IsAlarmState());
+        crossingCard = fadeLinesCrossingOtherCards &&
+                       CrossesOtherCard(cardPoint, lastBendPoint, sensorPoint, directionKnown && crossingCard);
+
+        bool fade = (lineReversed || crossingCard) &&
+                    !(keepAlarmLinesOpaqueWhenReversed && IsAlarmState());
         float target = fade ? reversedLineOpacity : 1f;
 
         if (!directionKnown)
@@ -547,6 +579,79 @@ public class StatLeaderLineView : MonoBehaviour
             directionStartOpacity,
             directionTargetOpacity,
             Mathf.SmoothStep(0f, 1f, progress));
+    }
+
+    /// <summary>
+    /// True when either segment runs through another visible card. Entering
+    /// needs the line to cut <see cref="cardCrossingMargin"/> into the card;
+    /// leaving needs it to clear the card by the same margin.
+    /// </summary>
+    private bool CrossesOtherCard(Vector2 cardPoint, Vector2 bendPoint, Vector2 sensorPoint, bool wasCrossing)
+    {
+        if (cardsToAvoid == null)
+            return false;
+
+        float grow = wasCrossing ? cardCrossingMargin : -cardCrossingMargin;
+        foreach (PerformanceStatCardView other in cardsToAvoid)
+        {
+            if (other == null || other == card || !other.isActiveAndEnabled ||
+                (other.TryGetComponent(out CanvasGroup group) && group.alpha < 0.05f))
+                continue;
+
+            ((RectTransform)other.transform).GetWorldCorners(CardCorners);
+            Vector2 min = lineLayer.InverseTransformPoint(CardCorners[0]);
+            Vector2 max = min;
+            for (int i = 1; i < 4; i++)
+            {
+                Vector2 corner = lineLayer.InverseTransformPoint(CardCorners[i]);
+                min = Vector2.Min(min, corner);
+                max = Vector2.Max(max, corner);
+            }
+            min -= Vector2.one * grow;
+            max += Vector2.one * grow;
+            if (min.x >= max.x || min.y >= max.y)
+                continue;
+
+            if (SegmentHitsRect(cardPoint, bendPoint, min, max) ||
+                SegmentHitsRect(bendPoint, sensorPoint, min, max))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Liang-Barsky clip of a segment against an axis-aligned rectangle.</summary>
+    private static bool SegmentHitsRect(Vector2 start, Vector2 end, Vector2 min, Vector2 max)
+    {
+        Vector2 delta = end - start;
+        float enter = 0f;
+        float exit = 1f;
+        return Clip(-delta.x, start.x - min.x, ref enter, ref exit) &&
+               Clip(delta.x, max.x - start.x, ref enter, ref exit) &&
+               Clip(-delta.y, start.y - min.y, ref enter, ref exit) &&
+               Clip(delta.y, max.y - start.y, ref enter, ref exit);
+    }
+
+    private static bool Clip(float direction, float distance, ref float enter, ref float exit)
+    {
+        if (Mathf.Approximately(direction, 0f))
+            return distance >= 0f;
+
+        float t = distance / direction;
+        if (direction < 0f)
+        {
+            if (t > exit)
+                return false;
+            enter = Mathf.Max(enter, t);
+        }
+        else
+        {
+            if (t < enter)
+                return false;
+            exit = Mathf.Min(exit, t);
+        }
+
+        return true;
     }
 
     private void HandleCardFocusChanged(PerformanceStatCardView changedCard, bool focused)

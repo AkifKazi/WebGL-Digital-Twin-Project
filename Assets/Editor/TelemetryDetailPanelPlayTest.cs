@@ -347,6 +347,37 @@ public static class TelemetryDetailPanelPlayTest
                 Capture("20-reversed-line-restored");
                 Expect(!reversalLine.IsReversed && reversalLine.DirectionOpacity >= 0.999f,
                     "back in front of its card the line returns to its usual opacity");
+                Debug.Log("DETAIL_PANEL_TEST crossing at rest: " + string.Join(", ",
+                    Object.FindObjectsByType<StatLeaderLineView>(FindObjectsSortMode.None)
+                        .Where(line => line.Card != null && line.IsCrossingCard)
+                        .Select(line => line.Source.MetricName)));
+
+                // As in the reported case: a left card's sensor just past a right
+                // card, so the line runs straight across that card.
+                FindCards();
+                RectTransform across = (RectTransform)rightCards[rightCards.Count - 1].transform;
+                Vector2 acrossCentre = RectTransformUtility.WorldToScreenPoint(
+                    captureCamera, across.TransformPoint(across.rect.center));
+                Vector3 home = captureCamera.WorldToScreenPoint(reversalAnchorHome);
+                reversalLine.Card.WorldAnchor.position = captureCamera.ScreenToWorldPoint(
+                    new Vector3(1910f, acrossCentre.y, home.z));
+                Next(1f);
+                break;
+
+            case 24:
+                Capture("21-line-across-card-faded");
+                Debug.Log($"DETAIL_PANEL_TEST across '{reversalLine.Source.MetricName}' crossing={reversalLine.IsCrossingCard} " +
+                          $"reversed={reversalLine.IsReversed} opacity={reversalLine.DirectionOpacity:F3}");
+                Expect(reversalLine.IsCrossingCard && !reversalLine.IsReversed && reversalLine.DirectionOpacity <= 0.051f,
+                    "a line running across another card fades to 5%");
+                reversalLine.Card.WorldAnchor.position = reversalAnchorHome;
+                Next(1f);
+                break;
+
+            case 25:
+                Capture("22-line-across-card-restored");
+                Expect(!reversalLine.IsCrossingCard && reversalLine.DirectionOpacity >= 0.999f,
+                    "clear of the card the line returns to its usual opacity");
                 Finish(failures == 0 ? "passed" : $"failed={failures}");
                 break;
         }

@@ -13,6 +13,9 @@ public class WideStatLeaderLineManager : MonoBehaviour
     [SerializeField] private Camera worldCamera;
     [SerializeField] private Canvas canvas;
 
+    // Every card in this layout; each line fades where it crosses one of them.
+    private readonly List<PerformanceStatCardView> layoutCards = new();
+
     private readonly List<StatLeaderLineView>
         generatedLines = new();
 
@@ -113,6 +116,11 @@ public class WideStatLeaderLineManager : MonoBehaviour
             generatedLines.Add(line);
             WatchState(source);
         }
+
+        layoutCards.Clear();
+        layoutCards.AddRange(linkedCards);
+        foreach (StatLeaderLineView line in generatedLines)
+            line.SetCardsToAvoid(layoutCards);
 
         previousRestingOpacity = desiredRestingOpacity;
         restingOpacityInitialized = true;
