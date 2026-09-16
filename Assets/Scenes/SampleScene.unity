@@ -97342,7 +97342,6 @@ MonoBehaviour:
   explicitSensors: []
   targetRenderers:
   - {fileID: 8813923737202289833}
-  - {fileID: 2048222042519678302}
 --- !u!4 &2037827740
 Transform:
   m_ObjectHideFlags: 0

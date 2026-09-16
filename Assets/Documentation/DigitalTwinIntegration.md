@@ -231,10 +231,11 @@ secondary rails are empty they transition to the higher resting opacity. Hover/t
 is immediate, while warning and critical presentations remain fully emphasized.
 
 A line whose sensor sits behind its card's connection point would run back across the
-card, so it fades to **Reversed Line Opacity** (5%) over 0.7 seconds and returns the same
-way once the sensor is in front again. This multiplies the focus and resting opacity rather
-than replacing it. Warning and critical lines fade too unless **Keep Alarm Lines Opaque
-When Reversed** is ticked on the leader-line prefab.
+card, or across another card, so it fades to **Reversed Line Opacity** (5%) over 0.7
+seconds and returns the same way once it is clear. This multiplies the focus and resting
+opacity rather than replacing it. Warning and critical lines fade only to **Reversed Alarm
+Line Opacity** (35%), so an alarm stays findable even when its anchor sits behind a card;
+**Keep Alarm Lines Opaque When Reversed** keeps them at full opacity.
 
 The **Secondary Rails** setting on the telemetry detail panel controller defaults to
 **Off**: there are no inner rails and cards use the primary rails and further pages. Choose

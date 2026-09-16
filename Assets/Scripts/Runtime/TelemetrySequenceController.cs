@@ -314,14 +314,13 @@ public class TelemetrySequenceController : MonoBehaviour
             RectTransform cardRect =
                 card.transform as RectTransform;
 
-            // The shader controls line visibility.
-            // Ensure an old CanvasGroup is not hiding it.
+            // The shader controls line visibility. The line's own CanvasGroup
+            // carries its focus dimming, so its alpha is left to the line.
             CanvasGroup lineGroup =
                 line.GetComponent<CanvasGroup>();
 
             if (lineGroup != null)
             {
-                lineGroup.alpha = 1f;
                 lineGroup.interactable = false;
                 lineGroup.blocksRaycasts = false;
             }

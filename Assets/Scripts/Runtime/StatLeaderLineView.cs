@@ -25,9 +25,9 @@ public class StatLeaderLineView : MonoBehaviour
     [SerializeField] private Color defaultColor = Color.cyan;
 
     [Header("Focus Presentation")]
-    [SerializeField, Range(0f, 1f)] private float restingLineOpacity = 0.025f;
+    [SerializeField, Range(0f, 1f)] private float restingLineOpacity = 0.0125f;
     [Tooltip("Resting line opacity used when no secondary rail contains a card.")]
-    [SerializeField, Range(0f, 1f)] private float emptySecondaryRailsRestingOpacity = 0.4f;
+    [SerializeField, Range(0f, 1f)] private float emptySecondaryRailsRestingOpacity = 0.2f;
     [SerializeField, Range(0f, 1f)] private float restingAnchorOpacity = 0.4f;
     [SerializeField, Min(0.05f)] private float focusToRestDuration = 0.23f;
     [Tooltip("Fade duration when secondary-rail occupancy changes the resting line opacity.")]
@@ -38,6 +38,9 @@ public class StatLeaderLineView : MonoBehaviour
              "on the card's side of the connection point, or that runs across another card. " +
              "Keeps the line off the cards' text.")]
     [SerializeField, Range(0f, 1f)] private float reversedLineOpacity = 0.05f;
+    [Tooltip("The same fade for warning and critical lines. Higher than the normal fade so an " +
+             "alarm line stays findable when its anchor is hidden behind a card.")]
+    [SerializeField, Range(0f, 1f)] private float reversedAlarmLineOpacity = 0.35f;
     [Tooltip("Seconds a line takes to fade when it turns back across its card or crosses " +
              "another card, and to return.")]
     [SerializeField, Min(0.01f)] private float reversedLineFadeDuration = 0.7f;
@@ -51,8 +54,8 @@ public class StatLeaderLineView : MonoBehaviour
     [Tooltip("How far past the connection point, in canvas units, the sensor has to move before " +
              "the line changes direction. Stops the fade flickering at the edge.")]
     [SerializeField, Min(0f)] private float reversedDirectionMargin = 12f;
-    [Tooltip("Off: warning and critical lines fade like the others when they turn back across " +
-             "their card. On: they stay at full opacity.")]
+    [Tooltip("Off: warning and critical lines fade to the alarm opacity above when they turn " +
+             "back across their card or cross another. On: they stay at full opacity.")]
     [SerializeField] private bool keepAlarmLinesOpaqueWhenReversed;
 
     private PerformanceStatSource source;
@@ -113,6 +116,7 @@ public class StatLeaderLineView : MonoBehaviour
     public bool IsReversed => lineReversed;
     public bool IsCrossingCard => crossingCard;
     public float DirectionOpacity => directionOpacity;
+    public float FadedDirectionOpacity => IsAlarmState() ? reversedAlarmLineOpacity : reversedLineOpacity;
 
     private void Awake()
     {
@@ -556,7 +560,7 @@ public class StatLeaderLineView : MonoBehaviour
 
         bool fade = (lineReversed || crossingCard) &&
                     !(keepAlarmLinesOpaqueWhenReversed && IsAlarmState());
-        float target = fade ? reversedLineOpacity : 1f;
+        float target = fade ? FadedDirectionOpacity : 1f;
 
         if (!directionKnown)
         {

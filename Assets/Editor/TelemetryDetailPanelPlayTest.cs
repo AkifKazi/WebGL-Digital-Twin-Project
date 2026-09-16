@@ -309,8 +309,8 @@ public static class TelemetryDetailPanelPlayTest
                 int reversed = lines.Count(line => line.IsReversed);
                 Debug.Log($"DETAIL_PANEL_TEST leader lines={lines.Length} reversed={reversed}: " +
                           string.Join(", ", lines.Where(line => line.IsReversed).Select(line => line.Source.MetricName)));
-                Expect(lines.Where(line => line.IsReversed).All(line => line.DirectionOpacity <= 0.051f),
-                    "lines turning back across their card fade to 5%");
+                Expect(lines.Where(line => line.IsReversed).All(line => line.DirectionOpacity <= line.FadedDirectionOpacity + 0.001f),
+                    "lines turning back across their card fade");
                 Expect(lines.Where(line => !line.IsReversed).All(line => line.DirectionOpacity >= 0.999f),
                     "lines leaving their card keep their opacity");
 
@@ -330,15 +330,16 @@ public static class TelemetryDetailPanelPlayTest
             case 21:
                 Debug.Log($"DETAIL_PANEL_TEST reversing '{reversalLine.Source.MetricName}' state={reversalLine.Card.VisualState} " +
                           $"reversed={reversalLine.IsReversed} opacity={reversalLine.DirectionOpacity:F3}");
-                Expect(reversalLine.IsReversed && reversalLine.DirectionOpacity < 0.95f && reversalLine.DirectionOpacity > 0.06f,
+                Expect(reversalLine.IsReversed && reversalLine.DirectionOpacity < 0.95f &&
+                       reversalLine.DirectionOpacity > reversalLine.FadedDirectionOpacity + 0.01f,
                     "a line turning back across its card is part way through its fade");
                 Next(0.6f);
                 break;
 
             case 22:
                 Capture("19-reversed-line-faded");
-                Expect(reversalLine.IsReversed && reversalLine.DirectionOpacity <= 0.051f,
-                    "after 0.7 s the reversed line (warning or critical included) is at 5%");
+                Expect(reversalLine.IsReversed && Mathf.Abs(reversalLine.DirectionOpacity - reversalLine.FadedDirectionOpacity) < 0.001f,
+                    $"after 0.7 s the reversed line is at its faded opacity ({reversalLine.FadedDirectionOpacity:P0})");
                 reversalLine.Card.WorldAnchor.position = reversalAnchorHome;
                 Next(1f);
                 break;
@@ -368,8 +369,9 @@ public static class TelemetryDetailPanelPlayTest
                 Capture("21-line-across-card-faded");
                 Debug.Log($"DETAIL_PANEL_TEST across '{reversalLine.Source.MetricName}' crossing={reversalLine.IsCrossingCard} " +
                           $"reversed={reversalLine.IsReversed} opacity={reversalLine.DirectionOpacity:F3}");
-                Expect(reversalLine.IsCrossingCard && !reversalLine.IsReversed && reversalLine.DirectionOpacity <= 0.051f,
-                    "a line running across another card fades to 5%");
+                Expect(reversalLine.IsCrossingCard && !reversalLine.IsReversed &&
+                       Mathf.Abs(reversalLine.DirectionOpacity - reversalLine.FadedDirectionOpacity) < 0.001f,
+                    "a line running across another card fades");
                 reversalLine.Card.WorldAnchor.position = reversalAnchorHome;
                 Next(1f);
                 break;
