@@ -1,0 +1,78 @@
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+/// <summary>
+/// The Telemetry / Service segmented control in the top bar. Styled like the
+/// view-mode control: the selected segment takes the outlined sprite and cannot
+/// be pressed again, the other stays idle and shows the hover sprite.
+/// </summary>
+[DisallowMultipleComponent]
+public sealed class DigitalTwinModeSwitch : MonoBehaviour
+{
+    [SerializeField] private ServiceModeController controller;
+    [SerializeField] private Button telemetryButton;
+    [SerializeField] private Button serviceButton;
+
+    [Header("Look")]
+    [SerializeField] private Sprite selectedSprite;
+    [SerializeField] private Sprite idleSprite;
+    [SerializeField] private Color selectedTextColor = new Color32(234, 253, 255, 255);
+    [SerializeField] private Color idleTextColor = new Color32(104, 166, 175, 255);
+
+    public Button TelemetryButton => telemetryButton;
+    public Button ServiceButton => serviceButton;
+
+    private void OnEnable()
+    {
+        if (telemetryButton != null)
+            telemetryButton.onClick.AddListener(SelectTelemetry);
+        if (serviceButton != null)
+            serviceButton.onClick.AddListener(SelectService);
+        if (controller != null)
+        {
+            controller.ModeChanged += Apply;
+            Apply(controller.CurrentMode);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (telemetryButton != null)
+            telemetryButton.onClick.RemoveListener(SelectTelemetry);
+        if (serviceButton != null)
+            serviceButton.onClick.RemoveListener(SelectService);
+        if (controller != null)
+            controller.ModeChanged -= Apply;
+    }
+
+    public void SelectTelemetry() => controller?.SetMode(DigitalTwinMode.Telemetry);
+
+    public void SelectService() => controller?.SetMode(DigitalTwinMode.Service);
+
+    private void Apply(DigitalTwinMode mode)
+    {
+        ApplySegment(telemetryButton, mode == DigitalTwinMode.Telemetry);
+        ApplySegment(serviceButton, mode == DigitalTwinMode.Service);
+    }
+
+    private void ApplySegment(Button button, bool selected)
+    {
+        if (button == null)
+            return;
+
+        if (button.targetGraphic is Image background)
+        {
+            background.sprite = selected ? selectedSprite : idleSprite;
+            // Preserve the colours authored into the sprites.
+            background.color = Color.white;
+        }
+
+        TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
+        if (label != null)
+            label.color = selected ? selectedTextColor : idleTextColor;
+
+        // The selected view cannot be selected again.
+        button.interactable = !selected;
+    }
+}

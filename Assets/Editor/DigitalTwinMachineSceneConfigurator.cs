@@ -45,15 +45,9 @@ public static class DigitalTwinMachineConfigurationLoader
 
     private static DigitalTwinMachineConfiguration LoadDefaultProviderConfiguration()
     {
-        IDigitalTwinMachineConfigurationProvider[] providers = AppDomain.CurrentDomain
-            .GetAssemblies()
-            .SelectMany(assembly =>
-            {
-                try { return assembly.GetTypes(); }
-                catch { return Array.Empty<Type>(); }
-            })
-            .Where(type => !type.IsAbstract &&
-                           typeof(IDigitalTwinMachineConfigurationProvider).IsAssignableFrom(type))
+        IDigitalTwinMachineConfigurationProvider[] providers = TypeCache
+            .GetTypesDerivedFrom<IDigitalTwinMachineConfigurationProvider>()
+            .Where(type => !type.IsAbstract)
             .Select(type => (IDigitalTwinMachineConfigurationProvider)Activator.CreateInstance(type))
             .Where(provider => provider.IsDefault)
             .ToArray();
@@ -74,12 +68,13 @@ public static class DigitalTwinMachineConfigurationLoader
         if (string.IsNullOrWhiteSpace(configuration.editorConfiguratorType))
             return null;
 
-        Type configuratorType = AppDomain.CurrentDomain.GetAssemblies()
-            .Select(assembly => assembly.GetType(configuration.editorConfiguratorType, false))
-            .FirstOrDefault(type => type != null);
+        Type configuratorType = TypeCache
+            .GetTypesDerivedFrom<IDigitalTwinMachineSceneConfigurator>()
+            .FirstOrDefault(type => !type.IsAbstract &&
+                                    (type.FullName == configuration.editorConfiguratorType ||
+                                     type.Name == configuration.editorConfiguratorType));
 
-        if (configuratorType == null ||
-            !typeof(IDigitalTwinMachineSceneConfigurator).IsAssignableFrom(configuratorType))
+        if (configuratorType == null)
         {
             throw new InvalidOperationException(
                 $"Machine '{configuration.machineId}' references invalid scene configurator " +

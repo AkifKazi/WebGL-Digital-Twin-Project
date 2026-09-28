@@ -490,7 +490,7 @@ public static class DigitalTwinProjectValidator
                         $"Portrait pager '{path}' must retain 26 spacing and flexible arrows.");
                 }
             }
-            else if (pager.PaginationCanvasGroup == null || row?.parent?.name != "Top bar" ||
+            else if (pager.PaginationCanvasGroup == null || !IsInTopBar(row) ||
                      !Mathf.Approximately(row.anchorMin.x, 1f) ||
                      !Mathf.Approximately(row.pivot.x, 1f))
             {
@@ -527,6 +527,23 @@ public static class DigitalTwinProjectValidator
             if (reference?.objectReferenceValue != shared)
                 result.Errors.Add($"View control '{GetPath(control.transform)}' is not using the shared controller.");
         }
+    }
+
+    /// <summary>
+    /// Directly in the top bar, or in the full-size wrapper the service view
+    /// fades telemetry controls through.
+    /// </summary>
+    private static bool IsInTopBar(RectTransform rect)
+    {
+        Transform parent = rect != null ? rect.parent : null;
+        if (parent == null)
+            return false;
+        if (parent.name == "Top bar")
+            return true;
+        return parent.name == "Telemetry Top Controls" &&
+               parent.parent != null && parent.parent.name == "Top bar" &&
+               parent is RectTransform wrapper &&
+               wrapper.anchorMin == Vector2.zero && wrapper.anchorMax == Vector2.one;
     }
 
     private static void ValidateRailReferences<T>(string[] propertyNames, ValidationResult result)

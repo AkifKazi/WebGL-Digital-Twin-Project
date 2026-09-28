@@ -377,29 +377,9 @@ public static class TelemetryDetailPanelSetup
         data.ApplyModifiedPropertiesWithoutUndo();
     }
 
-    // Demonstration service plans: interval and hours run since the last service,
-    // by machine part. Replace with the site's maintenance plan.
-    private static readonly (string Part, float Interval, float Since)[] ServicePlans =
-    {
-        ("Bearings", 4000f, 3120f),
-        ("Stator Windings", 8000f, 5210f),
-        ("Rotor Core", 8000f, 5210f),
-        ("Drive Shaft", 6000f, 2480f),
-        ("Motor Frame", 12000f, 5210f),
-        ("Upper Mixer Rotor", 3000f, 1740f),
-        ("Lower Rotor", 3000f, 1740f),
-        ("Screen Deck", 1500f, 1320f),
-        ("Discharge Outlets", 2000f, 610f),
-        ("Conveyor Belts", 2500f, 1980f),
-        ("Idler Rollers", 5000f, 2150f),
-        ("Drive Roller", 5000f, 2150f),
-        ("Bunker", 8760f, 4020f),
-        ("Support Frame", 17520f, 6300f)
-    };
-
     /// <summary>
     /// A service schedule beside the history recorder. Existing plans are kept;
-    /// parts without one get the demonstration values.
+    /// parts without one get the demonstration values in <see cref="ServiceModeSetup.Plans"/>.
     /// </summary>
     private static TelemetryServiceSchedule ConfigureServiceSchedule()
     {
@@ -423,15 +403,12 @@ public static class TelemetryDetailPanelSetup
                 covered.Add(part);
         }
 
-        foreach ((string name, float interval, float since) in ServicePlans)
+        foreach (ServiceModeSetup.PlanRow row in ServiceModeSetup.Plans)
         {
-            if (!parts.TryGetValue(name, out MachinePartGroup part) || covered.Contains(part))
+            if (!parts.TryGetValue(row.Part, out MachinePartGroup part) || covered.Contains(part))
                 continue;
             int index = plans.arraySize++;
-            SerializedProperty plan = plans.GetArrayElementAtIndex(index);
-            plan.FindPropertyRelative("part").objectReferenceValue = part;
-            plan.FindPropertyRelative("serviceIntervalHours").floatValue = interval;
-            plan.FindPropertyRelative("hoursSinceService").floatValue = since;
+            ServiceModeSetup.WritePlan(plans.GetArrayElementAtIndex(index), part, row);
         }
 
         data.ApplyModifiedPropertiesWithoutUndo();
