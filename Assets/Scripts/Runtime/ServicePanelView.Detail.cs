@@ -27,8 +27,11 @@ public sealed partial class ServicePanelView
     private const float OverviewHeight = 414f;
     private const float HistoryHeight = 248f;
     private const float ServiceDataHeight = 260f;
-    private const float ChartTop = 66f;
-    private const float ChartHeight = 132f;
+    // The values sit in a row of their own above the plot, so the plan line
+    // and the columns never cross them.
+    private const float ValueRowTop = 56f;
+    private const float ChartTop = 88f;
+    private const float ChartHeight = 110f;
     private const int MaximumHistoryColumns = 5;
 
     private RectTransform listHeader;
@@ -223,7 +226,6 @@ public sealed partial class ServicePanelView
         // Each past service is dated back from the last one, which was the
         // hours run ago.
         int columns = count + 1;
-        float scale = ChartHeight / historyChart.Ceiling;
         double hoursAgo = status.RunHours;
         for (int i = historyValues.Length - 1; i >= 0; i--)
         {
@@ -235,7 +237,7 @@ public sealed partial class ServicePanelView
 
             bool current = i == columns - 1;
             float value = current ? (float)status.EstimateHours : historyBuffer[i];
-            PlaceColumn(historyValues[i].rectTransform, i, columns, value * scale + 4f);
+            PlaceColumn(historyValues[i].rectTransform, i, columns, ChartHeight + (ChartTop - ValueRowTop) - 26f);
             PlaceColumn(historyDates[i].rectTransform, i, columns, -6f);
             SetText(historyValues[i], Number(value));
             historyValues[i].color = current ? state : ink;
