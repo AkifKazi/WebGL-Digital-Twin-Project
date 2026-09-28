@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// Marks parts on the model in the service view: a numbered pin, matching the
 /// part's row, on every part due soon or overdue, and on the part whose row
-/// the pointer is over, which is also outlined. Parts on track carry no pin,
+/// the pointer is over or whose detail is open, which is also outlined. Parts on track carry no pin,
 /// so the model stays quiet until something is due.
 /// </summary>
 [DisallowMultipleComponent]
@@ -58,7 +58,7 @@ public sealed class ServicePinLayer : MonoBehaviour
     private void LateUpdate()
     {
         bool service = controller != null && controller.CurrentMode == DigitalTwinMode.Service;
-        MachinePartGroup hovered = service && panel != null ? panel.HoveredPart : null;
+        MachinePartGroup hovered = service && panel != null ? panel.HighlightedPart : null;
 
         CollectShown(service, hovered);
         PlacePins(hovered);

@@ -13,8 +13,8 @@ using UnityEngine.Rendering.Universal;
 /// panel runs down the right of the screen with the viewport's controls
 /// beside it, the list is soonest first with a scrollbar that scrolls it, the
 /// wheel over the panel leaves the model's zoom alone, the parts due get pins,
-/// the model is moved beside the panel, and hovering a row pins and outlines
-/// its part. Then switches back and checks telemetry returns exactly as it was. Saves a
+/// the model is moved beside the panel, hovering a row pins and outlines its
+/// part, and clicking it opens the part's detail, which the back arrow closes. Then switches back and checks telemetry returns exactly as it was. Saves a
 /// 1920x1080 capture of each step, UI included, to Logs/ServiceModeTest.
 ///
 /// Run without -quit: the editor has to stay open while play mode runs.
@@ -128,13 +128,33 @@ public static class ServiceModePlayTest
                 Expect(ActivePins() == DueCount() + 1, "the hovered part gets a pin too");
                 Expect(SelectionOutline.Targets.Count > 0 && SelectionOutline.Strength > 0.9f, "the hovered part is outlined");
                 if (hovered != null)
+                {
                     Pointer(hovered.gameObject, ExecuteEvents.pointerExitHandler);
+                    Pointer(hovered.gameObject, ExecuteEvents.pointerClickHandler);
+                }
+                Next(0.4f);
+                break;
+
+            case 5:
+                Capture("05-detail");
+                Expect(panel.DetailOpen && panel.SelectedPart != null && panel.SelectedPart.name == HoverPart,
+                    "clicking a row opens its part's detail");
+                Expect(!panel.List.gameObject.activeInHierarchy, "the detail takes the list's place");
+                Expect(ActivePins() == DueCount() + 1, "the open part keeps its pin");
+                Expect(SelectionOutline.Targets.Count > 0 && SelectionOutline.Strength > 0.9f, "the open part stays outlined");
+                panel.BackButton.onClick.Invoke();
+                Next(0.3f);
+                break;
+
+            case 6:
+                Expect(!panel.DetailOpen && panel.List.gameObject.activeInHierarchy, "the back arrow returns to the list");
+                Expect(Mathf.Abs(panel.List.verticalNormalizedPosition - 0.5f) < 0.01f, "the list is still where it was scrolled to");
                 modeSwitch.TelemetryButton.onClick.Invoke();
                 Next(0.8f);
                 break;
 
-            case 5:
-                Capture("05-back-to-telemetry");
+            case 7:
+                Capture("07-back-to-telemetry");
                 Expect(controller.CurrentMode == DigitalTwinMode.Telemetry, "Telemetry is selected again");
                 Expect(TelemetryGroups().All(g => g.alpha > 0.99f && g.blocksRaycasts || !g.gameObject.activeInHierarchy),
                     "every telemetry element is back");

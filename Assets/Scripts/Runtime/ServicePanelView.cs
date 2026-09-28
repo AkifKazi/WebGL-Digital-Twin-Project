@@ -14,9 +14,11 @@ using UnityEngine.UI;
 /// so adding a plan to the schedule adds a row with no other authoring. The
 /// header and legend line up with the viewport's top and bottom bars when the
 /// panel runs the full height beside it (see <see cref="SetBands"/>).
+/// Clicking a row opens that part's detail in place of the list (see
+/// ServicePanelView.Detail.cs).
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class ServicePanelView : MonoBehaviour
+public sealed partial class ServicePanelView : MonoBehaviour
 {
     [SerializeField] private TelemetryServiceSchedule schedule;
     [SerializeField] private TMP_FontAsset labelFont;
@@ -140,6 +142,8 @@ public sealed class ServicePanelView : MonoBehaviour
         legendKeys.offsetMin = new Vector2(legendKeys.offsetMin.x, margin);
         listRect.offsetMin = new Vector2(0f, bottom);
         listRect.offsetMax = new Vector2(0f, -top);
+        detailBody.offsetMin = listRect.offsetMin;
+        detailBody.offsetMax = listRect.offsetMax;
 
         // Beside the viewport only the left edge is drawn: the others fall on
         // the screen's edges. Over the content area the panel is framed.
@@ -186,6 +190,7 @@ public sealed class ServicePanelView : MonoBehaviour
         }
 
         RefreshRows();
+        RefreshDetail();
     }
 
     private static int SoonestFirst(ServiceItemStatus a, ServiceItemStatus b) =>
@@ -232,6 +237,8 @@ public sealed class ServicePanelView : MonoBehaviour
     // -----------------------------------------------------------------------
     // Hover
     // -----------------------------------------------------------------------
+
+    private void HandleClicked(ServiceHoverTarget target) => ShowDetail(target.Part);
 
     private void HandleHover(ServiceHoverTarget target, bool hovered)
     {
@@ -323,19 +330,24 @@ public sealed class ServicePanelView : MonoBehaviour
         // Right edge in line with the cards' clearance of the scrollbar.
         Stretch(headerText, inset, ListRight + 4f, 0f, 0f);
 
-        TextMeshProUGUI title = CreateText("Title", headerText, 20f, false, label, TextAlignmentOptions.MidlineLeft);
+        listHeader = CreateRect("List", headerText);
+        Stretch(listHeader, 0f, 0f, 0f, 0f);
+
+        TextMeshProUGUI title = CreateText("Title", listHeader, 20f, false, label, TextAlignmentOptions.MidlineLeft);
         title.characterSpacing = 6f;
         title.text = "SERVICE SCHEDULE";
         Stretch(title.rectTransform, 0f, 0f, 0f, 0f);
 
-        runHoursText = CreateText("Run Hours", headerText, 20f, false, Muted, TextAlignmentOptions.MidlineRight);
+        runHoursText = CreateText("Run Hours", listHeader, 20f, false, Muted, TextAlignmentOptions.MidlineRight);
         Stretch(runHoursText.rectTransform, 0f, 0f, 0f, 0f);
 
         AddDivider(header, false);
 
         BuildList(root);
+        BuildDetail(root, headerText);
         BuildLegend(root);
         SetBands(0f, 0f, 0f);
+        ShowList();
     }
 
     private void BuildList(RectTransform root)
@@ -441,6 +453,7 @@ public sealed class ServicePanelView : MonoBehaviour
         row.Background.raycastTarget = true;
         row.Hover = row.Root.gameObject.AddComponent<ServiceHoverTarget>();
         row.Hover.HoverChanged += HandleHover;
+        row.Hover.Clicked += HandleClicked;
 
         RectTransform inner = CreateRect("Content", row.Root);
         Stretch(inner, CardPadding, CardPadding, 0f, 0f);
