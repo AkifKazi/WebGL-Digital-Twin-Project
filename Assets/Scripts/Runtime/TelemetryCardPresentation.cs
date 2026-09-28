@@ -41,4 +41,31 @@ public static class TelemetryPresentationBuilder
             .Select(TelemetryCardPresentation.Single)
             .ToList()
         ?? new List<TelemetryCardPresentation>();
+
+    /// <summary>
+    /// Viewport position that places a sensor's card. A sensor behind the
+    /// camera keeps a card, so it stays reachable instead of dropping off the
+    /// rails until another rebuild: its projection is mirrored, which puts the
+    /// card on the side the camera would turn towards, and clamped, because
+    /// a point near the camera plane projects to huge or undefined values. The
+    /// leader line hides itself while the sensor is behind the camera.
+    /// </summary>
+    public static Vector2 PlacementViewport(Camera camera, Vector3 worldPosition)
+    {
+        Vector3 viewport = camera.WorldToViewportPoint(worldPosition);
+        if (viewport.z > 0f)
+            return viewport;
+
+        return new Vector2(Mirror(viewport.x), Mirror(viewport.y));
+    }
+
+    /// <summary><see cref="PlacementViewport"/> in the camera's screen pixels.</summary>
+    public static Vector2 PlacementScreenPoint(Camera camera, Vector3 worldPosition)
+    {
+        Vector2 viewport = PlacementViewport(camera, worldPosition);
+        return camera.ViewportToScreenPoint(new Vector3(viewport.x, viewport.y, 1f));
+    }
+
+    private static float Mirror(float value) =>
+        float.IsFinite(value) ? Mathf.Clamp(1f - value, -1f, 2f) : 0.5f;
 }

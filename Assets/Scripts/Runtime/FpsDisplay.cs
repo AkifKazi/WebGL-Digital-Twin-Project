@@ -20,6 +20,8 @@ public sealed class FpsDisplay : MonoBehaviour
     private TMP_Text label;
     private float elapsedTime;
     private int elapsedFrames;
+    private int cachedQualityLevel = -1;
+    private string cachedQualityName;
 
     private void Awake()
     {
@@ -40,7 +42,7 @@ public sealed class FpsDisplay : MonoBehaviour
 
         if (showFrameTime && showQualityLevel)
         {
-            label.text = $"FPS {fps:0}\n{frameTimeMs:0.0} ms\n{QualitySettings.names[QualitySettings.GetQualityLevel()]}";
+            label.text = $"FPS {fps:0}\n{frameTimeMs:0.0} ms\n{QualityLevelName()}";
         }
         else if (showFrameTime)
         {
@@ -48,7 +50,7 @@ public sealed class FpsDisplay : MonoBehaviour
         }
         else if (showQualityLevel)
         {
-            label.text = $"FPS {fps:0}\n{QualitySettings.names[QualitySettings.GetQualityLevel()]}";
+            label.text = $"FPS {fps:0}\n{QualityLevelName()}";
         }
         else
         {
@@ -57,5 +59,23 @@ public sealed class FpsDisplay : MonoBehaviour
 
         elapsedTime = 0f;
         elapsedFrames = 0;
+    }
+
+    /// <summary>
+    /// QualitySettings.names builds a fresh string array on every read, which a
+    /// readout twice a second has no reason to pay for. The preset is only
+    /// changed deliberately, so the name is looked up when the level changes.
+    /// </summary>
+    private string QualityLevelName()
+    {
+        int level = QualitySettings.GetQualityLevel();
+        if (level != cachedQualityLevel || cachedQualityName == null)
+        {
+            cachedQualityLevel = level;
+            string[] names = QualitySettings.names;
+            cachedQualityName = level >= 0 && level < names.Length ? names[level] : string.Empty;
+        }
+
+        return cachedQualityName;
     }
 }

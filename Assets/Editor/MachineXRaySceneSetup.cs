@@ -435,7 +435,7 @@ public static class MachineXRaySceneSetup
         serialized.FindProperty("targetCamera").objectReferenceValue = Camera.main;
 
         Light key = Object
-            .FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .FindObjectsByType<Light>(FindObjectsInactive.Include)
             .FirstOrDefault(light => light.type == LightType.Directional);
 
         serialized.FindProperty("keyLight").objectReferenceValue = key;
@@ -462,7 +462,7 @@ public static class MachineXRaySceneSetup
         SerializedObject serialized = new(viewMode);
 
         serialized.FindProperty("clipController").objectReferenceValue =
-            Object.FindFirstObjectByType<HybridHopperClipController>();
+            Object.FindAnyObjectByType<HybridHopperClipController>();
 
         serialized.FindProperty("xrayPresenter").objectReferenceValue = presenter;
         serialized.FindProperty("environmentController").objectReferenceValue = environment;
@@ -477,7 +477,7 @@ public static class MachineXRaySceneSetup
     private static void ConfigureSegmentedControls(MachineViewModeController viewMode)
     {
         foreach (ViewModeSegmentedControl control in Object.FindObjectsByType<ViewModeSegmentedControl>(
-                     FindObjectsInactive.Include, FindObjectsSortMode.None))
+                     FindObjectsInactive.Include))
         {
             bool portrait = IsUnder(control.transform, PortraitLayoutName);
 
@@ -658,7 +658,7 @@ public static class MachineXRaySceneSetup
     }
 
     private static GameObject FindSceneObject(string name) =>
-        Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+        Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include)
             .FirstOrDefault(candidate => candidate.name == name);
 
     private static T GetOrAddComponent<T>(GameObject host) where T : Component

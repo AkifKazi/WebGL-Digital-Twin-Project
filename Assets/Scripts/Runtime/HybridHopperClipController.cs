@@ -50,6 +50,7 @@ public sealed class HybridHopperClipController : MonoBehaviour
     private bool isCrossSection;
     private Coroutine transitionRoutine;
     private Coroutine specsRoutine;
+    private bool transitionInterrupted;
     private MaterialPropertyBlock propertyBlock;
     private int clipXPropertyId;
     private int clipEnabledPropertyId;
@@ -63,6 +64,30 @@ public sealed class HybridHopperClipController : MonoBehaviour
         {
             fullHopperRenderers = fullHopper.GetComponentsInChildren<Renderer>(true);
         }
+    }
+
+    private void OnEnable()
+    {
+        // A clip animation cut off by disabling this object plays again, so the
+        // model settles on the view that was asked for.
+        if (!transitionInterrupted)
+            return;
+
+        transitionInterrupted = false;
+        TransitionStateChanged?.Invoke(true);
+        transitionRoutine = StartCoroutine(isCrossSection ? TransitionToCrossSection() : TransitionToFull());
+    }
+
+    private void OnDisable()
+    {
+        // Disabling stops coroutines without clearing their handles; a stale
+        // transition handle would refuse every later view change.
+        if (transitionRoutine == null)
+            return;
+
+        transitionRoutine = null;
+        transitionInterrupted = true;
+        TransitionStateChanged?.Invoke(false);
     }
 
     private void Start()

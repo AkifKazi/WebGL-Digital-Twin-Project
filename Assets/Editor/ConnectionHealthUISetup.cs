@@ -38,8 +38,7 @@ public static class ConnectionHealthUISetup
     private static ConnectionHealthMonitor ConfigureMonitor()
     {
         GameObject runtime = UnityEngine.Object.FindObjectsByType<Transform>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None)
+                FindObjectsInactive.Include)
             .First(transform => transform.name == "Digital Twin Runtime")
             .gameObject;
 
@@ -61,8 +60,7 @@ public static class ConnectionHealthUISetup
     private static RectTransform FindTopBar(string layoutName)
     {
         return UnityEngine.Object.FindObjectsByType<RectTransform>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None)
+                FindObjectsInactive.Include)
             .FirstOrDefault(rect => rect.name == "Top bar" && HasAncestor(rect, layoutName));
     }
 

@@ -16,8 +16,7 @@ public static class MachineViewRuntimeSetup
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         HybridHopperClipController[] controllers = UnityEngine.Object
             .FindObjectsByType<HybridHopperClipController>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
+                FindObjectsInactive.Include);
         if (controllers.Length == 0)
             throw new InvalidOperationException("No machine full/cross-section controller was found.");
 
@@ -25,7 +24,7 @@ public static class MachineViewRuntimeSetup
             .FirstOrDefault(controller => controller.name == SharedControllerName)
             ?? controllers[0];
         Transform runtime = UnityEngine.Object
-            .FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .FindObjectsByType<Transform>(FindObjectsInactive.Include)
             .FirstOrDefault(transform => transform.name == "Digital Twin Runtime");
         if (runtime == null)
             throw new InvalidOperationException("Digital Twin Runtime was not found.");
@@ -39,8 +38,7 @@ public static class MachineViewRuntimeSetup
 
         foreach (ViewModeSegmentedControl control in UnityEngine.Object
                      .FindObjectsByType<ViewModeSegmentedControl>(
-                         FindObjectsInactive.Include,
-                         FindObjectsSortMode.None))
+                         FindObjectsInactive.Include))
         {
             SerializedObject data = new(control);
             data.FindProperty("hopperController").objectReferenceValue = shared;
@@ -49,8 +47,7 @@ public static class MachineViewRuntimeSetup
 
         foreach (TelemetrySequenceController sequence in UnityEngine.Object
                      .FindObjectsByType<TelemetrySequenceController>(
-                         FindObjectsInactive.Include,
-                         FindObjectsSortMode.None))
+                         FindObjectsInactive.Include))
         {
             SerializedObject data = new(sequence);
             data.FindProperty("hopperController").objectReferenceValue = shared;

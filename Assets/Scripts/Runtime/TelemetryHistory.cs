@@ -142,6 +142,39 @@ public readonly struct TelemetryLimits
             return StatVisualState.Warning;
         return StatVisualState.Normal;
     }
+
+    /// <summary>
+    /// Like <see cref="Evaluate(float)"/>, but an alarm already raised only
+    /// steps down once the value clears its limit by <paramref name="hysteresis"/>
+    /// times the gap between the warning and critical limits. A reading
+    /// hovering on a limit then stays in one state instead of flickering.
+    /// Raising an alarm is never delayed.
+    /// </summary>
+    public StatVisualState Evaluate(float value, StatVisualState current, float hysteresis)
+    {
+        StatVisualState raw = Evaluate(value);
+        if (hysteresis <= 0f || Severity(raw) >= Severity(current))
+            return raw;
+
+        float highMargin = hysteresis * Math.Abs(CriticalAbove - WarningAbove);
+        float lowMargin = hysteresis * Math.Abs(WarningBelow - CriticalBelow);
+
+        if (current == StatVisualState.Critical &&
+            ((HasHigh && value > CriticalAbove - highMargin) || (HasLow && value < CriticalBelow + lowMargin)))
+            return StatVisualState.Critical;
+
+        if ((HasHigh && value > WarningAbove - highMargin) || (HasLow && value < WarningBelow + lowMargin))
+            return StatVisualState.Warning;
+
+        return raw;
+    }
+
+    private static int Severity(StatVisualState state) => state switch
+    {
+        StatVisualState.Critical => 2,
+        StatVisualState.Warning => 1,
+        _ => 0
+    };
 }
 
 /// <summary>

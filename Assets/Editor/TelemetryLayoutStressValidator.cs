@@ -19,7 +19,7 @@ public static class TelemetryLayoutStressValidator
         List<string> errors = new();
 
         PerformanceStatSource[] sources = UnityEngine.Object.FindObjectsByType<PerformanceStatSource>(
-            FindObjectsInactive.Include, FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         List<TelemetryCardPresentation> presentations = TelemetryPresentationBuilder.Build(sources);
 
         ValidatePresentations(sources, presentations, errors);
@@ -166,7 +166,7 @@ public static class TelemetryLayoutStressValidator
 
     private static void ValidateResponsiveShell(ICollection<string> errors)
     {
-        ResponsiveLayoutShell shell = UnityEngine.Object.FindFirstObjectByType<ResponsiveLayoutShell>(
+        ResponsiveLayoutShell shell = UnityEngine.Object.FindAnyObjectByType<ResponsiveLayoutShell>(
             FindObjectsInactive.Include);
         if (shell == null)
         {
@@ -199,9 +199,9 @@ public static class TelemetryLayoutStressValidator
 
     private static void ValidateRailManagers(ICollection<string> errors)
     {
-        WideStatRailManager wide = UnityEngine.Object.FindFirstObjectByType<WideStatRailManager>(
+        WideStatRailManager wide = UnityEngine.Object.FindAnyObjectByType<WideStatRailManager>(
             FindObjectsInactive.Include);
-        PortraitStatRailManager portrait = UnityEngine.Object.FindFirstObjectByType<PortraitStatRailManager>(
+        PortraitStatRailManager portrait = UnityEngine.Object.FindAnyObjectByType<PortraitStatRailManager>(
             FindObjectsInactive.Include);
         ValidateReferences(wide, new[]
         {
@@ -230,8 +230,7 @@ public static class TelemetryLayoutStressValidator
     {
         PortraitTelemetryPager[] pagers = UnityEngine.Object
             .FindObjectsByType<PortraitTelemetryPager>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
+                FindObjectsInactive.Include);
         if (pagers.Length != 2)
         {
             errors.Add($"Portrait and wide telemetry pagers are required; found {pagers.Length}.");

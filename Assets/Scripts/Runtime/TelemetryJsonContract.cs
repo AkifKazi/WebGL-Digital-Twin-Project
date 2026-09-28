@@ -25,6 +25,13 @@ public static class TelemetryJsonContract
 {
     public const int CurrentSchemaVersion = 1;
 
+    /// <summary>
+    /// Version 0 represents legacy payloads created before an explicit
+    /// schemaVersion field was introduced.
+    /// </summary>
+    public static bool IsSupportedSchemaVersion(int version) =>
+        version == 0 || version == CurrentSchemaVersion;
+
     public static bool TryParseReading(
         string json,
         out TelemetryReadingDto reading,
@@ -55,8 +62,7 @@ public static class TelemetryJsonContract
             return false;
         }
 
-        if (reading.schemaVersion != 0 &&
-            reading.schemaVersion != CurrentSchemaVersion)
+        if (!IsSupportedSchemaVersion(reading.schemaVersion))
         {
             error = $"Unsupported schemaVersion {reading.schemaVersion}.";
             return false;
@@ -95,10 +101,7 @@ public static class TelemetryJsonContract
             return false;
         }
 
-        // Version 0 represents legacy payloads created before an explicit
-        // schemaVersion field was introduced.
-        if (batch.schemaVersion != 0 &&
-            batch.schemaVersion != CurrentSchemaVersion)
+        if (!IsSupportedSchemaVersion(batch.schemaVersion))
         {
             error = $"Unsupported schemaVersion {batch.schemaVersion}.";
             return false;

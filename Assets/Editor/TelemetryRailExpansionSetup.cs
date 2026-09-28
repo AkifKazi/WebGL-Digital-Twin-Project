@@ -24,7 +24,7 @@ public static class TelemetryRailExpansionSetup
 
     private static void ConfigureWideRails()
     {
-        WideStatRailManager manager = UnityEngine.Object.FindFirstObjectByType<WideStatRailManager>(
+        WideStatRailManager manager = UnityEngine.Object.FindAnyObjectByType<WideStatRailManager>(
             FindObjectsInactive.Include);
         if (manager == null)
             throw new InvalidOperationException("Wide telemetry rail manager was not found.");
@@ -55,7 +55,7 @@ public static class TelemetryRailExpansionSetup
 
     private static void ConfigurePortraitRails()
     {
-        PortraitStatRailManager manager = UnityEngine.Object.FindFirstObjectByType<PortraitStatRailManager>(
+        PortraitStatRailManager manager = UnityEngine.Object.FindAnyObjectByType<PortraitStatRailManager>(
             FindObjectsInactive.Include);
         if (manager == null)
             throw new InvalidOperationException("Portrait telemetry rail manager was not found.");

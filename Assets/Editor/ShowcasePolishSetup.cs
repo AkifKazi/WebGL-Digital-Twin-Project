@@ -192,7 +192,7 @@ public static class ShowcasePolishSetup
     {
         int changed = 0;
         foreach (MachinePartGroup group in UnityEngine.Object.FindObjectsByType<MachinePartGroup>(
-                     FindObjectsInactive.Include, FindObjectsSortMode.None))
+                     FindObjectsInactive.Include))
         {
             if (group.name != "Lower Rotor")
                 continue;
@@ -217,7 +217,7 @@ public static class ShowcasePolishSetup
     private static int MigrateSpinners()
     {
         DualRotorSpin[] old = UnityEngine.Object.FindObjectsByType<DualRotorSpin>(
-            FindObjectsInactive.Include, FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         if (old.Length == 0)
             return 0;
 
@@ -262,7 +262,7 @@ public static class ShowcasePolishSetup
     private static int MigrateVibrators()
     {
         SeparatorVibration[] old = UnityEngine.Object.FindObjectsByType<SeparatorVibration>(
-            FindObjectsInactive.Include, FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         if (old.Length == 0)
             return 0;
 
@@ -324,7 +324,7 @@ public static class ShowcasePolishSetup
         target.TryGetComponent(out T component) ? component : target.AddComponent<T>();
 
     private static IEnumerable<Transform> FindAll(string objectName) =>
-        UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+        UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)
             .Where(transform => transform.name == objectName);
 
     private static Transform FindFirst(string objectName) => FindAll(objectName).FirstOrDefault();

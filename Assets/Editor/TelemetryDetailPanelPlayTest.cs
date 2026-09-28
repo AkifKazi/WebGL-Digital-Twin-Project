@@ -92,7 +92,7 @@ public static class TelemetryDetailPanelPlayTest
             case 0:
                 PrepareCapture();
                 // Telemetry cards only show in the cross-section view.
-                Object.FindFirstObjectByType<ViewModeSegmentedControl>().SelectSection();
+                Object.FindAnyObjectByType<ViewModeSegmentedControl>().SelectSection();
                 Next(4.2f);
                 break;
 
@@ -303,7 +303,7 @@ public static class TelemetryDetailPanelPlayTest
             case 20:
             {
                 Capture("18-reversed-lines");
-                StatLeaderLineView[] lines = Object.FindObjectsByType<StatLeaderLineView>(FindObjectsSortMode.None)
+                StatLeaderLineView[] lines = Object.FindObjectsByType<StatLeaderLineView>()
                     .Where(line => line.Card != null)
                     .ToArray();
                 int reversed = lines.Count(line => line.IsReversed);
@@ -349,7 +349,7 @@ public static class TelemetryDetailPanelPlayTest
                 Expect(!reversalLine.IsReversed && reversalLine.DirectionOpacity >= 0.999f,
                     "back in front of its card the line returns to its usual opacity");
                 Debug.Log("DETAIL_PANEL_TEST crossing at rest: " + string.Join(", ",
-                    Object.FindObjectsByType<StatLeaderLineView>(FindObjectsSortMode.None)
+                    Object.FindObjectsByType<StatLeaderLineView>()
                         .Where(line => line.Card != null && line.IsCrossingCard)
                         .Select(line => line.Source.MetricName)));
 
@@ -401,15 +401,15 @@ public static class TelemetryDetailPanelPlayTest
 
         // Screen-space-overlay UI is not part of a camera render; move the main
         // canvas into the camera so the captures include it.
-        Canvas canvas = Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None)
+        Canvas canvas = Object.FindObjectsByType<Canvas>()
             .First(c => c.name == "Main UI Canvas");
         canvas.renderMode = RenderMode.ScreenSpaceCamera;
         canvas.worldCamera = captureCamera;
         canvas.planeDistance = captureCamera.nearClipPlane + 1f;
 
-        controller = Object.FindFirstObjectByType<TelemetryDetailPanelController>();
-        releaser = Object.FindFirstObjectByType<TelemetryCardFocusReleaser>();
-        rails = Object.FindFirstObjectByType<WideStatRailManager>();
+        controller = Object.FindAnyObjectByType<TelemetryDetailPanelController>();
+        releaser = Object.FindAnyObjectByType<TelemetryCardFocusReleaser>();
+        rails = Object.FindAnyObjectByType<WideStatRailManager>();
         // The scene ships with the secondary rails off; the panel steps need them on.
         if (controller != null)
             SetSecondaryRails(SecondaryRailUse.DetailPanel);
@@ -431,7 +431,7 @@ public static class TelemetryDetailPanelPlayTest
     }
 
     private static IEnumerable<PerformanceStatCardView> AllCards() =>
-        Object.FindObjectsByType<PerformanceStatCardView>(FindObjectsSortMode.None)
+        Object.FindObjectsByType<PerformanceStatCardView>()
             .Where(card => card.isActiveAndEnabled);
 
     private static void Click(PerformanceStatCardView card)
@@ -459,7 +459,7 @@ public static class TelemetryDetailPanelPlayTest
 
     private static Button FindControl(string name, bool required = true)
     {
-        Button button = Object.FindObjectsByType<Button>(FindObjectsSortMode.None)
+        Button button = Object.FindObjectsByType<Button>()
             .FirstOrDefault(b => b.name == name && b.isActiveAndEnabled);
         if (button == null && required)
             Expect(false, $"control '{name}' exists");
@@ -477,7 +477,7 @@ public static class TelemetryDetailPanelPlayTest
 
     private static void CheckQualityControlSize()
     {
-        RectTransform hd = Object.FindObjectsByType<QualityToggleControl>(FindObjectsSortMode.None)
+        RectTransform hd = Object.FindObjectsByType<QualityToggleControl>()
             .Select(control => (RectTransform)control.transform)
             .FirstOrDefault(rect => rect.gameObject.activeInHierarchy);
         Transform zoom = hd != null ? hd.parent.Find("Camera Zoom Controls") : null;

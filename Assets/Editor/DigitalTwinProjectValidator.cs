@@ -44,8 +44,7 @@ public static class DigitalTwinProjectValidator
         ValidateMissingScripts(roots, result);
 
         PerformanceStatSource[] sources = UnityEngine.Object.FindObjectsByType<PerformanceStatSource>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
 
         ValidateSensors(sources, result);
         ValidateMachineConfiguration(sources, result);
@@ -105,8 +104,7 @@ public static class DigitalTwinProjectValidator
         }
 
         foreach (TMP_Text text in UnityEngine.Object.FindObjectsByType<TMP_Text>(
-                     FindObjectsInactive.Include,
-                     FindObjectsSortMode.None))
+                     FindObjectsInactive.Include))
         {
             if (text.font != medium && text.font != semiBold)
                 result.Errors.Add($"UI text '{GetPath(text.transform)}' is not using a production Rajdhani font.");
@@ -345,8 +343,7 @@ public static class DigitalTwinProjectValidator
         ValidationResult result)
     {
         TelemetryRegistry[] registries = UnityEngine.Object.FindObjectsByType<TelemetryRegistry>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         if (registries.Length == 0)
         {
             result.Errors.Add("Telemetry Registry is missing.");
@@ -368,8 +365,7 @@ public static class DigitalTwinProjectValidator
         ValidationResult result) where T : MonoBehaviour
     {
         foreach (T manager in UnityEngine.Object.FindObjectsByType<T>(
-                     FindObjectsInactive.Include,
-                     FindObjectsSortMode.None))
+                     FindObjectsInactive.Include))
         {
             SerializedObject serializedManager = new(manager);
             SerializedProperty selectionMode = serializedManager.FindProperty("sourceSelectionMode");
@@ -397,13 +393,13 @@ public static class DigitalTwinProjectValidator
         ValidationResult result)
     {
         TelemetryJsonIngestor ingestor =
-            UnityEngine.Object.FindFirstObjectByType<TelemetryJsonIngestor>(
+            UnityEngine.Object.FindAnyObjectByType<TelemetryJsonIngestor>(
                 FindObjectsInactive.Include);
         if (ingestor == null)
             result.Errors.Add("The generic telemetry JSON ingestor is missing.");
 
         TelemetryOperatingModeController modeController =
-            UnityEngine.Object.FindFirstObjectByType<TelemetryOperatingModeController>(
+            UnityEngine.Object.FindAnyObjectByType<TelemetryOperatingModeController>(
                 FindObjectsInactive.Include);
         if (modeController == null)
         {
@@ -427,7 +423,7 @@ public static class DigitalTwinProjectValidator
     private static void ValidateParticleController(ValidationResult result)
     {
         ParticleFlowController controller =
-            UnityEngine.Object.FindFirstObjectByType<ParticleFlowController>(FindObjectsInactive.Include);
+            UnityEngine.Object.FindAnyObjectByType<ParticleFlowController>(FindObjectsInactive.Include);
         if (controller == null)
         {
             result.Errors.Add("Particle Flow Controller is missing.");
@@ -454,8 +450,7 @@ public static class DigitalTwinProjectValidator
     private static void ValidatePortraitPagination(ValidationResult result)
     {
         PortraitTelemetryPager[] pagers = UnityEngine.Object.FindObjectsByType<PortraitTelemetryPager>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         if (pagers.Length != 2)
         {
             result.Errors.Add($"Expected portrait and wide telemetry pagers; found {pagers.Length}.");
@@ -512,8 +507,7 @@ public static class DigitalTwinProjectValidator
     {
         HybridHopperClipController[] controllers = UnityEngine.Object
             .FindObjectsByType<HybridHopperClipController>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
+                FindObjectsInactive.Include);
         if (controllers.Length != 1)
         {
             result.Errors.Add(
@@ -527,8 +521,7 @@ public static class DigitalTwinProjectValidator
 
         foreach (ViewModeSegmentedControl control in UnityEngine.Object
                      .FindObjectsByType<ViewModeSegmentedControl>(
-                         FindObjectsInactive.Include,
-                         FindObjectsSortMode.None))
+                         FindObjectsInactive.Include))
         {
             SerializedProperty reference = new SerializedObject(control).FindProperty("hopperController");
             if (reference?.objectReferenceValue != shared)
@@ -539,7 +532,7 @@ public static class DigitalTwinProjectValidator
     private static void ValidateRailReferences<T>(string[] propertyNames, ValidationResult result)
         where T : MonoBehaviour
     {
-        T manager = UnityEngine.Object.FindFirstObjectByType<T>(FindObjectsInactive.Include);
+        T manager = UnityEngine.Object.FindAnyObjectByType<T>(FindObjectsInactive.Include);
         if (manager == null)
             return;
         SerializedObject data = new(manager);
@@ -554,8 +547,7 @@ public static class DigitalTwinProjectValidator
     private static void ValidateNoTelemetryGrouping(ValidationResult result)
     {
         foreach (Transform candidate in UnityEngine.Object.FindObjectsByType<Transform>(
-                     FindObjectsInactive.Include,
-                     FindObjectsSortMode.None))
+                     FindObjectsInactive.Include))
         {
             if (candidate.name == "Presentation Groups" ||
                 candidate.name == "Telemetry Presentation Groups")
@@ -569,7 +561,7 @@ public static class DigitalTwinProjectValidator
     private static void ValidateCamera(ValidationResult result)
     {
         OrbitCameraController camera =
-            UnityEngine.Object.FindFirstObjectByType<OrbitCameraController>(FindObjectsInactive.Include);
+            UnityEngine.Object.FindAnyObjectByType<OrbitCameraController>(FindObjectsInactive.Include);
         if (camera == null)
             result.Errors.Add("Orbit Camera Controller is missing.");
         else if (!camera.enablePinchZoom)
@@ -579,7 +571,7 @@ public static class DigitalTwinProjectValidator
     private static void ValidateAdaptiveQuality(ValidationResult result)
     {
         AdaptiveQualityController quality =
-            UnityEngine.Object.FindFirstObjectByType<AdaptiveQualityController>(FindObjectsInactive.Include);
+            UnityEngine.Object.FindAnyObjectByType<AdaptiveQualityController>(FindObjectsInactive.Include);
         if (quality == null)
             result.Warnings.Add("Adaptive Quality Controller is missing.");
         else if (!quality.enabled)
@@ -596,13 +588,12 @@ public static class DigitalTwinProjectValidator
     private static void ValidateConnectionHealth(ValidationResult result)
     {
         ConnectionHealthMonitor monitor =
-            UnityEngine.Object.FindFirstObjectByType<ConnectionHealthMonitor>(FindObjectsInactive.Include);
+            UnityEngine.Object.FindAnyObjectByType<ConnectionHealthMonitor>(FindObjectsInactive.Include);
         if (monitor == null)
             result.Errors.Add("Connection Health Monitor is missing.");
 
         ConnectionHealthView[] views = UnityEngine.Object.FindObjectsByType<ConnectionHealthView>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+            FindObjectsInactive.Include);
         if (views.Length > 0)
             result.Errors.Add(
                 $"Connection-health top-bar UI should remain absent; found {views.Length} view(s).");
@@ -612,8 +603,7 @@ public static class DigitalTwinProjectValidator
     {
         TelemetryDetailPanelController[] controllers =
             UnityEngine.Object.FindObjectsByType<TelemetryDetailPanelController>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
+                FindObjectsInactive.Include);
         if (controllers.Length == 0)
         {
             result.Warnings.Add(
@@ -701,8 +691,7 @@ public static class DigitalTwinProjectValidator
 
     private static Transform FindTransform(string objectName) =>
         UnityEngine.Object.FindObjectsByType<Transform>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None)
+                FindObjectsInactive.Include)
             .FirstOrDefault(transform => transform.name == objectName);
 
     private static int CountMissingScripts(GameObject gameObject)

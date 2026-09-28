@@ -8,8 +8,27 @@ using UnityEngine.UI;
 /// <summary>Graphs the detail panel can show. Add a kind here and a view below to extend it.</summary>
 public enum TelemetryGraphKind
 {
-    StatusTimeline,
-    LineChart
+    StatusTimeline = 0,
+    LineChart = 1,
+    KeyFigures = 2
+}
+
+/// <summary>How the key figures share the row.</summary>
+public enum TelemetryKeyFigureLayout
+{
+    [InspectorName("Equal Halves")] EqualHalves = 0,
+    [InspectorName("Make Room For Long Values")] MakeRoomForLongValues = 1
+}
+
+/// <summary>Figures the key-figures row can show, chosen on the panel controller.</summary>
+public enum TelemetryKeyFigure
+{
+    None = 0,
+    [InspectorName("Average (over the range)")] Average = 1,
+    [InspectorName("Minimum (over the range)")] Minimum = 2,
+    [InspectorName("Maximum (over the range)")] Maximum = 3,
+    [InspectorName("Latest Reading")] Latest = 4,
+    [InspectorName("Time To Service (hours)")] TimeToService = 5
 }
 
 /// <summary>Colours and type shared by every graph in the detail panel.</summary>
@@ -62,14 +81,19 @@ public readonly struct TelemetryGraphData
     public readonly TelemetryHistoryRange Range;
     public readonly IReadOnlyList<TelemetryHistoryBucket> Buckets;
 
+    /// <summary>Optional. Answers how long until the source's part is due for service.</summary>
+    public readonly ITelemetryServiceLifeProvider ServiceLife;
+
     public TelemetryGraphData(
         PerformanceStatSource source,
         TelemetryHistoryRange range,
-        IReadOnlyList<TelemetryHistoryBucket> buckets)
+        IReadOnlyList<TelemetryHistoryBucket> buckets,
+        ITelemetryServiceLifeProvider serviceLife = null)
     {
         Source = source;
         Range = range;
         Buckets = buckets;
+        ServiceLife = serviceLife;
     }
 }
 
@@ -84,6 +108,8 @@ public abstract class TelemetryGraphView : MonoBehaviour
     private bool hasData;
 
     protected TelemetryGraphStyle Style { get; private set; }
+    protected IReadOnlyList<TelemetryKeyFigure> KeyFigures { get; private set; }
+    protected TelemetryKeyFigureLayout KeyFigureLayout { get; private set; }
     protected RectTransform Rect => (RectTransform)transform;
 
     /// <summary>Height the panel reserves for this graph.</summary>
@@ -92,15 +118,20 @@ public abstract class TelemetryGraphView : MonoBehaviour
     public static TelemetryGraphView Create(
         TelemetryGraphKind kind,
         RectTransform parent,
-        TelemetryGraphStyle style)
+        TelemetryGraphStyle style,
+        IReadOnlyList<TelemetryKeyFigure> keyFigures = null,
+        TelemetryKeyFigureLayout keyFigureLayout = TelemetryKeyFigureLayout.MakeRoomForLongValues)
     {
         RectTransform rect = CreateRect($"{kind} Graph", parent);
         TelemetryGraphView view = kind switch
         {
             TelemetryGraphKind.LineChart => rect.gameObject.AddComponent<TelemetryLineChartGraph>(),
+            TelemetryGraphKind.KeyFigures => rect.gameObject.AddComponent<TelemetryKeyFiguresGraph>(),
             _ => rect.gameObject.AddComponent<TelemetryStatusTimelineGraph>()
         };
         view.Style = style ?? new TelemetryGraphStyle();
+        view.KeyFigures = keyFigures ?? Array.Empty<TelemetryKeyFigure>();
+        view.KeyFigureLayout = keyFigureLayout;
 
         LayoutElement layout = rect.gameObject.AddComponent<LayoutElement>();
         layout.minHeight = view.PreferredHeight;

@@ -26,10 +26,10 @@ public sealed class AdaptiveQualityController : MonoBehaviour
     [Tooltip("Mobile browsers stay on the light preset, whatever is stored, and HD is not offered.")]
 #pragma warning disable CS0414 // Read only in WebGL player builds, so editor compiles see it as unused.
     [SerializeField] private bool lockMobileBrowserToLowQuality = true;
-#pragma warning restore CS0414
 
     [Tooltip("Frame-rate limit used by mobile browsers. Desktop WebGL remains browser driven.")]
     [SerializeField, Range(15, 60)] private int mobileBrowserTargetFrameRate = 30;
+#pragma warning restore CS0414
 
     [Header("Behaviour")]
     [Tooltip("Remembers the viewer's HD choice in the browser, so a refresh keeps it.")]

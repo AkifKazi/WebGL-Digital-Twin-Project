@@ -162,10 +162,15 @@ Unity only the current or aggregated values required for visualization.
 ## Acceptance rules
 
 - Unknown sensor IDs are rejected and cannot switch the player into Live mode.
-- `NaN` and infinite numeric values are rejected.
+- `NaN`, infinite and out-of-float-range numeric values (for example `1e100`) are rejected.
 - Non-zero duplicate or older sequence numbers from the same provider are rejected.
 - Missing source timestamps use the browser receive time.
 - Invalid quality integers are converted to Bad quality.
+- Every reading in a batch follows the same `schemaVersion` rule as a single reading;
+  unsupported entries are skipped and counted in one warning.
+- An alarm steps down only once the reading falls back past its limit by the source's
+  **Alarm Hysteresis** (10% of the warning-to-critical gap by default); raising an alarm
+  is never delayed.
 - Accepted Good or Uncertain readings update the visible numeric value.
 - Bad and Stale readings retain the last usable number but show Unavailable state.
 - The first accepted live reading switches from Simulation to Live mode.
@@ -231,10 +236,10 @@ secondary rails are empty they transition to the higher resting opacity. Hover/t
 is immediate, while warning and critical presentations remain fully emphasized.
 
 A line whose sensor sits behind its card's connection point would run back across the
-card, or across another card, so it fades to **Reversed Line Opacity** (5%) over 0.7
+card, or across another card, so it fades to **Reversed Line Opacity** (2%) over 0.7
 seconds and returns the same way once it is clear. This multiplies the focus and resting
-opacity rather than replacing it. Warning and critical lines fade only to **Reversed Alarm
-Line Opacity** (35%), so an alarm stays findable even when its anchor sits behind a card;
+opacity rather than replacing it. Warning and critical lines fade to **Reversed Alarm
+Line Opacity** (8%); their anchor keeps full strength so the sensor stays findable.
 **Keep Alarm Lines Opaque When Reversed** keeps them at full opacity.
 
 The **Secondary Rails** setting on the telemetry detail panel controller defaults to
@@ -249,7 +254,9 @@ its preferred outer rail is offered to the opposite outer rail before either
 inner overflow rail is enabled. Allocation order is preferred outer, opposite outer,
 preferred inner, opposite inner, then the next portrait page when none has physical
 capacity. Alarm severity and display priority determine page order, with alarms on page
-one. The arrow beside the zoom controls fades out over 0.3 seconds when its direction has
+one. A new or worsening alarm returns the rails to page one; an alarm clearing
+leaves the viewer on the page they are reading. A sensor behind the camera keeps
+its card (its leader line hides until the sensor is in view again). The arrow beside the zoom controls fades out over 0.3 seconds when its direction has
 no page. Inner rails remain inactive when the outer rails hold all content, preserving
 the maximum stage area.
 

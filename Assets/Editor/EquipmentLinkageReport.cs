@@ -66,13 +66,10 @@ public static class EquipmentLinkageReport
                         if (property.propertyType != SerializedPropertyType.ObjectReference)
                             continue;
 
-                        // A non-zero instance id with no object is a reference whose
-                        // target no longer exists - what the Inspector shows as "Missing".
-                        // The id accessor is deprecated but still the reliable test for it.
-#pragma warning disable CS0618
+                        // A valid entity id with no object is a reference whose target
+                        // no longer exists - what the Inspector shows as "Missing".
                         bool missing = property.objectReferenceValue == null &&
-                                       property.objectReferenceInstanceIDValue != 0;
-#pragma warning restore CS0618
+                                       property.objectReferenceEntityIdValue.IsValid();
                         if (missing)
                         {
                             report.AppendLine($"MISSING REFERENCE: {PathOf(t)} [{component.GetType().Name}] {property.propertyPath}");

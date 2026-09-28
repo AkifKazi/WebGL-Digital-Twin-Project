@@ -32,6 +32,10 @@ public sealed class TMPOverflowScroller : MonoBehaviour
     private float leftFadeStrength;
     private float rightFadeStrength;
     private bool preRenderSubscribed;
+    private string measuredText;
+    private float measuredViewportWidth = float.NaN;
+    private float measuredFontSize = float.NaN;
+    private float measuredPreferredWidth;
 
     private void Awake()
     {
@@ -97,7 +101,7 @@ public sealed class TMPOverflowScroller : MonoBehaviour
         else
         {
             x -= speed * Time.unscaledDeltaTime;
-            if (x <= originX - label.preferredWidth - continuousGap)
+            if (x <= originX - measuredPreferredWidth - continuousGap)
                 x = originX + viewport.rect.width;
         }
 
@@ -143,6 +147,9 @@ public sealed class TMPOverflowScroller : MonoBehaviour
         direction = -1f;
         pauseRemaining = edgePause;
         SetX(originX);
+        // The label's wrapping mode or viewport may have been reconfigured by
+        // the caller, so measure again rather than trusting the cache.
+        InvalidateMeasurement();
         RecalculateOverflow();
         UpdateDirectionalFade(originX);
     }
@@ -151,8 +158,33 @@ public sealed class TMPOverflowScroller : MonoBehaviour
     {
         if (label == null || viewport == null)
             return;
-        label.ForceMeshUpdate();
-        overflow = Mathf.Max(0f, label.preferredWidth - viewport.rect.width);
+
+        float viewportWidth = viewport.rect.width;
+
+        // ForceMeshUpdate lays the whole string out again. It used to run every
+        // frame on every scrolling label; the answer only changes when the text,
+        // the type size or the space it has to fit in changes, so it is measured
+        // on those and cached in between.
+        if (!string.Equals(measuredText, label.text, System.StringComparison.Ordinal) ||
+            !Mathf.Approximately(measuredFontSize, label.fontSize) ||
+            !Mathf.Approximately(measuredViewportWidth, viewportWidth))
+        {
+            label.ForceMeshUpdate();
+            measuredText = label.text;
+            measuredFontSize = label.fontSize;
+            measuredViewportWidth = viewportWidth;
+            measuredPreferredWidth = label.preferredWidth;
+        }
+
+        overflow = Mathf.Max(0f, measuredPreferredWidth - viewportWidth);
+    }
+
+    /// <summary>Drops the cached measurement, so the next frame measures again.</summary>
+    private void InvalidateMeasurement()
+    {
+        measuredText = null;
+        measuredViewportWidth = float.NaN;
+        measuredFontSize = float.NaN;
     }
 
     private void EnsureMask()

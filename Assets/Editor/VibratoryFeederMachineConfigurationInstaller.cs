@@ -22,6 +22,23 @@ public static class VibratoryFeederMachineConfigurationInstaller
 
         DigitalTwinMachineConfiguration configuration =
             AssetDatabase.LoadAssetAtPath<DigitalTwinMachineConfiguration>(AssetPath);
+        if (configuration != null && configuration.sensors != null && configuration.sensors.Count > 0)
+        {
+            const string warning =
+                "The Vibratory Feeder configuration already exists. Installing resets its sensors " +
+                "(labels, units, limits, rails and priorities) to the built-in template and makes it " +
+                "the default. Anchor positions of sensors that already exist and the machine parts " +
+                "are kept.";
+            if (Application.isBatchMode)
+            {
+                Debug.LogWarning($"MACHINE_CONFIGURATION_INSTALL_SKIPPED {warning}");
+                return;
+            }
+
+            if (!EditorUtility.DisplayDialog("Install Vibratory Feeder", warning, "Reset Sensors", "Cancel"))
+                return;
+        }
+
         if (configuration == null)
         {
             configuration = ScriptableObject.CreateInstance<DigitalTwinMachineConfiguration>();
@@ -46,6 +63,18 @@ public static class VibratoryFeederMachineConfigurationInstaller
         configuration.displayName = template.displayName;
         configuration.isDefault = template.isDefault;
         configuration.editorConfiguratorType = template.editorConfiguratorType;
+        // Anchor placement is authored in the scene and copied into the
+        // configuration; a reset of labels and limits must not undo it.
+        if (configuration.sensors != null)
+        {
+            foreach (MachineSensorDefinition sensor in template.sensors)
+            {
+                MachineSensorDefinition existing = configuration.sensors.Find(candidate => candidate.id == sensor.id);
+                if (existing != null)
+                    sensor.localPosition = existing.localPosition;
+            }
+        }
+
         configuration.sensors = template.sensors;
         Object.DestroyImmediate(template);
 

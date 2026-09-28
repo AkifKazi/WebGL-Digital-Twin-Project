@@ -324,7 +324,7 @@ public static class PortraitPaginationUISetup
         .GetComponentsInChildren<RectTransform>(true).FirstOrDefault(rect => rect.name == name);
 
     private static RectTransform FindInLayout(string layoutName, string objectName) => UnityEngine.Object
-        .FindObjectsByType<RectTransform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+        .FindObjectsByType<RectTransform>(FindObjectsInactive.Include)
         .FirstOrDefault(rect => rect.name == objectName && HasAncestor(rect, layoutName));
 
     private static bool HasAncestor(Transform transform, string name)

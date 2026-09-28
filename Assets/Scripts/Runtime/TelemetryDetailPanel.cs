@@ -21,7 +21,7 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
     [SerializeField] private Graphic[] rangeUnderlines = Array.Empty<Graphic>();
     [SerializeField] private Button pinButton;
     [SerializeField] private Graphic pinBackground;
-    [SerializeField] private UIIconGraphic pinIcon;
+    [SerializeField] private Graphic pinIcon;
     [SerializeField] private Button closeButton;
     [Tooltip("Background of the graph section.")]
     [SerializeField] private RectTransform graphSection;
@@ -38,10 +38,10 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
     [SerializeField, Min(0f)] private float frameInset = 10f;
 
     [Tooltip("Distance from the top of the panel to the graph section, header included.")]
-    [SerializeField, Min(0f)] private float headerHeight = 59f;
+    [SerializeField, Min(0f)] private float headerHeight = 66f;
 
     [Tooltip("Distance from the panel's sides and bottom to its sections.")]
-    [SerializeField, Min(0f)] private float sectionInset = 23f;
+    [SerializeField, Min(0f)] private float sectionInset = 25f;
 
     [Tooltip("Space between the graph section and the detail section.")]
     [SerializeField, Min(0f)] private float sectionGap = 10f;
@@ -61,12 +61,16 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
     [SerializeField] private Color rangeUnavailable = new(0.408f, 0.651f, 0.686f, 0.3f);
     [SerializeField] private Color pinIdle = new(0.212f, 0.929f, 1f, 1f);
     [SerializeField] private Color pinActive = new(0.04f, 0.1f, 0.13f, 1f);
+    [Tooltip("The pointer towards the card. One colour whatever the card's alarm state, " +
+             "matching the panel frame.")]
+    [SerializeField] private Color pointerColor = new(0.08f, 0.9f, 1f, 1f);
 
     private readonly List<TelemetryGraphView> graphViews = new();
     private readonly List<TelemetryHistoryBucket> buckets = new();
     private readonly bool[] rangeAvailable = { true, true, true, true, true };
     private ITelemetryHistoryProvider history;
     private ITelemetryInsightProvider insight;
+    private ITelemetryServiceLifeProvider serviceLife;
 
     public event Action<TelemetryDetailPanel> PinToggled;
     public event Action<TelemetryDetailPanel> CloseRequested;
@@ -88,13 +92,17 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
 
     public void Initialise(
         IReadOnlyList<TelemetryGraphKind> kinds,
+        IReadOnlyList<TelemetryKeyFigure> keyFigures,
+        TelemetryKeyFigureLayout keyFigureLayout,
         TelemetryGraphStyle style,
         TelemetryHistoryRange range,
         ITelemetryHistoryProvider historyProvider,
-        ITelemetryInsightProvider insightProvider)
+        ITelemetryInsightProvider insightProvider,
+        ITelemetryServiceLifeProvider serviceLifeProvider)
     {
         history = historyProvider;
         insight = insightProvider;
+        serviceLife = serviceLifeProvider;
         Range = range;
 
         Inset(graphArea, sectionPadding);
@@ -110,7 +118,7 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
         stack.childForceExpandHeight = false;
 
         foreach (TelemetryGraphKind kind in kinds)
-            graphViews.Add(TelemetryGraphView.Create(kind, graphArea, style));
+            graphViews.Add(TelemetryGraphView.Create(kind, graphArea, style, keyFigures, keyFigureLayout));
 
         for (int i = 0; i < rangeButtons.Length && i < TelemetryHistoryRanges.All.Length; i++)
         {
@@ -176,7 +184,7 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
     }
 
     /// <summary>Points at the card from <paramref name="yFromTop"/> down the panel's frame line.</summary>
-    public void SetPointer(float yFromTop, Color color)
+    public void SetPointer(float yFromTop)
     {
         float y = Mathf.Clamp(yFromTop, pointerInset, Mathf.Max(pointerInset, Height - pointerInset));
         bool left = Side == StatRailSide.Left;
@@ -185,7 +193,7 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
             // The pointer's base overlaps the frame line by a pixel so the two read as one.
             float x = frameInset + 1f;
             pointer.rectTransform.anchoredPosition = new Vector2(left ? x : -x, -y);
-            pointer.color = color;
+            pointer.color = pointerColor;
         }
         // The leader line leaves from the frame line on the model's side.
         if (linkAnchor != null)
@@ -218,18 +226,29 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
             return;
 
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        for (int i = 0; i < TelemetryHistoryRanges.All.Length; i++)
-            rangeAvailable[i] = history.TryGetHistory(Source, TelemetryHistoryRanges.All[i], now, buckets);
 
-        if (!rangeAvailable[(int)Range])
+        // Every probe builds that range's buckets in full. The shown range is
+        // probed last so its buckets are the ones left in the list, which saves
+        // querying it a second time for the graphs below.
+        int selected = (int)Range;
+        for (int i = 0; i < TelemetryHistoryRanges.All.Length; i++)
+        {
+            if (i != selected)
+                rangeAvailable[i] = history.TryGetHistory(Source, TelemetryHistoryRanges.All[i], now, buckets);
+        }
+
+        rangeAvailable[selected] = history.TryGetHistory(Source, Range, now, buckets);
+
+        if (!rangeAvailable[selected])
         {
             int first = Array.IndexOf(rangeAvailable, true);
             if (first >= 0)
+            {
                 Range = TelemetryHistoryRanges.All[first];
+                history.TryGetHistory(Source, Range, now, buckets);
+            }
         }
-
-        history.TryGetHistory(Source, Range, now, buckets);
-        TelemetryGraphData data = new(Source, Range, buckets);
+        TelemetryGraphData data = new(Source, Range, buckets, serviceLife);
         foreach (TelemetryGraphView view in graphViews)
             view.Render(data);
 

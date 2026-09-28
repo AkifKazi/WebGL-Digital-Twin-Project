@@ -284,7 +284,7 @@ public static class SeparatorModelReconnect
     private static int SyncAnchorPositions(DigitalTwinMachineConfiguration configuration)
     {
         Dictionary<string, PerformanceStatSource> sources = Object
-            .FindObjectsByType<PerformanceStatSource>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            .FindObjectsByType<PerformanceStatSource>(FindObjectsInactive.Include)
             .GroupBy(source => source.StatId)
             .ToDictionary(group => group.Key, group => group.First());
 

@@ -46,6 +46,32 @@ public sealed class MachineViewModeController : MonoBehaviour
         (clipController != null && clipController.IsTransitioning);
 
     private Coroutine transitionRoutine;
+    private MachineViewMode interruptedFrom;
+    private bool transitionInterrupted;
+
+    private void OnEnable()
+    {
+        // A transition cut off by disabling this object finishes now, so the
+        // geometry, hologram and environment settle on the chosen view.
+        if (!transitionInterrupted)
+            return;
+
+        transitionInterrupted = false;
+        TransitionStateChanged?.Invoke(true);
+        transitionRoutine = StartCoroutine(TransitionRoutine(interruptedFrom, CurrentMode));
+    }
+
+    private void OnDisable()
+    {
+        // Disabling stops the coroutine without clearing its handle, which
+        // would otherwise refuse every later view change.
+        if (transitionRoutine == null)
+            return;
+
+        transitionRoutine = null;
+        transitionInterrupted = true;
+        TransitionStateChanged?.Invoke(false);
+    }
 
     private void Start()
     {
@@ -76,6 +102,7 @@ public sealed class MachineViewModeController : MonoBehaviour
 
         MachineViewMode previous = CurrentMode;
         CurrentMode = mode;
+        interruptedFrom = previous;
 
         ModeChanged?.Invoke(CurrentMode);
         TransitionStateChanged?.Invoke(true);

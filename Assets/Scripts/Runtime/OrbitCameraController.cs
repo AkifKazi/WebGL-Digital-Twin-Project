@@ -100,6 +100,10 @@ public class OrbitCameraController : MonoBehaviour
     [Tooltip("Free space kept at the top and bottom when the camera pulls back to show a point.")]
     [Range(0f, 0.45f)] public float framingMarginY = 0.14f;
 
+    [Tooltip("Seconds the camera takes to pull back to show a point. It eases in and out; any " +
+             "zoom or pinch from the viewer takes over straight away.")]
+    [Min(0.05f)] public float framingZoomDuration = 1.2f;
+
     [Header("Debug")]
     public bool showDebug = false;
 
@@ -128,6 +132,12 @@ public class OrbitCameraController : MonoBehaviour
     private bool lastCanZoomIn;
     private bool lastCanZoomOut;
     private bool zoomAvailabilityInitialised;
+
+    private bool framingZoomActive;
+    private float framingZoomFrom;
+    private float framingZoomTo;
+    private float framingZoomStartedAt;
+    private float framingZoomLastSet;
 
     private void Start()
     {
@@ -179,6 +189,7 @@ public class OrbitCameraController : MonoBehaviour
             HandleMouseDragInput();
             HandlePinchZoomInput();
             HandleTouchDragInput();
+            UpdateFramingZoom();
 
             ClampValues();
             ApplyCameraPosition(false);
@@ -555,27 +566,58 @@ public class OrbitCameraController : MonoBehaviour
         // rather than stepping out in fixed jumps, so the pull-back is minimal.
         float near = desiredDistance;
         float far = maxDistance;
-        if (!IsPointFramed(worldPoint, far, view))
+        if (IsPointFramed(worldPoint, far, view))
         {
-            desiredDistance = far;
-            ClampValues();
-            PublishZoomAvailability(false);
-            return true;
+            for (int i = 0; i < 12 && far - near > 0.05f; i++)
+            {
+                float middle = (near + far) * 0.5f;
+                if (IsPointFramed(worldPoint, middle, view))
+                    far = middle;
+                else
+                    near = middle;
+            }
         }
 
-        for (int i = 0; i < 12 && far - near > 0.05f; i++)
-        {
-            float middle = (near + far) * 0.5f;
-            if (IsPointFramed(worldPoint, middle, view))
-                far = middle;
-            else
-                near = middle;
-        }
-
-        desiredDistance = far;
-        ClampValues();
-        PublishZoomAvailability(false);
+        BeginFramingZoom(far);
         return true;
+    }
+
+    /// <summary>
+    /// Eases the orbit distance to <paramref name="distance"/> over
+    /// <see cref="framingZoomDuration"/>, slow at both ends, instead of letting
+    /// the general smoothing jump most of the way in the first frames.
+    /// </summary>
+    private void BeginFramingZoom(float distance)
+    {
+        framingZoomFrom = desiredDistance;
+        framingZoomTo = Mathf.Clamp(distance, minDistance, maxDistance);
+        framingZoomStartedAt = Time.time;
+        framingZoomLastSet = desiredDistance;
+        framingZoomActive = true;
+    }
+
+    private void UpdateFramingZoom()
+    {
+        if (!framingZoomActive)
+            return;
+
+        // The viewer zoomed or pinched this frame: their input wins.
+        if (!Mathf.Approximately(desiredDistance, framingZoomLastSet))
+        {
+            framingZoomActive = false;
+            return;
+        }
+
+        float t = Mathf.Clamp01((Time.time - framingZoomStartedAt) / framingZoomDuration);
+        float eased = t * t * t * (t * (t * 6f - 15f) + 10f);
+        desiredDistance = Mathf.Lerp(framingZoomFrom, framingZoomTo, eased);
+        framingZoomLastSet = Mathf.Clamp(desiredDistance, minDistance, maxDistance);
+
+        if (t >= 1f)
+        {
+            framingZoomActive = false;
+            PublishZoomAvailability(false);
+        }
     }
 
     /// <summary>True when the point sits inside the margins at the given orbit distance.</summary>

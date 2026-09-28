@@ -119,6 +119,7 @@ public sealed class MachineXRayPresenter : MonoBehaviour
 
     private Coroutine transitionRoutine;
     private Coroutine isolationRoutine;
+    private bool transitionInterrupted;
     // Parts the focused card's sensor is read from; empty while no card is focused.
     private readonly HashSet<MachinePartGroup> focusedGroups = new();
     private readonly List<MachinePartGroup> focusScratch = new();
@@ -165,6 +166,14 @@ public sealed class MachineXRayPresenter : MonoBehaviour
         // The UI publishes which sensor is focused; this component is the only
         // thing that knows which geometry that sensor belongs to.
         PerformanceStatCardView.ActiveFocusChanged += HandleCardFocusChanged;
+
+        // A reveal or dissolve cut off by disabling this object plays again, so
+        // the materials settle on the presentation that was asked for.
+        if (transitionInterrupted)
+        {
+            transitionInterrupted = false;
+            transitionRoutine = StartCoroutine(IsPresenting ? EnterRoutine() : ExitRoutine());
+        }
     }
 
     private void OnDisable()
@@ -176,6 +185,12 @@ public sealed class MachineXRayPresenter : MonoBehaviour
         }
 
         PerformanceStatCardView.ActiveFocusChanged -= HandleCardFocusChanged;
+
+        // Disabling stops coroutines without clearing their handles; a stale
+        // transition handle would refuse every later presentation change.
+        transitionInterrupted = transitionRoutine != null;
+        transitionRoutine = null;
+        isolationRoutine = null;
 
         ResetGlobals();
     }

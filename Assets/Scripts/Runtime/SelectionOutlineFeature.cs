@@ -104,6 +104,8 @@ public sealed class SelectionOutlineFeature : ScriptableRendererFeature
         private readonly GraphicsFormat maskFormat;
         private readonly List<Renderer> visible = new();
         private readonly List<Material> materials = new();
+        // Reused every frame: Renderer.sharedMaterials allocates a new array per call.
+        private readonly List<Material> sharedMaterialScratch = new();
         private readonly List<int> submeshCounts = new();
         private readonly MaterialPropertyBlock block = new();
 
@@ -145,7 +147,8 @@ public sealed class SelectionOutlineFeature : ScriptableRendererFeature
 
                 visible.Add(renderer);
                 materials.Add(clipped ? clippedMaterial : material);
-                submeshCounts.Add(Mathf.Max(1, renderer.sharedMaterials.Length));
+                renderer.GetSharedMaterials(sharedMaterialScratch);
+                submeshCounts.Add(Mathf.Max(1, sharedMaterialScratch.Count));
             }
 
             if (visible.Count == 0)

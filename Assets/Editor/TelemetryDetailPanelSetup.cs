@@ -22,11 +22,14 @@ public static class TelemetryDetailPanelSetup
     private const string PrefabPath = "Assets/Prefabs/Telemetry Detail Panel.prefab";
     private const string PanelSpritePath = "Assets/UI/Sprites/Detail Panel Background.png";
     private const string HoverSpritePath = "Assets/UI/Sprites/Button Hover Background.png";
+    private const string PinIconPath = "Assets/UI/Sprites/Pin Icon.png";
+    private const string CloseIconPath = "Assets/UI/Sprites/Close Icon.png";
     private const string MediumFontPath = "Assets/UI/Fonts/Rajdhani-Medium SDF.asset";
     private const string SemiBoldFontPath = "Assets/UI/Fonts/Rajdhani-SemiBold SDF.asset";
     private const string LayerName = "Telemetry Detail Layer";
 
     private static readonly Color Teal = new(0.08f, 0.9f, 1f, 1f);
+    private static readonly Color IconCyan = new(0.212f, 0.929f, 1f, 1f);
     private static readonly Color Idle = new(0.408f, 0.651f, 0.686f, 1f);
     private static readonly Color Ink = new(0.918f, 0.992f, 1f, 1f);
     private static readonly Color Clear = new(1f, 1f, 1f, 0f);
@@ -34,11 +37,42 @@ public static class TelemetryDetailPanelSetup
 
     // Panel geometry, in canvas units. The panel sprite draws its frame line
     // 10 in from the rectangle's edge; the spacing below is measured from it.
+    // Proportions follow the approved mockup at the panel's usual 388 wide frame.
     private const float Frame = 10f;
-    private const float HeaderHeight = 44f;
-    private const float RangeCell = 36f;
-    private const float RangeSpacing = 4f;
+    private const float HeaderRow = 52f;          // header row centred 26 below the frame line
+    private const float PanelHeaderHeight = 66f;  // panel top to the graph section
+    private const float PanelSectionInset = 25f;  // 15 inside the frame line
+    private const float RangeCell = 36f;          // also the hover backdrop and the underline
+    private const float RangeCellHeight = 25f;
+    private const float RangeSpacing = 3.5f;      // letters 44 apart, dividers between
+    private const float FirstRangeCentre = 36f;   // from the frame line
+    private const float RangeFontSize = 21f;
     private const float HeaderButton = 32f;
+    private const float HeaderIcon = 17f;
+    private const float CloseCentre = 27f;        // from the frame line's right edge
+    private const float PinCentre = 65f;
+    private const float PinnedSquare = 24f;
+
+    /// <summary>
+    /// Rebuilds the panel prefab and adds the key figures and the service
+    /// schedule to the scene, leaving the rest of the setup (controls, rails,
+    /// recorder) as it is.
+    /// </summary>
+    [MenuItem("Tools/Digital Twin/Update Telemetry Detail Panel")]
+    public static void ApplyPanelUpdate()
+    {
+        BuildPrefab();
+        Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        TelemetryDetailPanelController controller = UnityEngine.Object
+            .FindObjectsByType<TelemetryDetailPanelController>(FindObjectsInactive.Include)
+            .FirstOrDefault() ?? throw new InvalidOperationException("Telemetry Detail Panel Controller not found.");
+        ConfigureKeyFigures(controller, ConfigureServiceSchedule());
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+        Debug.Log($"TELEMETRY_DETAIL_PANEL_UPDATE prefab='{PrefabPath}'");
+    }
 
     [MenuItem("Tools/Digital Twin/Set Up Telemetry Detail Panel")]
     public static void Apply()
@@ -51,6 +85,10 @@ public static class TelemetryDetailPanelSetup
             .GetComponent<TelemetryDetailPanel>();
         TelemetryHistoryRecorder recorder = ConfigureRecorder();
         ConfigureController(prefab, recorder);
+        ConfigureKeyFigures(
+            UnityEngine.Object.FindObjectsByType<TelemetryDetailPanelController>(
+                FindObjectsInactive.Include).First(),
+            ConfigureServiceSchedule());
         ConfigureFocusReleaser();
         int hovers = ConfigureControlHoverStates();
         RenameSecondaryRails();
@@ -92,7 +130,7 @@ public static class TelemetryDetailPanelSetup
         header.anchorMin = new Vector2(0f, 1f);
         header.anchorMax = new Vector2(1f, 1f);
         header.pivot = new Vector2(0.5f, 1f);
-        header.offsetMin = new Vector2(Frame, -(Frame + HeaderHeight));
+        header.offsetMin = new Vector2(Frame, -(Frame + HeaderRow));
         header.offsetMax = new Vector2(-Frame, -Frame);
 
         RectTransform ranges = CreateUIObject("Ranges", header);
@@ -101,7 +139,7 @@ public static class TelemetryDetailPanelSetup
         ranges.pivot = new Vector2(0f, 0.5f);
         int count = TelemetryHistoryRanges.All.Length;
         ranges.sizeDelta = new Vector2(count * RangeCell + (count - 1) * (1f + RangeSpacing * 2f), 0f);
-        ranges.anchoredPosition = new Vector2(7f, 0f); // first letter centred 25 in from the frame
+        ranges.anchoredPosition = new Vector2(FirstRangeCentre - RangeCell * 0.5f, 0f);
         HorizontalLayoutGroup row = ranges.gameObject.AddComponent<HorizontalLayoutGroup>();
         row.spacing = RangeSpacing;
         row.childAlignment = TextAnchor.MiddleLeft;
@@ -120,7 +158,7 @@ public static class TelemetryDetailPanelSetup
                 Image divider = CreateImage("Divider", ranges, null, new Color(Idle.r, Idle.g, Idle.b, 0.35f));
                 LayoutElement dividerSize = divider.gameObject.AddComponent<LayoutElement>();
                 dividerSize.preferredWidth = dividerSize.minWidth = 1f;
-                dividerSize.preferredHeight = dividerSize.minHeight = 9f;
+                dividerSize.preferredHeight = dividerSize.minHeight = 13f;
             }
 
             string letter = TelemetryHistoryRanges.ShortLabel(TelemetryHistoryRanges.All[i]);
@@ -128,14 +166,15 @@ public static class TelemetryDetailPanelSetup
             hit.raycastTarget = true;
             LayoutElement cell = hit.gameObject.AddComponent<LayoutElement>();
             cell.preferredWidth = cell.minWidth = RangeCell;
-            cell.preferredHeight = cell.minHeight = RangeCell;
+            cell.preferredHeight = cell.minHeight = RangeCellHeight;
             Button button = hit.gameObject.AddComponent<Button>();
             button.transition = Selectable.Transition.None;
             button.targetGraphic = hit;
 
-            Image hover = CreateHoverImage(hit.rectTransform, 3f);
+            // The hover backdrop fills the letter's cell, as in the mockup.
+            Image hover = CreateHoverImage(hit.rectTransform, 0f);
 
-            TMP_Text label = CreateText("Label", hit.rectTransform, letter, 19f, Idle, medium);
+            TMP_Text label = CreateText("Label", hit.rectTransform, letter, RangeFontSize, Idle, medium);
             Stretch(label.rectTransform, 0f);
             label.alignment = TextAlignmentOptions.Center;
 
@@ -143,8 +182,8 @@ public static class TelemetryDetailPanelSetup
             underline.rectTransform.anchorMin = new Vector2(0.5f, 0f);
             underline.rectTransform.anchorMax = new Vector2(0.5f, 0f);
             underline.rectTransform.pivot = new Vector2(0.5f, 0f);
-            underline.rectTransform.sizeDelta = new Vector2(26f, 2f);
-            underline.rectTransform.anchoredPosition = new Vector2(0f, 7f);
+            underline.rectTransform.sizeDelta = new Vector2(RangeCell, 2f);
+            underline.rectTransform.anchoredPosition = Vector2.zero; // along the cell's bottom edge
             underline.enabled = false;
 
             // The selected range shows its underline and never the hover.
@@ -154,15 +193,15 @@ public static class TelemetryDetailPanelSetup
             rangeUnderlines.Add(underline);
         }
 
-        // Close centred 23 in from the frame's right edge; pin's 21 px square 16 to its left.
-        Button closeButton = CreateIconButton("Close", header, -7f, UIIconGraphic.Shape.Close,
-            new Color(Ink.r, Ink.g, Ink.b, 0.85f), hoverSprite, out _, out Image closeHover);
+        // Close and pin in the same cyan; a pinned panel shows a dark pin on a cyan square.
+        Button closeButton = CreateIconButton("Close", header, -(CloseCentre - HeaderButton * 0.5f),
+            LoadIcon(CloseIconPath), IconCyan, out _, out Image closeHover);
         AddHover(closeButton.gameObject, closeHover, hoverSprite, null, null);
 
-        Button pinButton = CreateIconButton("Pin", header, -41f, UIIconGraphic.Shape.Pin,
-            Teal, hoverSprite, out UIIconGraphic pinIcon, out Image pinHover);
-        Image pinBackground = CreateImage("Pinned", (RectTransform)pinButton.transform, null, new Color(Teal.r, Teal.g, Teal.b, 0.9f));
-        Stretch(pinBackground.rectTransform, 5.5f);
+        Button pinButton = CreateIconButton("Pin", header, -(PinCentre - HeaderButton * 0.5f),
+            LoadIcon(PinIconPath), IconCyan, out Image pinIcon, out Image pinHover);
+        Image pinBackground = CreateImage("Pinned", (RectTransform)pinButton.transform, null, IconCyan);
+        Stretch(pinBackground.rectTransform, (HeaderButton - PinnedSquare) * 0.5f);
         pinBackground.transform.SetAsFirstSibling();
         pinBackground.enabled = false;
         // A pinned panel shows the filled square and never the hover.
@@ -207,6 +246,10 @@ public static class TelemetryDetailPanelSetup
         data.FindProperty("pointer").objectReferenceValue = pointer;
         data.FindProperty("linkAnchor").objectReferenceValue = link;
         data.FindProperty("frameInset").floatValue = Frame;
+        data.FindProperty("headerHeight").floatValue = PanelHeaderHeight;
+        data.FindProperty("sectionInset").floatValue = PanelSectionInset;
+        data.FindProperty("pinIdle").colorValue = IconCyan;
+        data.FindProperty("pointerColor").colorValue = Teal;
         data.ApplyModifiedPropertiesWithoutUndo();
 
         GameObject saved = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
@@ -218,10 +261,9 @@ public static class TelemetryDetailPanelSetup
         string name,
         RectTransform header,
         float rightOffset,
-        UIIconGraphic.Shape shape,
+        Sprite iconSprite,
         Color color,
-        Sprite hoverSprite,
-        out UIIconGraphic icon,
+        out Image icon,
         out Image hover)
     {
         Image hit = CreateImage(name, header, null, Clear);
@@ -236,15 +278,12 @@ public static class TelemetryDetailPanelSetup
         button.transition = Selectable.Transition.None;
         button.targetGraphic = hit;
 
-        hover = CreateHoverImage(rect, 4f);
+        hover = CreateHoverImage(rect, 2f);
 
-        RectTransform iconRect = CreateUIObject("Icon", rect);
-        // Close is a 14 px cross; the pin's shape sits inside its box, so it gets more room.
-        Stretch(iconRect, shape == UIIconGraphic.Shape.Pin ? 7f : 9f);
-        icon = iconRect.gameObject.AddComponent<UIIconGraphic>();
-        icon.IconShape = shape;
-        icon.color = color;
-        icon.raycastTarget = false;
+        // White icon sprites, tinted here.
+        icon = CreateImage("Icon", rect, iconSprite, color);
+        Stretch(icon.rectTransform, (HeaderButton - HeaderIcon) * 0.5f);
+        icon.preserveAspect = true;
         return button;
     }
 
@@ -283,7 +322,7 @@ public static class TelemetryDetailPanelSetup
     private static TelemetryHistoryRecorder ConfigureRecorder()
     {
         TelemetryRegistry registry = UnityEngine.Object.FindObjectsByType<TelemetryRegistry>(
-                FindObjectsInactive.Include, FindObjectsSortMode.None)
+                FindObjectsInactive.Include)
             .FirstOrDefault() ?? throw new InvalidOperationException("Telemetry Registry not found.");
 
         if (!registry.TryGetComponent(out TelemetryHistoryRecorder recorder))
@@ -338,10 +377,108 @@ public static class TelemetryDetailPanelSetup
         data.ApplyModifiedPropertiesWithoutUndo();
     }
 
+    // Demonstration service plans: interval and hours run since the last service,
+    // by machine part. Replace with the site's maintenance plan.
+    private static readonly (string Part, float Interval, float Since)[] ServicePlans =
+    {
+        ("Bearings", 4000f, 3120f),
+        ("Stator Windings", 8000f, 5210f),
+        ("Rotor Core", 8000f, 5210f),
+        ("Drive Shaft", 6000f, 2480f),
+        ("Motor Frame", 12000f, 5210f),
+        ("Upper Mixer Rotor", 3000f, 1740f),
+        ("Lower Rotor", 3000f, 1740f),
+        ("Screen Deck", 1500f, 1320f),
+        ("Discharge Outlets", 2000f, 610f),
+        ("Conveyor Belts", 2500f, 1980f),
+        ("Idler Rollers", 5000f, 2150f),
+        ("Drive Roller", 5000f, 2150f),
+        ("Bunker", 8760f, 4020f),
+        ("Support Frame", 17520f, 6300f)
+    };
+
+    /// <summary>
+    /// A service schedule beside the history recorder. Existing plans are kept;
+    /// parts without one get the demonstration values.
+    /// </summary>
+    private static TelemetryServiceSchedule ConfigureServiceSchedule()
+    {
+        TelemetryRegistry registry = UnityEngine.Object.FindObjectsByType<TelemetryRegistry>(
+                FindObjectsInactive.Include)
+            .FirstOrDefault() ?? throw new InvalidOperationException("Telemetry Registry not found.");
+        if (!registry.TryGetComponent(out TelemetryServiceSchedule schedule))
+            schedule = registry.gameObject.AddComponent<TelemetryServiceSchedule>();
+
+        Dictionary<string, MachinePartGroup> parts = UnityEngine.Object
+            .FindObjectsByType<MachinePartGroup>(FindObjectsInactive.Include)
+            .GroupBy(part => part.name)
+            .ToDictionary(group => group.Key, group => group.First());
+
+        SerializedObject data = new(schedule);
+        SerializedProperty plans = data.FindProperty("plans");
+        HashSet<MachinePartGroup> covered = new();
+        for (int i = 0; i < plans.arraySize; i++)
+        {
+            if (plans.GetArrayElementAtIndex(i).FindPropertyRelative("part").objectReferenceValue is MachinePartGroup part)
+                covered.Add(part);
+        }
+
+        foreach ((string name, float interval, float since) in ServicePlans)
+        {
+            if (!parts.TryGetValue(name, out MachinePartGroup part) || covered.Contains(part))
+                continue;
+            int index = plans.arraySize++;
+            SerializedProperty plan = plans.GetArrayElementAtIndex(index);
+            plan.FindPropertyRelative("part").objectReferenceValue = part;
+            plan.FindPropertyRelative("serviceIntervalHours").floatValue = interval;
+            plan.FindPropertyRelative("hoursSinceService").floatValue = since;
+        }
+
+        data.ApplyModifiedPropertiesWithoutUndo();
+        return schedule;
+    }
+
+    /// <summary>Puts the key figures between the timeline and the chart, once, and links the schedule.</summary>
+    private static void ConfigureKeyFigures(TelemetryDetailPanelController controller, TelemetryServiceSchedule schedule)
+    {
+        SerializedObject data = new(controller);
+        SerializedProperty graphs = data.FindProperty("graphs");
+        bool hasKeyFigures = false;
+        int chartIndex = graphs.arraySize;
+        for (int i = 0; i < graphs.arraySize; i++)
+        {
+            int kind = graphs.GetArrayElementAtIndex(i).enumValueFlag;
+            hasKeyFigures |= kind == (int)TelemetryGraphKind.KeyFigures;
+            if (kind == (int)TelemetryGraphKind.LineChart && chartIndex == graphs.arraySize)
+                chartIndex = i;
+        }
+
+        if (!hasKeyFigures)
+        {
+            // Grow by one, shift the chart and anything after it down, then fill the gap.
+            graphs.arraySize++;
+            for (int i = graphs.arraySize - 1; i > chartIndex; i--)
+                graphs.GetArrayElementAtIndex(i).enumValueFlag = graphs.GetArrayElementAtIndex(i - 1).enumValueFlag;
+            graphs.GetArrayElementAtIndex(chartIndex).enumValueFlag = (int)TelemetryGraphKind.KeyFigures;
+        }
+
+        SerializedProperty figures = data.FindProperty("keyFigures");
+        if (figures.arraySize == 0)
+        {
+            figures.arraySize = 2;
+            figures.GetArrayElementAtIndex(0).enumValueFlag = (int)TelemetryKeyFigure.Average;
+            figures.GetArrayElementAtIndex(1).enumValueFlag = (int)TelemetryKeyFigure.TimeToService;
+        }
+
+        if (data.FindProperty("serviceLifeProvider").objectReferenceValue == null)
+            data.FindProperty("serviceLifeProvider").objectReferenceValue = schedule;
+        data.ApplyModifiedPropertiesWithoutUndo();
+    }
+
     private static void ConfigureFocusReleaser()
     {
         EventSystem system = UnityEngine.Object.FindObjectsByType<EventSystem>(
-                FindObjectsInactive.Include, FindObjectsSortMode.None)
+                FindObjectsInactive.Include)
             .FirstOrDefault() ?? throw new InvalidOperationException("EventSystem not found.");
         if (!system.TryGetComponent(out TelemetryCardFocusReleaser _))
             system.gameObject.AddComponent<TelemetryCardFocusReleaser>();
@@ -356,7 +493,7 @@ public static class TelemetryDetailPanelSetup
         Sprite hover = LoadSprite(HoverSpritePath);
         int configured = 0;
         foreach (Button button in UnityEngine.Object.FindObjectsByType<Button>(
-                     FindObjectsInactive.Include, FindObjectsSortMode.None))
+                     FindObjectsInactive.Include))
         {
             if (!HasAncestor(button.transform, "Bottom controls") &&
                 !HasAncestor(button.transform, "Telemetry Pagination Controls"))
@@ -422,8 +559,23 @@ public static class TelemetryDetailPanelSetup
 
     private static WideStatRailManager FindRailManager() =>
         UnityEngine.Object.FindObjectsByType<WideStatRailManager>(
-                FindObjectsInactive.Include, FindObjectsSortMode.None)
+                FindObjectsInactive.Include)
             .FirstOrDefault() ?? throw new InvalidOperationException("Wide Stat Rail Manager not found.");
+
+    /// <summary>
+    /// The 128 px white icons are drawn at about 17 px; mipmaps keep them from
+    /// shimmering at that size.
+    /// </summary>
+    private static Sprite LoadIcon(string path)
+    {
+        if (AssetImporter.GetAtPath(path) is TextureImporter importer && !importer.mipmapEnabled)
+        {
+            importer.mipmapEnabled = true;
+            importer.alphaIsTransparency = true;
+            importer.SaveAndReimport();
+        }
+        return LoadSprite(path);
+    }
 
     private static Sprite LoadSprite(string path) =>
         AssetDatabase.LoadAssetAtPath<Sprite>(path)

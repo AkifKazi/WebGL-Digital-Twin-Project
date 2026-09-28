@@ -24,15 +24,34 @@ public static class SeparatorModelAdoption
     [MenuItem("Tools/Digital Twin/Adopt Separator Model Update", priority = 70)]
     public static void Run()
     {
+        if (!Application.isBatchMode && !EditorUtility.DisplayDialog(
+                "Adopt Separator Model Update",
+                "This renames model files, reapplies the WebGL load settings, reorganises and " +
+                "renames the scene hierarchy, rebuilds the rock flow and the sensors, then deletes " +
+                "unused assets. Each step saves as it goes.\n\n" +
+                "For a re-exported separator whose parts were split, use Reconnect Separator Model " +
+                "instead.",
+                "Run All Steps",
+                "Cancel"))
+            return;
+
         RenameModelFiles();
 
         WebGLLoadOptimization.Apply();
         DigitalTwinSceneOrganization.Apply();
         ConveyorRockFlowSetup.Apply();
-        DigitalTwinSceneSetup.SetUpFromMenu();
+        if (!DigitalTwinSceneSetup.SetUpFromMenu())
+        {
+            Debug.LogWarning("SEPARATOR_MODEL_ADOPTION stopped: sensor setup was cancelled, so no assets were removed.");
+            return;
+        }
 
         // Last, so the scene saved above no longer references what it removes.
-        ProjectUnusedAssetCleanup.Apply();
+        if (!ProjectUnusedAssetCleanup.Apply())
+        {
+            Debug.LogWarning("SEPARATOR_MODEL_ADOPTION stopped before removing unused assets.");
+            return;
+        }
 
         Debug.Log("SEPARATOR_MODEL_ADOPTION completed");
     }

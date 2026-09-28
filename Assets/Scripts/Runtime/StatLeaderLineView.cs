@@ -37,10 +37,10 @@ public class StatLeaderLineView : MonoBehaviour
     [Tooltip("Opacity of a line that doubles back across its own card, because the sensor sits " +
              "on the card's side of the connection point, or that runs across another card. " +
              "Keeps the line off the cards' text.")]
-    [SerializeField, Range(0f, 1f)] private float reversedLineOpacity = 0.05f;
-    [Tooltip("The same fade for warning and critical lines. Higher than the normal fade so an " +
-             "alarm line stays findable when its anchor is hidden behind a card.")]
-    [SerializeField, Range(0f, 1f)] private float reversedAlarmLineOpacity = 0.35f;
+    [SerializeField, Range(0f, 1f)] private float reversedLineOpacity = 0.02f;
+    [Tooltip("The same fade for warning and critical lines, a little above the normal fade. " +
+             "Their anchor stays at full strength, so the sensor is still easy to find.")]
+    [SerializeField, Range(0f, 1f)] private float reversedAlarmLineOpacity = 0.08f;
     [Tooltip("Seconds a line takes to fade when it turns back across its card or crosses " +
              "another card, and to return.")]
     [SerializeField, Min(0.01f)] private float reversedLineFadeDuration = 0.7f;
@@ -69,6 +69,9 @@ public class StatLeaderLineView : MonoBehaviour
     private Image anchorImage;
     private Material horizontalMaterialInstance;
     private Material angledMaterialInstance;
+    private Material horizontalSourceMaterial;
+    private Material angledSourceMaterial;
+    private int revealMaterialState = UnknownRevealState;
     private Vector3 anchorOriginalScale = Vector3.one;
 
     private float horizontalLength;
@@ -96,8 +99,22 @@ public class StatLeaderLineView : MonoBehaviour
     private float directionTransitionStartedAt;
     private bool crossingCard;
     private Vector2 lastBendPoint;
+    private Vector2 lastCardPoint;
+    private Vector2 lastSensorPoint;
+    private bool geometryValid;
+    private float appliedRevealDistance = float.NaN;
+    private float appliedAngledLength = float.NaN;
+    private float appliedHorizontalLength = float.NaN;
+    private bool horizontalActive = true;
+    private bool angledActive = true;
+    private bool anchorActive = true;
+    private float appliedAnchorProgress = float.NaN;
     private IReadOnlyList<PerformanceStatCardView> cardsToAvoid;
     private static readonly Vector3[] CardCorners = new Vector3[4];
+
+    private const int UnknownRevealState = -1;
+    private const int SharedRevealState = 0;
+    private const int ClonedRevealState = 1;
 
     private static readonly int RevealDistanceId = Shader.PropertyToID("_RevealDistance");
     private static readonly int SegmentStartDistanceId = Shader.PropertyToID("_SegmentStartDistance");
@@ -127,6 +144,11 @@ public class StatLeaderLineView : MonoBehaviour
 
         if (anchorMarker != null)
             anchorOriginalScale = anchorMarker.localScale;
+
+        // Seed the cached activation state from what the prefab actually has.
+        horizontalActive = horizontalSegment != null && horizontalSegment.gameObject.activeSelf;
+        angledActive = angledSegment != null && angledSegment.gameObject.activeSelf;
+        anchorActive = anchorMarker != null && anchorMarker.gameObject.activeSelf;
 
         ApplyAnchorAppearance();
     }
@@ -172,6 +194,7 @@ public class StatLeaderLineView : MonoBehaviour
         fadingToRest = false;
         directionKnown = false;
         crossingCard = false;
+        geometryValid = false;
         ApplyPeerPresentationInstant(ResolvePeerPresentationAlpha());
         CacheImages();
         CreateRuntimeMaterials();
@@ -192,6 +215,7 @@ public class StatLeaderLineView : MonoBehaviour
         canvas = null;
         lineLayer = null;
         gameObject.name = "Leader Line (Pooled)";
+        geometryValid = false;
         SetGeometryVisible(false);
     }
 
@@ -305,7 +329,26 @@ public class StatLeaderLineView : MonoBehaviour
             return;
         }
 
-        DrawElbow(cardPoint, sensorPoint);
+        // Rebuilding the elbow resizes and rotates two UI images, which dirties
+        // their meshes and makes the canvas rebuild. The camera is still for most
+        // of a session, so the geometry is only rebuilt when an endpoint actually
+        // moved; a sub-pixel move is not visible and does not count.
+        const float MoveEpsilon = 0.01f;
+        if (!geometryValid ||
+            (cardPoint - lastCardPoint).sqrMagnitude > MoveEpsilon ||
+            (sensorPoint - lastSensorPoint).sqrMagnitude > MoveEpsilon)
+        {
+            lastCardPoint = cardPoint;
+            lastSensorPoint = sensorPoint;
+            geometryValid = true;
+            DrawElbow(cardPoint, sensorPoint);
+        }
+        else
+        {
+            ApplyRevealToMaterials();
+            ApplyAnchorAppearance();
+        }
+
         UpdateDirectionPresentation(cardPoint, sensorPoint);
         RefreshColor();
         SetGeometryVisible(true);
@@ -363,14 +406,17 @@ public class StatLeaderLineView : MonoBehaviour
         Vector2 difference = end - start;
         float length = difference.magnitude;
 
+        // A zero-length segment is collapsed rather than deactivated: the
+        // caller re-activates every part afterwards, which would otherwise show
+        // the segment again at its previous, stale size.
         if (length <= 0.01f)
         {
-            segment.gameObject.SetActive(false);
+            segment.anchoredPosition = start;
+            segment.sizeDelta = new Vector2(0f, lineThickness);
             return 0f;
         }
 
         float angle = Mathf.Atan2(difference.y, difference.x) * Mathf.Rad2Deg;
-        segment.gameObject.SetActive(true);
         segment.anchoredPosition = (start + end) * 0.5f;
         segment.sizeDelta = new Vector2(length, lineThickness);
         segment.localRotation = Quaternion.Euler(0f, 0f, angle);
@@ -379,10 +425,29 @@ public class StatLeaderLineView : MonoBehaviour
 
     private void ApplyRevealToMaterials()
     {
-        if (totalPathLength <= 0.01f)
+        bool revealing = revealProgress < 1f;
+        ApplyRevealMaterials(revealing);
+
+        // A fully revealed line draws from the shared UI material, which must
+        // never be written to: it is the one every other UI element uses.
+        if (!revealing || totalPathLength <= 0.01f)
             return;
 
         float revealDistance = revealProgress * totalPathLength;
+
+        // Writing a material property is a native call that also invalidates the
+        // shader's constant buffer, so the reveal only re-uploads when one of its
+        // three inputs actually moved.
+        if (Mathf.Approximately(appliedRevealDistance, revealDistance) &&
+            Mathf.Approximately(appliedAngledLength, angledLength) &&
+            Mathf.Approximately(appliedHorizontalLength, horizontalLength))
+        {
+            return;
+        }
+
+        appliedRevealDistance = revealDistance;
+        appliedAngledLength = angledLength;
+        appliedHorizontalLength = horizontalLength;
 
         SetMaterialPathValues(
             angledMaterialInstance,
@@ -411,17 +476,10 @@ public class StatLeaderLineView : MonoBehaviour
         if (material == null)
             return;
 
-        if (material.HasProperty(SegmentStartDistanceId))
-            material.SetFloat(SegmentStartDistanceId, segmentStartDistance);
-
-        if (material.HasProperty(SegmentLengthId))
-            material.SetFloat(SegmentLengthId, segmentLength);
-
-        if (material.HasProperty(RevealDistanceId))
-            material.SetFloat(RevealDistanceId, revealDistance);
-
-        if (material.HasProperty(ReverseDirectionId))
-            material.SetFloat(ReverseDirectionId, reverseDirection);
+        material.SetFloat(SegmentStartDistanceId, segmentStartDistance);
+        material.SetFloat(SegmentLengthId, segmentLength);
+        material.SetFloat(RevealDistanceId, revealDistance);
+        material.SetFloat(ReverseDirectionId, reverseDirection);
     }
 
     private void CacheImages()
@@ -436,29 +494,81 @@ public class StatLeaderLineView : MonoBehaviour
             anchorImage = anchorMarker.GetComponent<Image>();
     }
 
-    private void CreateRuntimeMaterials()
+    /// <summary>
+    /// Records the prefab's own line material, once, before anything swaps it.
+    /// Graphic.material reports the shared default material once it has been
+    /// cleared, so capturing after a swap would capture the wrong material and
+    /// the line would never get its reveal shader back.
+    /// </summary>
+    private void CaptureSourceMaterials()
     {
-        if (horizontalImage != null && horizontalMaterialInstance == null)
-            horizontalMaterialInstance = CreateMaterialInstance(horizontalImage, "Horizontal");
+        if (revealMaterialState != UnknownRevealState)
+            return;
 
-        if (angledImage != null && angledMaterialInstance == null)
-            angledMaterialInstance = CreateMaterialInstance(angledImage, "Angled");
+        if (horizontalSourceMaterial == null && horizontalImage != null)
+            horizontalSourceMaterial = horizontalImage.material;
+
+        if (angledSourceMaterial == null && angledImage != null)
+            angledSourceMaterial = angledImage.material;
     }
 
-    private static Material CreateMaterialInstance(Image image, string suffix)
+    private void CreateRuntimeMaterials()
     {
-        Material sourceMaterial = image.material;
+        CaptureSourceMaterials();
+
+        if (horizontalMaterialInstance == null)
+        {
+            horizontalMaterialInstance =
+                CreateMaterialInstance(horizontalSourceMaterial, "Horizontal");
+        }
+
+        if (angledMaterialInstance == null)
+            angledMaterialInstance = CreateMaterialInstance(angledSourceMaterial, "Angled");
+
+        ApplyRevealMaterials(revealProgress < 1f);
+    }
+
+    private static Material CreateMaterialInstance(Material sourceMaterial, string suffix)
+    {
         if (sourceMaterial == null)
             return null;
 
-        Material instance = new Material(sourceMaterial)
+        return new Material(sourceMaterial)
         {
             name = sourceMaterial.name + " - " + suffix + " Instance",
             hideFlags = HideFlags.DontSave
         };
+    }
 
-        image.material = instance;
-        return instance;
+    /// <summary>
+    /// The reveal material is a per-line clone, and a clone is its own UI batch:
+    /// every leader line on screen costs two extra draw calls, and splits the
+    /// batch of whatever the canvas draws between them. The shader only masks the
+    /// part of the path beyond the reveal distance, so once a line is fully
+    /// revealed - which is the whole of the steady state, the intro aside - it
+    /// draws exactly the vertex colour the default UI material draws. Handing the
+    /// images back to that shared material there is pixel for pixel identical and
+    /// lets every line batch again.
+    /// </summary>
+    private void ApplyRevealMaterials(bool useRevealMaterial)
+    {
+        int wanted = useRevealMaterial ? ClonedRevealState : SharedRevealState;
+        if (revealMaterialState == wanted)
+            return;
+
+        revealMaterialState = wanted;
+
+        // The clones keep whatever the reveal last wrote while they are parked,
+        // so a line that starts revealing again must re-send its path values.
+        appliedRevealDistance = float.NaN;
+        appliedAngledLength = float.NaN;
+        appliedHorizontalLength = float.NaN;
+
+        if (horizontalImage != null && horizontalSourceMaterial != null)
+            horizontalImage.material = useRevealMaterial ? horizontalMaterialInstance : null;
+
+        if (angledImage != null && angledSourceMaterial != null)
+            angledImage.material = useRevealMaterial ? angledMaterialInstance : null;
     }
 
     private static void PrepareLinePart(RectTransform segment)
@@ -520,9 +630,16 @@ public class StatLeaderLineView : MonoBehaviour
         if (anchorMarker == null)
             return;
 
-        float eased = EaseOutBack(anchorProgress);
-        float scale = Mathf.Lerp(0.65f, 1f, eased);
-        anchorMarker.localScale = anchorOriginalScale * scale;
+        // Writing localScale dirties the transform and the UI element under it,
+        // and this runs every frame; the scale only moves while the anchor is
+        // animating in.
+        if (!Mathf.Approximately(appliedAnchorProgress, anchorProgress))
+        {
+            appliedAnchorProgress = anchorProgress;
+            float eased = EaseOutBack(anchorProgress);
+            float scale = Mathf.Lerp(0.65f, 1f, eased);
+            anchorMarker.localScale = anchorOriginalScale * scale;
+        }
 
         Color lineColor = matchCardStateColor && card != null
             ? card.StateColor
@@ -827,14 +944,23 @@ public class StatLeaderLineView : MonoBehaviour
 
     private void SetGeometryVisible(bool visible)
     {
-        if (horizontalSegment != null)
-            horizontalSegment.gameObject.SetActive(visible);
+        SetPartActive(horizontalSegment, visible, ref horizontalActive);
+        SetPartActive(angledSegment, visible, ref angledActive);
+        SetPartActive(anchorMarker, visible, ref anchorActive);
+    }
 
-        if (angledSegment != null)
-            angledSegment.gameObject.SetActive(visible);
+    /// <summary>
+    /// SetActive on an object already in that state still crosses into native
+    /// code and re-walks the child hierarchy. These run every frame for every
+    /// line, so the state is tracked here and only real changes are sent.
+    /// </summary>
+    private static void SetPartActive(RectTransform part, bool active, ref bool current)
+    {
+        if (part == null || current == active)
+            return;
 
-        if (anchorMarker != null)
-            anchorMarker.gameObject.SetActive(visible);
+        current = active;
+        part.gameObject.SetActive(active);
     }
 
     private static float EaseOutBack(float value)

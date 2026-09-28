@@ -27,12 +27,12 @@ public static class MachineViewModeLayoutTest
     {
         EditorSceneManager.OpenScene("Assets/Scenes/SampleScene.unity", OpenSceneMode.Single);
 
-        CanvasScaler scaler = Object.FindFirstObjectByType<CanvasScaler>();
+        CanvasScaler scaler = Object.FindAnyObjectByType<CanvasScaler>();
         RectTransform canvasRect = scaler.GetComponent<RectTransform>();
 
         // Both layout roots are measured, so the inactive one still reports.
         foreach (GameObject root in Object.FindObjectsByType<GameObject>(
-                     FindObjectsInactive.Include, FindObjectsSortMode.None))
+                     FindObjectsInactive.Include))
         {
             if (root.name == "Wide layout" || root.name == "Portrait layout")
                 root.SetActive(true);
@@ -50,7 +50,7 @@ public static class MachineViewModeLayoutTest
             canvasRect.sizeDelta = new Vector2(screen.x / scale, screen.y / scale);
 
             foreach (ViewModeSegmentedControl control in
-                     Object.FindObjectsByType<ViewModeSegmentedControl>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                     Object.FindObjectsByType<ViewModeSegmentedControl>(FindObjectsInactive.Include))
             {
                 if (!IsPortraitInstance(control.transform) == (screen.y > screen.x))
                     continue;

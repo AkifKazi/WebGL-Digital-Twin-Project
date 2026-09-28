@@ -50,8 +50,23 @@ public sealed class TelemetryJsonIngestor : MonoBehaviour, ITelemetryReadingSink
             return;
         }
 
+        int rejected = 0;
         foreach (TelemetryReadingDto reading in batch.readings)
+        {
+            // Each reading follows the same version rule as a single reading.
+            if (reading != null && !TelemetryJsonContract.IsSupportedSchemaVersion(reading.schemaVersion))
+            {
+                rejected++;
+                continue;
+            }
+
             Apply(reading);
+        }
+
+        if (rejected > 0)
+            Debug.LogWarning(
+                $"Rejected {rejected} of {batch.readings.Length} batch reading(s) with an unsupported schemaVersion.",
+                this);
     }
 
     private void Apply(TelemetryReadingDto dto)
@@ -98,7 +113,7 @@ public sealed class TelemetryJsonIngestor : MonoBehaviour, ITelemetryReadingSink
                     this);
             }
 
-            return double.IsNaN(reading.Value) || double.IsInfinity(reading.Value)
+            return !PerformanceStatSource.IsUsableValue(reading.Value)
                 ? TelemetryIngestionResult.InvalidValue
                 : TelemetryIngestionResult.DuplicateOrOutOfOrder;
         }

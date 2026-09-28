@@ -228,6 +228,13 @@ MonoBehaviour:
   restingAnchorOpacity: 0.4
   focusToRestDuration: 0.23
   secondaryRailOpacityTransitionDuration: 1
+  reversedLineOpacity: 0.02
+  reversedAlarmLineOpacity: 0.08
+  reversedLineFadeDuration: 0.7
+  fadeLinesCrossingOtherCards: 1
+  cardCrossingMargin: 6
+  reversedDirectionMargin: 12
+  keepAlarmLinesOpaqueWhenReversed: 0
 --- !u!1 &7294951810797098089
 GameObject:
   m_ObjectHideFlags: 0

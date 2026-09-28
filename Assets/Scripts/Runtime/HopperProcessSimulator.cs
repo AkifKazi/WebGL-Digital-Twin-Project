@@ -75,6 +75,8 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
         ResetModel();
     }
 
+    private const float MaximumStepSeconds = 2f;
+
     private void Update()
     {
         // Keep simulation publishing independent of Time.timeScale and stable on
@@ -84,7 +86,12 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
         if (accumulatedTime < updateInterval)
             return;
 
-        float deltaTime = accumulatedTime * processTimeScale;
+        // A hidden browser tab or a paused editor delivers its whole absence as
+        // one frame. Stepping the model through minutes at once would snap the
+        // hopper empty or full and raise alarms the moment the viewer returns,
+        // so the absence is skipped rather than simulated.
+        float maximumStep = Mathf.Max(MaximumStepSeconds, updateInterval * 2f);
+        float deltaTime = Mathf.Min(accumulatedTime, maximumStep) * processTimeScale;
         accumulatedTime = 0f;
         StepModel(deltaTime);
     }

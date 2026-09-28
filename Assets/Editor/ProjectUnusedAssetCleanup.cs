@@ -64,10 +64,16 @@ public static class ProjectUnusedAssetCleanup
     };
 
     [MenuItem("Tools/Digital Twin/Remove Verified Unused Assets")]
-    public static void Apply()
+    private static void ApplyFromMenu() => Apply();
+
+    /// <summary>
+    /// Deletes the audited candidates nothing in production depends on, after
+    /// the user has seen the list. Returns false when they cancel.
+    /// </summary>
+    public static bool Apply()
     {
         HashSet<string> dependencies = CollectProductionDependencies();
-        int removed = 0;
+        List<string> removable = new();
 
         foreach (string candidate in Candidates)
         {
@@ -80,6 +86,22 @@ public static class ProjectUnusedAssetCleanup
                 continue;
             }
 
+            removable.Add(candidate);
+        }
+
+        if (removable.Count > 0 && !Application.isBatchMode && !EditorUtility.DisplayDialog(
+                "Remove Verified Unused Assets",
+                $"These {removable.Count} asset(s) or folder(s) are not used by SampleScene, the " +
+                "card and leader-line prefabs, the render settings or any build scene, and will be " +
+                "deleted. Anything loaded only from code by name is not detected, so check the list " +
+                "(or commit first).\n\n" + string.Join("\n", removable),
+                "Delete",
+                "Cancel"))
+            return false;
+
+        int removed = 0;
+        foreach (string candidate in removable)
+        {
             if (!AssetDatabase.DeleteAsset(candidate))
                 throw new InvalidOperationException($"Could not delete verified unused asset '{candidate}'.");
             removed++;
@@ -93,11 +115,18 @@ public static class ProjectUnusedAssetCleanup
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log($"UNUSED_ASSET_CLEANUP_RESULT removed={removed}");
+        return true;
     }
 
     private static HashSet<string> CollectProductionDependencies()
     {
         List<string> roots = new();
+        foreach (EditorBuildSettingsScene scene in EditorBuildSettings.scenes)
+        {
+            if (!string.IsNullOrEmpty(scene.path) && AssetDatabase.LoadMainAssetAtPath(scene.path) != null)
+                roots.Add(scene.path);
+        }
+
         foreach (string root in ProductionRoots)
         {
             if (AssetDatabase.IsValidFolder(root))

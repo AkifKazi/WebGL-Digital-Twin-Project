@@ -31,6 +31,10 @@ public sealed class UILineChartGraphic : MaskableGraphic
     private readonly List<Color> limitColors = new();
     private readonly List<Vector2> run = new();
     private readonly List<Vector2> curve = new();
+    // Reused by MonotoneCurve. The mesh is rebuilt whenever the panel resizes,
+    // so the smoothing must not allocate a pair of arrays each time.
+    private float[] slopeBuffer = System.Array.Empty<float>();
+    private float[] tangentBuffer = System.Array.Empty<float>();
     private float minimum;
     private float maximum = 1f;
 
@@ -67,10 +71,6 @@ public sealed class UILineChartGraphic : MaskableGraphic
         if (rect.width < 2f || rect.height < 2f)
             return;
 
-        Vector2 ToLocal(Vector2 data) => new(
-            rect.xMin + data.x * rect.width,
-            rect.yMin + ValueFraction(data.y) * rect.height);
-
         foreach (float value in gridValues)
         {
             float y = rect.yMin + ValueFraction(value) * rect.height;
@@ -86,7 +86,7 @@ public sealed class UILineChartGraphic : MaskableGraphic
 
         // Fill first so the limit lines and the curve sit on top of it.
         if (fillArea)
-            ForEachRun(ToLocal, r => AddArea(vh, r, rect.yMin));
+            ForEachRun(vh, rect, RunPass.Area);
 
         for (int i = 0; i < limitValues.Count; i++)
         {
@@ -98,20 +98,11 @@ public sealed class UILineChartGraphic : MaskableGraphic
                 UIMesh.AddRect(vh, new Vector2(x, y - 0.6f), new Vector2(Mathf.Min(x + 4f, rect.xMax), y + 0.6f), limitColors[i] * color);
         }
 
-        ForEachRun(ToLocal, r =>
-        {
-            if (r.Count == 1)
-            {
-                UIMesh.AddDisc(vh, r[0], lineWidth * 0.75f, lineColor * color);
-                return;
-            }
-            for (int i = 0; i < r.Count - 1; i++)
-                UIMesh.AddLine(vh, r[i], r[i + 1], lineWidth, lineColor * color);
-        });
+        ForEachRun(vh, rect, RunPass.Line);
 
         if (TryGetLastPoint(out Vector2 last))
         {
-            Vector2 marker = ToLocal(last);
+            Vector2 marker = ToLocal(last, rect);
             UIMesh.AddRect(vh, new Vector2(marker.x - 0.5f, rect.yMin), new Vector2(marker.x + 0.5f, marker.y), nowLineColor * color);
             UIMesh.AddDisc(vh, marker, markerRadius + ringWidth, markerRingColor * color);
             UIMesh.AddDisc(vh, marker, markerRadius, lineColor * color);
@@ -131,8 +122,22 @@ public sealed class UILineChartGraphic : MaskableGraphic
         }
     }
 
-    /// <summary>Calls <paramref name="action"/> with each unbroken stretch of the line, smoothed.</summary>
-    private void ForEachRun(System.Func<Vector2, Vector2> toLocal, System.Action<List<Vector2>> action)
+    private enum RunPass
+    {
+        Area,
+        Line
+    }
+
+    private Vector2 ToLocal(Vector2 data, Rect rect) => new(
+        rect.xMin + data.x * rect.width,
+        rect.yMin + ValueFraction(data.y) * rect.height);
+
+    /// <summary>
+    /// Draws each unbroken stretch of the line, smoothed. Takes the pass as a
+    /// value rather than a callback: the callback form allocated a closure for
+    /// the projection and another for the body on every mesh rebuild.
+    /// </summary>
+    private void ForEachRun(VertexHelper vh, Rect rect, RunPass pass)
     {
         run.Clear();
         for (int i = 0; i <= points.Count; i++)
@@ -140,16 +145,30 @@ public sealed class UILineChartGraphic : MaskableGraphic
             bool gap = i == points.Count || float.IsNaN(points[i].y);
             if (!gap)
             {
-                run.Add(toLocal(points[i]));
+                run.Add(ToLocal(points[i], rect));
                 continue;
             }
             if (run.Count > 0)
             {
                 MonotoneCurve(run, curve);
-                action(curve);
+                if (pass == RunPass.Area)
+                    AddArea(vh, curve, rect.yMin);
+                else
+                    AddLineRun(vh, curve);
                 run.Clear();
             }
         }
+    }
+
+    private void AddLineRun(VertexHelper vh, List<Vector2> r)
+    {
+        if (r.Count == 1)
+        {
+            UIMesh.AddDisc(vh, r[0], lineWidth * 0.75f, lineColor * color);
+            return;
+        }
+        for (int i = 0; i < r.Count - 1; i++)
+            UIMesh.AddLine(vh, r[i], r[i + 1], lineWidth, lineColor * color);
     }
 
     private bool TryGetLastPoint(out Vector2 last)
@@ -170,7 +189,7 @@ public sealed class UILineChartGraphic : MaskableGraphic
     /// Monotone cubic interpolation (Fritsch-Carlson): smooth like a spline but
     /// never rising above a peak or dipping below a trough the data does not have.
     /// </summary>
-    private static void MonotoneCurve(List<Vector2> p, List<Vector2> result)
+    private void MonotoneCurve(List<Vector2> p, List<Vector2> result)
     {
         result.Clear();
         int n = p.Count;
@@ -180,8 +199,12 @@ public sealed class UILineChartGraphic : MaskableGraphic
             return;
         }
 
-        float[] slopes = new float[n - 1];
-        float[] tangents = new float[n];
+        if (slopeBuffer.Length < n - 1)
+            slopeBuffer = new float[n - 1];
+        if (tangentBuffer.Length < n)
+            tangentBuffer = new float[n];
+        float[] slopes = slopeBuffer;
+        float[] tangents = tangentBuffer;
         for (int i = 0; i < n - 1; i++)
             slopes[i] = (p[i + 1].y - p[i].y) / Mathf.Max(1e-4f, p[i + 1].x - p[i].x);
 

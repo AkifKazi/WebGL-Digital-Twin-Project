@@ -37,13 +37,32 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
              "example). Empty, the section stays hidden.")]
     [SerializeField] private MonoBehaviour insightProvider;
 
+    [Tooltip("Optional. Supplies the hours until a sensor's part is due for service: the " +
+             "Telemetry Service Schedule, or any component implementing " +
+             "ITelemetryServiceLifeProvider. Empty, Time To Service shows a dash.")]
+    [SerializeField] private MonoBehaviour serviceLifeProvider;
+
     [Header("Graphs")]
     [Tooltip("Graphs in each panel, top to bottom.")]
     [SerializeField] private List<TelemetryGraphKind> graphs = new()
     {
         TelemetryGraphKind.StatusTimeline,
+        TelemetryGraphKind.KeyFigures,
         TelemetryGraphKind.LineChart
     };
+
+    [Tooltip("What the Key Figures graph shows, left to right. The first two that are not " +
+             "None are shown, each in half of the panel's width.")]
+    [SerializeField] private List<TelemetryKeyFigure> keyFigures = new()
+    {
+        TelemetryKeyFigure.Average,
+        TelemetryKeyFigure.TimeToService
+    };
+
+    [Tooltip("Equal Halves: each key figure keeps half of the row. Make Room For Long Values: " +
+             "a first figure too long for its half pushes the second to the right, as far as " +
+             "the second still fits, before either shrinks.")]
+    [SerializeField] private TelemetryKeyFigureLayout keyFigureLayout = TelemetryKeyFigureLayout.MakeRoomForLongValues;
 
     [SerializeField] private TelemetryHistoryRange defaultRange = TelemetryHistoryRange.Hour;
     [SerializeField] private TelemetryGraphStyle graphStyle = new();
@@ -92,6 +111,7 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
 
     private ITelemetryHistoryProvider History => historyProvider as ITelemetryHistoryProvider;
     private ITelemetryInsightProvider Insight => insightProvider as ITelemetryInsightProvider;
+    private ITelemetryServiceLifeProvider ServiceLife => serviceLifeProvider as ITelemetryServiceLifeProvider;
     private RectTransform Layer => (RectTransform)transform;
 
     private void OnEnable()
@@ -224,7 +244,7 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
     {
         TelemetryDetailPanel panel = Instantiate(panelPrefab, transform);
         panel.name = panelPrefab.name;
-        panel.Initialise(graphs, graphStyle, defaultRange, History, Insight);
+        panel.Initialise(graphs, keyFigures, keyFigureLayout, graphStyle, defaultRange, History, Insight, ServiceLife);
         panel.PinToggled += HandlePinToggled;
         panel.CloseRequested += HandleCloseRequested;
         panels.Add(panel);
@@ -406,7 +426,7 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
             }
 
             panel.RectTransform.anchoredPosition = new Vector2(x, panel.CurrentTop) - layer.center;
-            panel.SetPointer(panel.CurrentTop - cardCentres[i], panel.Card.StateColor);
+            panel.SetPointer(panel.CurrentTop - cardCentres[i]);
             panel.SetAlpha(Mathf.MoveTowards(panel.Alpha, CardVisibility(panel.Card), fadeStep));
         }
     }

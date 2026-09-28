@@ -56,6 +56,11 @@ public sealed class PerformanceStatSource : MonoBehaviour
     [SerializeField] private float warningAbove = 80f;
     [SerializeField] private float criticalAbove = 95f;
 
+    [Tooltip("How far past a limit, as a share of the gap between the warning and critical " +
+             "limits, a reading must fall back before its alarm steps down. Stops a reading " +
+             "hovering on a limit from flickering between states. 0 turns it off.")]
+    [SerializeField, Range(0f, 0.5f)] private float alarmHysteresis = 0.1f;
+
     [Header("Data Health")]
     [SerializeField] private TelemetryDataQuality dataQuality = TelemetryDataQuality.Good;
     [SerializeField, Min(0f)] private float staleAfterSeconds = 5f;
@@ -194,7 +199,12 @@ public sealed class PerformanceStatSource : MonoBehaviour
         if (quality == TelemetryDataQuality.Bad ||
             quality == TelemetryDataQuality.Stale)
         {
-            SetState(StatVisualState.Unavailable);
+            // Bad to Stale keeps the Unavailable look, but listeners still
+            // need to hear that the quality changed.
+            if (visualState == StatVisualState.Unavailable)
+                Changed?.Invoke(this);
+            else
+                SetState(StatVisualState.Unavailable);
             return;
         }
 
@@ -228,9 +238,16 @@ public sealed class PerformanceStatSource : MonoBehaviour
         TryApplyReading(reading);
     }
 
+    /// <summary>
+    /// A value this source can hold: finite, and within float range so storing
+    /// it cannot turn a very large finite reading into Infinity.
+    /// </summary>
+    public static bool IsUsableValue(double value) =>
+        !double.IsNaN(value) && !double.IsInfinity(value) && Math.Abs(value) <= float.MaxValue;
+
     public bool TryApplyReading(in TelemetryReading reading)
     {
-        if (double.IsNaN(reading.Value) || double.IsInfinity(reading.Value))
+        if (!IsUsableValue(reading.Value))
             return false;
 
         bool sameProvider = string.Equals(
@@ -298,7 +315,7 @@ public sealed class PerformanceStatSource : MonoBehaviour
         }
 
         return new TelemetryLimits(limitMode, warningBelow, criticalBelow, warningAbove, criticalAbove)
-            .Evaluate(value);
+            .Evaluate(value, visualState, alarmHysteresis);
     }
 
 #if UNITY_EDITOR

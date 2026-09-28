@@ -745,13 +745,39 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
             cardWidth - backgroundLeft - backgroundRight -
             contentPaddingInsideBackground * 2f);
 
-        string label = presentation.Source.MetricName.ToUpperInvariant();
-        int lines = EstimateWrappedLineCount(label, availableLabelWidth);
-        float extra = lines <= maximumWrappedLabelLines
-            ? Mathf.Max(0, lines - 1) * wrappedLineHeight
+        // The rails ask every card for its height every frame, and measuring a
+        // label lays the whole string out twice. The answer only moves when the
+        // label or the width it has to fit in moves, so it is cached on those.
+        string source = presentation.Source.MetricName;
+        if (!string.Equals(estimateSourceLabel, source, StringComparison.Ordinal) ||
+            !Mathf.Approximately(estimateLabelWidth, availableLabelWidth))
+        {
+            estimateSourceLabel = source;
+            estimateLabelWidth = availableLabelWidth;
+            estimateUpperLabel = string.IsNullOrEmpty(source) ? string.Empty : source.ToUpperInvariant();
+            estimateLines = EstimateWrappedLineCount(estimateUpperLabel, availableLabelWidth);
+        }
+
+        float extra = estimateLines <= maximumWrappedLabelLines
+            ? Mathf.Max(0, estimateLines - 1) * wrappedLineHeight
             : 0f;
         return stableMetricHeight + extra;
     }
+
+    /// <summary>
+    /// Drops the cached height measurement. Call after anything that changes how
+    /// the metric label lays out (its font, its type size, the card artwork).
+    /// </summary>
+    public void InvalidateHeightEstimate()
+    {
+        estimateSourceLabel = null;
+        estimateLabelWidth = float.NaN;
+    }
+
+    private string estimateSourceLabel;
+    private string estimateUpperLabel;
+    private float estimateLabelWidth = float.NaN;
+    private int estimateLines = 1;
 
     private int EstimateWrappedLineCount(string text, float width)
     {

@@ -7,19 +7,20 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// The average of each bucket as a smooth line, Apple Health style: the
-/// range's average as the headline, faint gridlines with values on the right,
+/// The average of each bucket as a smooth line, Apple Health style: faint
+/// gridlines with values on the right,
 /// dotted guides at the time labels, the warning and critical limits as thin
 /// coloured lines, and the latest value as a ringed dot.
 /// </summary>
 public sealed class TelemetryLineChartGraph : TelemetryGraphView
 {
-    private const float CaptionHeight = 14f;
-    private const float ValueHeight = 38f;
-    private const float PlotTop = 66f;
+    // Room above the top gridline for half of its value label.
+    private const float PlotTop = 10f;
     private const float PlotHeight = 118f;
     private const float AxisHeight = 22f;
-    private const float Gutter = 42f;
+    // Between the plot's right edge and its value labels.
+    private const float LabelGap = 8f;
+    private const float LabelHeight = 18f;
     private const int MaxGridLines = 6;
     private static readonly float[] Guides = { 0f, 1f / 3f, 2f / 3f, 1f };
 
@@ -31,35 +32,16 @@ public sealed class TelemetryLineChartGraph : TelemetryGraphView
     private readonly List<TextMeshProUGUI> xLabels = new();
     private UILineChartGraphic chart;
     private RectTransform plot;
-    private TextMeshProUGUI average;
-    private TextMeshProUGUI unit;
 
     public override float PreferredHeight => PlotTop + PlotHeight + AxisHeight;
 
     protected override void Build()
     {
-        TextMeshProUGUI caption = CreateText("Caption", Rect, Style.labelSize - 2f, false, Style.muted, TextAlignmentOptions.TopLeft);
-        PlaceRow(caption.rectTransform, 0f, CaptionHeight);
-        caption.text = "AVERAGE";
-        caption.characterSpacing = 6f;
-
-        RectTransform valueRow = CreateRect("Average", Rect);
-        PlaceRow(valueRow, CaptionHeight, ValueHeight);
-        HorizontalLayoutGroup row = valueRow.gameObject.AddComponent<HorizontalLayoutGroup>();
-        row.spacing = 6f;
-        row.childAlignment = TextAnchor.LowerLeft;
-        row.childControlWidth = true;
-        row.childControlHeight = true;
-        row.childForceExpandWidth = false;
-        row.childForceExpandHeight = false;
-        average = CreateText("Value", valueRow, Style.valueSize, true, Style.ink, TextAlignmentOptions.BottomLeft);
-        unit = CreateText("Unit", valueRow, Style.labelSize + 1f, false, Style.muted, TextAlignmentOptions.BottomLeft);
-
         plot = CreateRect("Plot", Rect);
         plot.anchorMin = Vector2.zero;
         plot.anchorMax = Vector2.one;
         plot.offsetMin = new Vector2(0f, AxisHeight);
-        plot.offsetMax = new Vector2(-Gutter, -PlotTop);
+        plot.offsetMax = new Vector2(0f, -PlotTop);
         chart = plot.gameObject.AddComponent<UILineChartGraphic>();
         chart.raycastTarget = false;
 
@@ -67,7 +49,7 @@ public sealed class TelemetryLineChartGraph : TelemetryGraphView
         {
             TextMeshProUGUI label = CreateText("Y", plot, Style.labelSize - 1f, false, Style.muted, TextAlignmentOptions.MidlineLeft);
             label.rectTransform.pivot = new Vector2(0f, 0.5f);
-            label.rectTransform.sizeDelta = new Vector2(Gutter - 8f, 18f);
+            label.rectTransform.sizeDelta = new Vector2(0f, LabelHeight);
             yLabels.Add(label);
         }
 
@@ -110,20 +92,15 @@ public sealed class TelemetryLineChartGraph : TelemetryGraphView
             high = Mathf.Max(high, mean);
         }
 
-        string format = string.IsNullOrWhiteSpace(data.Source.ValueFormat) ? "0.0" : data.Source.ValueFormat;
-        unit.text = string.IsNullOrEmpty(data.Source.Unit) ? string.Empty : data.Source.Unit.ToUpperInvariant();
-
         if (samples == 0)
         {
-            average.text = "—";
+            SetGutter(0f);
             chart.SetData(points, 0f, 1f, null, Guides, null, null);
             foreach (TextMeshProUGUI label in yLabels)
                 label.gameObject.SetActive(false);
             PlaceTimeLabels(buckets, data.Range);
             return;
         }
-
-        average.text = ((float)(sum / samples)).ToString(format, CultureInfo.InvariantCulture);
 
         // Limits near the data are drawn (and pulled into the scale); limits far
         // outside it would only squash the line flat.
@@ -161,6 +138,23 @@ public sealed class TelemetryLineChartGraph : TelemetryGraphView
         for (float value = low; value <= high + step * 0.01f && grid.Count < MaxGridLines; value += step)
             grid.Add(value);
 
+        // The value labels take only the width their longest number needs, so a
+        // short scale leaves the chart as wide as the graphs above it and a
+        // long one (12,500) still fits.
+        int decimals = step >= 1f ? 0 : step >= 0.1f ? 1 : 2;
+        string tickFormat = decimals == 0 ? "0" : "0." + new string('0', decimals);
+        float labelWidth = 0f;
+        for (int i = 0; i < yLabels.Count; i++)
+        {
+            bool visible = i < grid.Count;
+            yLabels[i].gameObject.SetActive(visible);
+            if (!visible)
+                continue;
+            yLabels[i].text = grid[i].ToString(tickFormat, CultureInfo.InvariantCulture);
+            labelWidth = Mathf.Max(labelWidth, yLabels[i].GetPreferredValues(yLabels[i].text).x);
+        }
+        SetGutter(Mathf.Ceil(labelWidth));
+
         chart.lineColor = Style.normal;
         Color area = Style.normal;
         area.a = 0.16f;
@@ -170,22 +164,22 @@ public sealed class TelemetryLineChartGraph : TelemetryGraphView
         chart.markerRingColor = Style.surface;
         chart.SetData(points, low, high, grid, Guides, limits, limitColors);
 
-        int decimals = step >= 1f ? 0 : step >= 0.1f ? 1 : 2;
-        string tickFormat = decimals == 0 ? "0" : "0." + new string('0', decimals);
-        for (int i = 0; i < yLabels.Count; i++)
+        for (int i = 0; i < grid.Count && i < yLabels.Count; i++)
         {
-            TextMeshProUGUI label = yLabels[i];
-            bool visible = i < grid.Count;
-            label.gameObject.SetActive(visible);
-            if (!visible)
-                continue;
-            float fraction = chart.ValueFraction(grid[i]);
-            label.rectTransform.anchorMin = label.rectTransform.anchorMax = new Vector2(1f, fraction);
-            label.rectTransform.anchoredPosition = new Vector2(8f, 0f);
-            label.text = grid[i].ToString(tickFormat, CultureInfo.InvariantCulture);
+            RectTransform label = yLabels[i].rectTransform;
+            label.anchorMin = label.anchorMax = new Vector2(1f, chart.ValueFraction(grid[i]));
+            label.anchoredPosition = new Vector2(LabelGap, 0f);
         }
 
         PlaceTimeLabels(buckets, data.Range);
+    }
+
+    private void SetGutter(float labelWidth)
+    {
+        float gutter = labelWidth > 0f ? LabelGap + labelWidth : 0f;
+        plot.offsetMax = new Vector2(-gutter, -PlotTop);
+        foreach (TextMeshProUGUI label in yLabels)
+            label.rectTransform.sizeDelta = new Vector2(labelWidth, LabelHeight);
     }
 
     private void AddLimit(float value, Color color, float low, float high, float span)

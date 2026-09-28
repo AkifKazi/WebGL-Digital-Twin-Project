@@ -36,7 +36,7 @@ public static class MachineXRayPreview
         MachineXRaySceneSetup.ApplyPreset(material);
 
         GameObject equipment = Object.FindObjectsByType<GameObject>(
-                FindObjectsInactive.Include, FindObjectsSortMode.None)
+                FindObjectsInactive.Include)
             .FirstOrDefault(go => go.name == "03 - Equipment");
 
         if (equipment == null)

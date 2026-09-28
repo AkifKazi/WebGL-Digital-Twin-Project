@@ -78,6 +78,10 @@ public sealed class PerformanceStatSourceEditor : DigitalTwinComponentEditor
                 Draw("criticalAbove", "Critical At or Above");
             }
 
+            Draw("alarmHysteresis", "Alarm Hysteresis",
+                "Share of the warning-to-critical gap a reading must fall back past a limit before " +
+                "its alarm steps down. 0 turns it off.");
+
             DrawThresholdWarnings(mode);
         }
         else

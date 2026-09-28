@@ -97,6 +97,9 @@ public class WideStatRailManager : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs;
 
+    // Each source's alarm level when the layout was last built.
+    private readonly Dictionary<PerformanceStatSource, int> subscribedAlarmRanks = new();
+
     private readonly Dictionary<
         PerformanceStatSource,
         PerformanceStatCardView
@@ -257,13 +260,9 @@ public class WideStatRailManager : MonoBehaviour
                 continue;
             }
 
-            Vector3 viewportPosition =
-                worldCamera.WorldToViewportPoint(
-                    presentation.WorldAnchor.position
-                );
-
-            if (viewportPosition.z <= 0f)
-                continue;
+            Vector2 viewportPosition = TelemetryPresentationBuilder.PlacementViewport(
+                worldCamera,
+                presentation.WorldAnchor.position);
 
             candidates.Add(new PresentationPosition(
                 presentation,
@@ -293,14 +292,17 @@ public class WideStatRailManager : MonoBehaviour
                             innerLeftSources.Count + innerRightSources.Count;
         SetHiddenPresentationCount(candidates.Count - visibleOnPage);
 
-        Debug.Log(
-            $"TELEMETRY_WIDE_LAYOUT candidates={candidates.Count} " +
-            $"page={CurrentPageIndex + 1}/{PageCount} " +
-            $"outerLeft={leftSources.Count} outerRight={rightSources.Count} " +
-            $"innerLeft={innerLeftSources.Count} innerRight={innerRightSources.Count} " +
-            $"heights={GetAvailableRailHeight(leftCardContainer):F1}/" +
-            $"{GetAvailableRailHeight(rightCardContainer):F1}",
-            this);
+        if (showDebugLogs)
+        {
+            Debug.Log(
+                $"TELEMETRY_WIDE_LAYOUT candidates={candidates.Count} " +
+                $"page={CurrentPageIndex + 1}/{PageCount} " +
+                $"outerLeft={leftSources.Count} outerRight={rightSources.Count} " +
+                $"innerLeft={innerLeftSources.Count} innerRight={innerRightSources.Count} " +
+                $"heights={GetAvailableRailHeight(leftCardContainer):F1}/" +
+                $"{GetAvailableRailHeight(rightCardContainer):F1}",
+                this);
+        }
 
         BuildRail(
             leftSources,
@@ -841,20 +843,15 @@ public class WideStatRailManager : MonoBehaviour
         List<RailCardBinding> bindings,
         RectTransform container)
     {
+        // Project each sensor once. The sort used to call GetDesiredLocalY from
+        // inside its comparison, which re-projected every card O(n log n) times
+        // a frame through a freshly allocated closure, and let the ordering shift
+        // under the sort while the camera moved.
+        for (int i = 0; i < bindings.Count; i++)
+            bindings[i].DesiredY = GetDesiredLocalY(bindings[i].Presentation, container);
+
         if (!preserveCardOrder)
-        {
-            bindings.Sort((a, b) =>
-                GetDesiredLocalY(
-                    b.Presentation,
-                    container
-                ).CompareTo(
-                    GetDesiredLocalY(
-                        a.Presentation,
-                        container
-                    )
-                )
-            );
-        }
+            bindings.Sort(TopmostFirst);
 
         float upperLimit =
             container.rect.yMax -
@@ -869,15 +866,9 @@ public class WideStatRailManager : MonoBehaviour
         // Start with each sensor's projected vertical position.
         for (int i = 0; i < bindings.Count; i++)
         {
-            float desiredY =
-                GetDesiredLocalY(
-                    bindings[i].Presentation,
-                    container
-                );
-
             bindings[i].TargetY =
                 Mathf.Clamp(
-                    desiredY,
+                    bindings[i].DesiredY,
                     lowerLimit,
                     upperLimit
                 );
@@ -1005,6 +996,10 @@ public class WideStatRailManager : MonoBehaviour
         }
     }
 
+    // Cached so sorting a rail allocates no delegate.
+    private static readonly Comparison<RailCardBinding> TopmostFirst =
+        (a, b) => b.DesiredY.CompareTo(a.DesiredY);
+
     private float GetDesiredLocalY(
         TelemetryCardPresentation presentation,
         RectTransform container)
@@ -1014,10 +1009,9 @@ public class WideStatRailManager : MonoBehaviour
             return 0f;
         }
 
-        Vector2 screenPoint =
-            worldCamera.WorldToScreenPoint(
-                presentation.WorldAnchor.position
-            );
+        Vector2 screenPoint = TelemetryPresentationBuilder.PlacementScreenPoint(
+            worldCamera,
+            presentation.WorldAnchor.position);
 
         Camera uiCamera = GetUICamera();
 
@@ -1081,10 +1075,27 @@ public class WideStatRailManager : MonoBehaviour
 
     private void HandleLayoutPriorityChanged(PerformanceStatSource source)
     {
-        // A newly raised alarm must always return to the highest-priority page.
-        CurrentPageIndex = 0;
+        // A newly raised or worsened alarm returns to the first page, where
+        // alarms sort. An alarm clearing reorders the cards but leaves the
+        // viewer on the page they are reading.
+        if (IsNewOrWorseAlarm(source))
+            CurrentPageIndex = 0;
         RebuildLayout();
     }
+
+    private bool IsNewOrWorseAlarm(PerformanceStatSource source)
+    {
+        bool alarm = source.VisualState is StatVisualState.Warning or StatVisualState.Critical;
+        int previous = subscribedAlarmRanks.TryGetValue(source, out int rank) ? rank : 0;
+        return alarm && AlarmRank(source) > previous;
+    }
+
+    private static int AlarmRank(PerformanceStatSource source) => source.VisualState switch
+    {
+        StatVisualState.Critical => 2,
+        StatVisualState.Warning => 1,
+        _ => 0
+    };
 
     private void SubscribeToSources()
     {
@@ -1097,6 +1108,7 @@ public class WideStatRailManager : MonoBehaviour
             {
                 source.Changed += HandleSourceChanged;
                 source.LayoutPriorityChanged += HandleLayoutPriorityChanged;
+                subscribedAlarmRanks[source] = AlarmRank(source);
             }
         }
 
@@ -1165,6 +1177,9 @@ public class WideStatRailManager : MonoBehaviour
 
         public float TargetY;
         public float CurrentVelocity;
+
+        /// <summary>The sensor's projected rail position this frame.</summary>
+        public float DesiredY;
 
         public RailCardBinding(
             TelemetryCardPresentation presentation,

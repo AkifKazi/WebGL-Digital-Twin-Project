@@ -24,9 +24,10 @@ public sealed class TelemetryHistoryRecorder : MonoBehaviour, ITelemetryHistoryP
     [SerializeField, Min(1f)] private float maximumGapSeconds = 10f;
 
     [Header("Prototype")]
-    [Tooltip("Prototype only. Fills the time before this session began with generated " +
-             "history, so the day, week, month and year views have something to show. " +
-             "Turn this off once a real history source is connected.")]
+    [Tooltip("Prototype only. Fills the time before this session began, and any gap in it " +
+             "(a paused editor or a hidden browser tab), with generated history, so the graphs " +
+             "never show empty stretches. Turn this off once a real history source is " +
+             "connected: real gaps should show as gaps.")]
     [SerializeField] private bool backfillWithGeneratedHistory = true;
 
     [SerializeField] private int generatedHistorySeed = 1731;
@@ -36,6 +37,11 @@ public sealed class TelemetryHistoryRecorder : MonoBehaviour, ITelemetryHistoryP
 
     [Tooltip("Share of generated buckets that reach the critical limit.")]
     [SerializeField, Range(0f, 0.2f)] private float generatedCriticalShare = 0.02f;
+
+    // Buckets per drift lattice cell. 14 reproduces the feature size of the
+    // Perlin term this replaced (its 0.071 step was one cell per ~14 buckets),
+    // so generated history keeps the same shape.
+    private const int DriftCellBuckets = 14;
 
     private readonly Dictionary<PerformanceStatSource, SourceHistory> histories = new();
     private float nextSampleTime;
@@ -85,7 +91,6 @@ public sealed class TelemetryHistoryRecorder : MonoBehaviour, ITelemetryHistoryP
         int count = TelemetryHistoryRanges.BucketCount(range);
         long bucketMs = TelemetryHistoryRanges.BucketMilliseconds(range);
         long lastStart = TelemetryHistoryRanges.AlignDown(endUnixMs, bucketMs);
-        long firstRecorded = history?.FirstUnixMs ?? long.MaxValue;
         bool any = false;
 
         for (int i = count - 1; i >= 0; i--)
@@ -96,9 +101,10 @@ public sealed class TelemetryHistoryRecorder : MonoBehaviour, ITelemetryHistoryP
                     ? recorded
                     : new TelemetryHistoryBucket { StartUnixMs = start };
 
-            // Generated history only ever stands in for time wholly before
-            // recording began; it never overwrites a recorded bucket.
-            if (!bucket.HasData && backfillWithGeneratedHistory && start + bucketMs <= firstRecorded)
+            // Generated history stands in for time before recording began and
+            // for empty buckets after it (a paused editor, a hidden tab); it never
+            // overwrites a bucket with recorded data.
+            if (!bucket.HasData && backfillWithGeneratedHistory)
                 bucket = Generate(source, history, start, bucketMs);
 
             any |= bucket.HasData;
@@ -126,7 +132,7 @@ public sealed class TelemetryHistoryRecorder : MonoBehaviour, ITelemetryHistoryP
         uint key = HashString(source.StatId) ^ (uint)generatedHistorySeed;
         long index = start / bucketMs;
 
-        float drift = (Mathf.PerlinNoise(index * 0.071f, (key & 1023) * 0.37f) - 0.5f) * span * 0.5f;
+        float drift = (SmoothNoise(key, index, 7u) - 0.5f) * span * 0.5f;
         float jitter = (Hash01(key, index, 1u) - 0.5f) * span * 0.15f;
         float value = anchor + drift + jitter;
         float seconds = bucketMs / 1000f;
@@ -203,6 +209,29 @@ public sealed class TelemetryHistoryRecorder : MonoBehaviour, ITelemetryHistoryP
                 hash = (hash ^ c) * 16777619u;
             return hash;
         }
+    }
+
+    /// <summary>
+    /// Smooth value noise over the bucket index, one lattice cell per
+    /// <see cref="DriftCellBuckets"/> buckets.
+    ///
+    /// Perlin noise cannot be used here. A bucket index is absolute, so an hour
+    /// bucket sits near 3e7 today, and at that magnitude a float cannot hold the
+    /// 0.071 step between neighbouring buckets: every bucket on screen sampled
+    /// the same coordinate, the drift term came out constant, and the line chart
+    /// drew a flat line. Hashing the integer index keeps full precision at any
+    /// date, for every range.
+    /// </summary>
+    private static float SmoothNoise(uint key, long index, uint salt)
+    {
+        long cell = index >= 0
+            ? index / DriftCellBuckets
+            : (index - DriftCellBuckets + 1) / DriftCellBuckets;
+        float t = (index - cell * DriftCellBuckets) / (float)DriftCellBuckets;
+        return Mathf.Lerp(
+            Hash01(key, cell, salt),
+            Hash01(key, cell + 1, salt),
+            t * t * (3f - 2f * t));
     }
 
     private static float Hash01(uint key, long index, uint salt)

@@ -11,18 +11,74 @@ public static class DigitalTwinSceneSetup
     private const string ScenePath = "Assets/Scenes/SampleScene.unity";
 
     [MenuItem("Tools/Digital Twin/Set Up Sensors And Flow Controls")]
-    public static void SetUpFromMenu()
+    private static void SetUpFromMenuItem() => SetUpFromMenu();
+
+    /// <summary>
+    /// Runs the setup after the user has seen which anchors it moves and which
+    /// sensors it deletes. Returns false when they cancel, so a caller running
+    /// several steps can stop too.
+    /// </summary>
+    public static bool SetUpFromMenu()
     {
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
-            return;
+            return false;
+
+        if (!Application.isBatchMode && !ConfirmChanges())
+            return false;
 
         DigitalTwinMachineConfiguration configuration = SetUpScene();
-        EditorUtility.DisplayDialog(
-            "Digital Twin Setup",
-            $"'{configuration.displayName}' is configured with " +
-            $"{configuration.sensors.Count} sensors.",
-            "OK");
+        if (!Application.isBatchMode)
+        {
+            EditorUtility.DisplayDialog(
+                "Digital Twin Setup",
+                $"'{configuration.displayName}' is configured with " +
+                $"{configuration.sensors.Count} sensors.",
+                "OK");
+        }
+
+        return true;
     }
+
+    private static bool ConfirmChanges()
+    {
+        DigitalTwinMachineConfiguration configuration =
+            DigitalTwinMachineConfigurationLoader.LoadDefault();
+        EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        PerformanceStatSource[] sources = UnityEngine.Object
+            .FindObjectsByType<PerformanceStatSource>(FindObjectsInactive.Include);
+
+        HashSet<string> configuredIds = new(StringComparer.OrdinalIgnoreCase);
+        List<string> moved = new();
+        foreach (MachineSensorDefinition sensor in configuration.sensors)
+        {
+            configuredIds.Add(sensor.id);
+            if (!string.IsNullOrWhiteSpace(sensor.legacyId))
+                configuredIds.Add(sensor.legacyId);
+
+            PerformanceStatSource source = sources.FirstOrDefault(candidate =>
+                string.Equals(candidate.StatId, sensor.id, StringComparison.OrdinalIgnoreCase));
+            if (source != null && (source.transform.localPosition - sensor.localPosition).sqrMagnitude > 1e-8f)
+                moved.Add(source.name);
+        }
+
+        List<string> deleted = sources
+            .Where(source => !configuredIds.Contains(source.StatId))
+            .Select(source => source.name)
+            .ToList();
+
+        string message =
+            $"This rebuilds the sensors, machine parts and simulator of SampleScene from " +
+            $"'{configuration.displayName}', then saves the scene.\n\n" +
+            Describe("Anchors moved back to their configured position", moved) +
+            Describe("Sensors not in the configuration, deleted with their objects", deleted);
+        return EditorUtility.DisplayDialog("Set Up Sensors And Flow Controls", message, "Set Up", "Cancel");
+    }
+
+    private static string Describe(string heading, IReadOnlyCollection<string> names) =>
+        names.Count == 0
+            ? $"{heading}: none.\n\n"
+            : $"{heading} ({names.Count}): {string.Join(", ", names.Take(12))}" +
+              (names.Count > 12 ? ", ..." : string.Empty) + ".\n\n";
 
     // Entry point used by headless verification/setup.
     public static DigitalTwinMachineConfiguration SetUpScene()
