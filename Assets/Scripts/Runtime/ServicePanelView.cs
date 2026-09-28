@@ -30,26 +30,32 @@ public sealed class ServicePanelView : MonoBehaviour
 
     [Header("Colours")]
     [SerializeField] private Color ink = new(0.918f, 0.992f, 1f, 1f);
-    [SerializeField] private Color label = new(0.212f, 0.929f, 1f, 1f);
-    [SerializeField] private Color normal = new(0.08f, 0.9f, 1f, 1f);
+    // The accent the bottom controls use for their selected text.
+    [SerializeField] private Color label = new(0f, 0.922f, 1f, 1f);
+    [SerializeField] private Color normal = new(0f, 0.922f, 1f, 1f);
     [SerializeField] private Color warning = new(1f, 0.70f, 0.10f, 1f);
     [SerializeField] private Color critical = new(1f, 0.22f, 0.20f, 1f);
-    [SerializeField] private Color onBadge = new(0.024f, 0.075f, 0.102f, 1f);
 
     [Tooltip("The panel's fill. Near opaque, so the model does not show through the list.")]
     [SerializeField] private Color backdrop = new(0.031f, 0.086f, 0.118f, 0.96f);
 
-    private const float RowHeight = 116f;
+    [Tooltip("Each row's card: a solid step lighter than the panel, so the rows need no dividers.")]
+    [SerializeField] private Color card = new(0.063f, 0.122f, 0.153f, 1f);
+
+    private const float RowHeight = 104f;
+    private const float RowGap = 12f;
+    private const float CardPadding = 22f;
+    // The cards' margins in the list: the right one clears the scrollbar.
+    private const float ListLeft = 16f;
+    private const float ListRight = 38f;
     private const float HoursWidth = 170f;
     private const float CompactHeaderHeight = 72f;
     private const float CompactLegendHeight = 64f;
-    // Room on the right of each row for the scrollbar.
-    private const float ScrollGutter = 12f;
     private const float ScrollHitWidth = 24f;
     private const float ScrollTrackWidth = 2f;
     private const float ScrollThumbWidth = 6f;
-    // Kept low: the project blends in linear space, where a small alpha reads strong.
-    private const float AlertTint = 0.012f;
+    // How far a due row's card leans towards its state colour.
+    private const float AlertTint = 0.14f;
 
     private readonly List<ServiceItemStatus> statusBuffer = new();
     private readonly List<ServiceItemStatus> items = new();
@@ -208,10 +214,9 @@ public sealed class ServicePanelView : MonoBehaviour
         bool alert = status.State != ServiceState.OnTrack;
         Color state = StateColor(status.State);
         row.Hover.Part = status.Part;
-        row.Background.SetColors(Color.clear, alert ? new Color(state.r, state.g, state.b, AlertTint) : Color.clear);
-        row.Accent.gameObject.SetActive(alert);
-        row.Accent.SetColors(Color.clear, state);
-        row.Badge.SetColors(Color.clear, alert ? state : new Color(normal.r, normal.g, normal.b, 0.55f));
+        Color fill = alert ? Color.Lerp(card, new Color(state.r, state.g, state.b, 1f), AlertTint) : card;
+        row.Background.SetColors(Color.clear, fill);
+        row.Number.color = state;
         SetText(row.Number, number.ToString(CultureInfo.InvariantCulture));
         SetText(row.Name, DisplayName(status.Part));
         SetText(row.Task, TaskLabel(status.Task));
@@ -221,7 +226,7 @@ public sealed class ServicePanelView : MonoBehaviour
             (float)status.RunHours,
             (float)status.PlanHours,
             (float)status.EstimateHours,
-            alert ? state : new Color(normal.r, normal.g, normal.b, 0.55f));
+            state);
     }
 
     // -----------------------------------------------------------------------
@@ -282,8 +287,6 @@ public sealed class ServicePanelView : MonoBehaviour
         public RectTransform Root;
         public ServiceHoverTarget Hover;
         public UIFrameGraphic Background;
-        public UIFrameGraphic Accent;
-        public UIFrameGraphic Badge;
         public TextMeshProUGUI Number;
         public TextMeshProUGUI Name;
         public TextMeshProUGUI Task;
@@ -317,7 +320,8 @@ public sealed class ServicePanelView : MonoBehaviour
         header.anchoredPosition = Vector2.zero;
 
         headerText = CreateRect("Content", header);
-        Stretch(headerText, inset, inset + ScrollGutter, 0f, 0f);
+        // Right edge in line with the cards' clearance of the scrollbar.
+        Stretch(headerText, inset, ListRight + 4f, 0f, 0f);
 
         TextMeshProUGUI title = CreateText("Title", headerText, 20f, false, label, TextAlignmentOptions.MidlineLeft);
         title.characterSpacing = 6f;
@@ -359,6 +363,8 @@ public sealed class ServicePanelView : MonoBehaviour
         listContent.pivot = new Vector2(0.5f, 1f);
         listContent.sizeDelta = Vector2.zero;
         VerticalLayoutGroup stack = listContent.gameObject.AddComponent<VerticalLayoutGroup>();
+        stack.padding = new RectOffset((int)ListLeft, (int)ListRight, (int)RowGap, (int)RowGap);
+        stack.spacing = RowGap;
         stack.childControlWidth = true;
         stack.childControlHeight = true;
         stack.childForceExpandWidth = true;
@@ -436,51 +442,33 @@ public sealed class ServicePanelView : MonoBehaviour
         row.Hover = row.Root.gameObject.AddComponent<ServiceHoverTarget>();
         row.Hover.HoverChanged += HandleHover;
 
-        RectTransform accent = CreateRect("Accent", row.Root);
-        accent.anchorMin = Vector2.zero;
-        accent.anchorMax = new Vector2(0f, 1f);
-        accent.pivot = new Vector2(0f, 0.5f);
-        accent.sizeDelta = new Vector2(4f, 0f);
-        row.Accent = AddFrame(accent, Color.clear, 0f, false);
-
-        RectTransform line = CreateRect("Divider", row.Root);
-        line.anchorMin = Vector2.zero;
-        line.anchorMax = new Vector2(1f, 0f);
-        line.pivot = new Vector2(0.5f, 0f);
-        line.sizeDelta = new Vector2(0f, 1.5f);
-        AddFrame(line, new Color(normal.r, normal.g, normal.b, 0.14f), 0f, false);
-
         RectTransform inner = CreateRect("Content", row.Root);
-        Stretch(inner, inset, inset + ScrollGutter, 0f, 0f);
+        Stretch(inner, CardPadding, CardPadding, 0f, 0f);
 
-        RectTransform badge = CreateRect("Badge", inner);
-        badge.anchorMin = badge.anchorMax = new Vector2(0f, 1f);
-        badge.pivot = new Vector2(0f, 1f);
-        badge.anchoredPosition = new Vector2(0f, -20f);
-        badge.sizeDelta = new Vector2(36f, 36f);
-        row.Badge = AddFrame(badge, Color.clear, 0f, false);
-        row.Number = CreateText("Number", badge, 21f, true, onBadge, TextAlignmentOptions.Center);
-        Stretch(row.Number.rectTransform, 0f, 0f, 0f, 0f);
+        // A plain number in the state colour: easier to read than one set in a square.
+        row.Number = CreateText("Number", inner, 32f, true, normal, TextAlignmentOptions.MidlineLeft);
+        row.Number.overflowMode = TextOverflowModes.Overflow;
+        Place(row.Number.rectTransform, 0f, -8f, 44f, 48f, left: true);
 
         row.Name = CreateText("Name", inner, 24f, true, ink, TextAlignmentOptions.MidlineLeft);
-        row.Name.characterSpacing = 4f;
+        row.Name.characterSpacing = 3f;
         // Names take the width left of the hours, and cut short where a
         // narrow panel leaves too little.
-        PlaceBeside(row.Name.rectTransform, 54f, HoursWidth + 12f, -8f, 36f);
+        PlaceBeside(row.Name.rectTransform, 46f, HoursWidth + 12f, -10f, 36f);
 
         row.Task = CreateText("Task", inner, 19f, false, Muted, TextAlignmentOptions.MidlineLeft);
         row.Task.characterSpacing = 3f;
-        PlaceBeside(row.Task.rectTransform, 54f, HoursWidth + 12f, -44f, 30f);
+        PlaceBeside(row.Task.rectTransform, 46f, HoursWidth + 12f, -42f, 30f);
 
         row.Hours = CreateText("Hours", inner, 40f, true, ink, TextAlignmentOptions.MidlineRight);
-        Place(row.Hours.rectTransform, 0f, -6f, HoursWidth, 62f, left: false);
+        Place(row.Hours.rectTransform, 0f, -4f, HoursWidth, 62f, left: false);
 
         RectTransform bar = CreateRect("Bar", inner);
         bar.anchorMin = Vector2.zero;
         bar.anchorMax = new Vector2(1f, 0f);
         bar.pivot = new Vector2(0.5f, 0f);
-        bar.anchoredPosition = new Vector2(0f, 18f);
-        bar.sizeDelta = new Vector2(0f, 20f);
+        bar.anchoredPosition = new Vector2(0f, 12f);
+        bar.sizeDelta = new Vector2(0f, 22f);
         row.Bar = bar.gameObject.AddComponent<UIServiceBarGraphic>();
         row.Bar.raycastTarget = false;
         return row;
@@ -497,16 +485,18 @@ public sealed class ServicePanelView : MonoBehaviour
         AddDivider(legend, true);
 
         RectTransform row = CreateRect("Keys", legend);
-        Stretch(row, inset, inset + ScrollGutter, 0f, 0f);
+        // Centred under the cards.
+        Stretch(row, ListLeft, ListRight, 0f, 0f);
         legendKeys = row;
         HorizontalLayoutGroup keys = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-        keys.childAlignment = TextAnchor.MiddleLeft;
+        keys.spacing = 44f;
+        keys.childAlignment = TextAnchor.MiddleCenter;
         keys.childControlWidth = true;
         keys.childControlHeight = true;
-        keys.childForceExpandWidth = true;
+        keys.childForceExpandWidth = false;
         keys.childForceExpandHeight = false;
 
-        AddLegendKey(row, UIServiceLegendSwatch.Kind.Run, new Color(normal.r, normal.g, normal.b, 0.55f), 22f, "RUN");
+        AddLegendKey(row, UIServiceLegendSwatch.Kind.Run, normal, 22f, "RUN");
         AddLegendKey(row, UIServiceLegendSwatch.Kind.Estimate, Color.white, 8f, "ESTIMATE");
         AddLegendKey(row, UIServiceLegendSwatch.Kind.Plan, new Color(1f, 1f, 1f, 0.7f), 8f, "PLAN");
         AddLegendKey(row, UIServiceLegendSwatch.Kind.Gap, new Color(1f, 1f, 1f, 0.55f), 22f, "GAP");

@@ -32,7 +32,7 @@ public sealed class UIServiceLegendSwatch : MaskableGraphic
         switch (kind)
         {
             case Kind.Run:
-                UIMesh.AddRect(vh, new Vector2(r.xMin, mid - 4f), new Vector2(r.xMax, mid + 4f), c);
+                UIMesh.AddRect(vh, new Vector2(r.xMin, mid - 3f), new Vector2(r.xMax, mid + 3f), c);
                 break;
             case Kind.Estimate:
                 UIMesh.AddRect(vh, new Vector2(r.center.x - 1.5f, r.yMin), new Vector2(r.center.x + 1.5f, r.yMax), c);

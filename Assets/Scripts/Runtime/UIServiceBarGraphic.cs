@@ -6,13 +6,20 @@ using UnityEngine.UI;
 /// service as a fill, the estimated service point as a solid tick, the planned
 /// one as a dotted tick, and the stretch between the two hatched. The bar is
 /// as long as the later of the two points, so either can be the one at the end.
+///
+/// The fill brightens towards the hours run so far and carries a soft glow,
+/// strongest at its leading end, drawn as quads fading to clear.
 /// </summary>
 [RequireComponent(typeof(CanvasRenderer))]
 public sealed class UIServiceBarGraphic : MaskableGraphic
 {
-    [SerializeField, Min(1f)] private float trackHeight = 8f;
+    [SerializeField, Min(1f)] private float trackHeight = 6f;
+    [SerializeField, Min(0f)] private float glowSize = 5f;
+    [SerializeField, Range(0f, 1f)] private float glowStrength = 0.28f;
+    [Tooltip("Brightness of the fill's start, as a share of its end.")]
+    [SerializeField, Range(0f, 1f)] private float fillStartBrightness = 0.45f;
     [SerializeField] private Color trackColor = new(1f, 1f, 1f, 0.1f);
-    [SerializeField] private Color fillColor = new(0.08f, 0.9f, 1f, 0.55f);
+    [SerializeField] private Color fillColor = new(0f, 0.922f, 1f, 1f);
     [SerializeField] private Color markerColor = Color.white;
     [SerializeField] private Color planColor = new(1f, 1f, 1f, 0.7f);
     [SerializeField] private Color hatchColor = new(1f, 1f, 1f, 0.55f);
@@ -50,7 +57,7 @@ public sealed class UIServiceBarGraphic : MaskableGraphic
 
         UIMesh.AddRect(vh, new Vector2(r.xMin, y0), new Vector2(r.xMax, y1), trackColor * color);
         if (run > 0f)
-            UIMesh.AddRect(vh, new Vector2(r.xMin, y0), new Vector2(X(run), y1), fillColor * color);
+            AddGlowingFill(vh, r.xMin, X(run), y0, y1);
 
         float gapStart = X(Mathf.Min(plan, estimate));
         float gapEnd = X(Mathf.Max(plan, estimate));
@@ -63,6 +70,51 @@ public sealed class UIServiceBarGraphic : MaskableGraphic
 
         float estimateX = X(estimate);
         UIMesh.AddRect(vh, new Vector2(estimateX - 3f, r.yMin), new Vector2(estimateX, r.yMax), markerColor * color);
+    }
+
+    private void AddGlowingFill(VertexHelper vh, float x0, float x1, float y0, float y1)
+    {
+        if (x1 - x0 < 0.5f)
+            return;
+
+        Color end = fillColor * color;
+        Color start = new(end.r * fillStartBrightness, end.g * fillStartBrightness, end.b * fillStartBrightness, end.a);
+
+        if (glowSize > 0f && glowStrength > 0f)
+        {
+            // Faint along the start, full at the leading end.
+            Color glowEnd = new(end.r, end.g, end.b, end.a * glowStrength);
+            Color glowStart = new(end.r, end.g, end.b, glowEnd.a * 0.25f);
+            Color clear = new(end.r, end.g, end.b, 0f);
+
+            UIMesh.AddQuad(vh,
+                new Vector2(x0, y1), new Vector2(x0, y1 + glowSize),
+                new Vector2(x1, y1 + glowSize), new Vector2(x1, y1),
+                glowStart, clear, clear, glowEnd);
+            UIMesh.AddQuad(vh,
+                new Vector2(x0, y0 - glowSize), new Vector2(x0, y0),
+                new Vector2(x1, y0), new Vector2(x1, y0 - glowSize),
+                clear, glowStart, glowEnd, clear);
+
+            // Past the leading end, and its two corners.
+            UIMesh.AddQuad(vh,
+                new Vector2(x1, y0), new Vector2(x1, y1),
+                new Vector2(x1 + glowSize, y1), new Vector2(x1 + glowSize, y0),
+                glowEnd, glowEnd, clear, clear);
+            UIMesh.AddQuad(vh,
+                new Vector2(x1, y1), new Vector2(x1, y1 + glowSize),
+                new Vector2(x1 + glowSize, y1 + glowSize), new Vector2(x1 + glowSize, y1),
+                glowEnd, clear, clear, clear);
+            UIMesh.AddQuad(vh,
+                new Vector2(x1, y0 - glowSize), new Vector2(x1, y0),
+                new Vector2(x1 + glowSize, y0), new Vector2(x1 + glowSize, y0 - glowSize),
+                clear, glowEnd, clear, clear);
+        }
+
+        UIMesh.AddQuad(vh,
+            new Vector2(x0, y0), new Vector2(x0, y1),
+            new Vector2(x1, y1), new Vector2(x1, y0),
+            start, start, end, end);
     }
 
     /// <summary>Diagonal stripes between two x positions, clipped to the band.</summary>
