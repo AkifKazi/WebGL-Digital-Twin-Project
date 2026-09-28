@@ -14285,7 +14285,7 @@ MonoBehaviour:
     m_Right: 0
     m_Top: 0
     m_Bottom: 0
-  m_ChildAlignment: 5
+  m_ChildAlignment: 8
   m_Spacing: 24
   m_ChildForceExpandWidth: 0
   m_ChildForceExpandHeight: 0
@@ -36935,8 +36935,8 @@ MonoBehaviour:
   - {fileID: 1653046166}
   cardHeight: 119
   minimumGap: 8
-  topPadding: 0
-  bottomPadding: 0
+  topPadding: 22
+  bottomPadding: 22
   smoothTime: 0.1
   maximumSpeed: 1500
   maximumCardsPerRail: 32
