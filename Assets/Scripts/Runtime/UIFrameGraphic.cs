@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// A square-cornered outline with an optional fill, drawn as one mesh. Used for
-/// the service view's chips, attention items and pins, which need a border in a
+/// the service view's rows, pins and scrollbar, which need a border in a
 /// state colour the sliced panel sprites cannot take.
 /// </summary>
 [RequireComponent(typeof(CanvasRenderer))]

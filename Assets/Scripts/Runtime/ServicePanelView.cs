@@ -6,12 +6,14 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// The service panel: what needs attention at the top, then every part's
-/// service position sorted by hours left, then a legend for the bars.
+/// The service panel: every part's service position sorted by hours left, in a
+/// scrolling list between a header and a legend for the bars. Parts due soon
+/// or overdue are marked in their state colour; parts on track stay quiet.
 ///
 /// Built at runtime from the service schedule, like the detail panel's graphs,
-/// so adding a plan to the schedule adds a row with no other authoring. Colour
-/// is kept for what needs attention; parts on track stay quiet.
+/// so adding a plan to the schedule adds a row with no other authoring. The
+/// header and legend line up with the viewport's top and bottom bars when the
+/// panel runs the full height beside it (see <see cref="SetBands"/>).
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class ServicePanelView : MonoBehaviour
@@ -26,9 +28,6 @@ public sealed class ServicePanelView : MonoBehaviour
     [Tooltip("Space between the panel's edges and its content.")]
     [SerializeField, Min(0f)] private float inset = 28f;
 
-    [Tooltip("Most items the Needs Attention list shows.")]
-    [SerializeField, Range(1, 5)] private int maximumAttentionItems = 3;
-
     [Header("Colours")]
     [SerializeField] private Color ink = new(0.918f, 0.992f, 1f, 1f);
     [SerializeField] private Color label = new(0.212f, 0.929f, 1f, 1f);
@@ -37,45 +36,50 @@ public sealed class ServicePanelView : MonoBehaviour
     [SerializeField] private Color critical = new(1f, 0.22f, 0.20f, 1f);
     [SerializeField] private Color onBadge = new(0.024f, 0.075f, 0.102f, 1f);
 
-    [Tooltip("Fill inside the panel's frame. Near opaque, so the model does not show through the list.")]
-    [SerializeField] private Color backdrop = new(0.031f, 0.086f, 0.118f, 0.94f);
+    [Tooltip("The panel's fill. Near opaque, so the model does not show through the list.")]
+    [SerializeField] private Color backdrop = new(0.031f, 0.086f, 0.118f, 0.96f);
 
     private const float RowHeight = 116f;
-    private const float AttentionItemHeight = 80f;
-    private const float AttentionGap = 10f;
-    private const float HeaderHeight = 36f;
-    private const float SectionPadding = 18f;
-    private const float EmptyHeight = 40f;
-    private const float LegendHeight = 60f;
+    private const float HoursWidth = 170f;
+    private const float CompactHeaderHeight = 72f;
+    private const float CompactLegendHeight = 64f;
+    // Room on the right of each row for the scrollbar.
+    private const float ScrollGutter = 12f;
+    private const float ScrollHitWidth = 24f;
+    private const float ScrollTrackWidth = 2f;
+    private const float ScrollThumbWidth = 6f;
     // Kept low: the project blends in linear space, where a small alpha reads strong.
-    private const float AlertTint = 0.05f;
+    private const float AlertTint = 0.012f;
 
     private readonly List<ServiceItemStatus> statusBuffer = new();
     private readonly List<ServiceItemStatus> items = new();
-    private readonly List<int> attention = new();
     private readonly List<Row> rows = new();
-    private readonly List<AttentionItem> attentionItems = new();
 
-    private RectTransform attentionSection;
-    private RectTransform attentionList;
+    private RectTransform border;
+    private RectTransform header;
+    private RectTransform headerText;
     private TextMeshProUGUI runHoursText;
-    private TextMeshProUGUI emptyText;
-    private RectTransform divider;
     private RectTransform listRect;
     private RectTransform listContent;
+    private RectTransform legend;
+    private RectTransform legendKeys;
     private bool built;
     private float nextRefresh;
     private long shownRunHours = -1;
     private MachinePartGroup hoveredPart;
+    private Vector3 appliedBands = new(-1f, -1f, -1f);
 
     /// <summary>Every part's service position, soonest first.</summary>
     public IReadOnlyList<ServiceItemStatus> Items => items;
 
-    /// <summary>How many items the Needs Attention list is showing.</summary>
-    public int AttentionCount => attention.Count;
-
-    /// <summary>The part whose row or attention item the pointer is over, if any.</summary>
+    /// <summary>The part whose row the pointer is over, if any.</summary>
     public MachinePartGroup HoveredPart => hoveredPart;
+
+    /// <summary>The list's scroll view.</summary>
+    public ScrollRect List { get; private set; }
+
+    /// <summary>The list's scrollbar, shown while the rows do not all fit.</summary>
+    public Scrollbar Scrollbar { get; private set; }
 
     public event Action<MachinePartGroup> HoveredPartChanged;
 
@@ -103,15 +107,39 @@ public sealed class ServicePanelView : MonoBehaviour
         return false;
     }
 
-    /// <summary>True when the part is in the Needs Attention list.</summary>
-    public bool NeedsAttention(MachinePartGroup part)
+    /// <summary>
+    /// Sizes the header and legend. Beside the viewport they take the heights
+    /// of its top and bottom bars, <paramref name="top"/> and
+    /// <paramref name="bottom"/>, with their content centred on the bars'
+    /// controls, which sit <paramref name="edgeMargin"/> in from the screen's
+    /// edges. Zero heights give a compact header and legend, for the panel
+    /// sitting over the content area.
+    /// </summary>
+    public void SetBands(float top, float bottom, float edgeMargin)
     {
-        foreach (int index in attention)
-        {
-            if (items[index].Part == part)
-                return true;
-        }
-        return false;
+        Build();
+        bool beside = top > 0f && bottom > 0f;
+        float margin = beside ? edgeMargin : 0f;
+        top = beside ? top : CompactHeaderHeight;
+        bottom = beside ? bottom : CompactLegendHeight;
+
+        Vector3 bands = new(top, bottom, beside ? margin : -1f);
+        if (bands == appliedBands)
+            return;
+        appliedBands = bands;
+
+        header.sizeDelta = new Vector2(0f, top);
+        headerText.offsetMax = new Vector2(headerText.offsetMax.x, -margin);
+        legend.sizeDelta = new Vector2(0f, bottom);
+        legendKeys.offsetMin = new Vector2(legendKeys.offsetMin.x, margin);
+        listRect.offsetMin = new Vector2(0f, bottom);
+        listRect.offsetMax = new Vector2(0f, -top);
+
+        // Beside the viewport only the left edge is drawn: the others fall on
+        // the screen's edges. Over the content area the panel is framed.
+        float outside = beside ? 2f : 0f;
+        border.offsetMin = new Vector2(0f, -outside);
+        border.offsetMax = new Vector2(outside, outside);
     }
 
     private void Awake() => Build();
@@ -144,33 +172,6 @@ public sealed class ServicePanelView : MonoBehaviour
             items.Sort(SoonestFirst);
         }
 
-        attention.Clear();
-        for (int i = 0; i < items.Count; i++)
-        {
-            if (items[i].State != ServiceState.OnTrack)
-                attention.Add(i);
-        }
-        attention.Sort((a, b) =>
-        {
-            int severity = items[b].State.CompareTo(items[a].State);
-            return severity != 0 ? severity : a.CompareTo(b);
-        });
-        if (attention.Count > maximumAttentionItems)
-            attention.RemoveRange(maximumAttentionItems, attention.Count - maximumAttentionItems);
-
-        RefreshAttention();
-        RefreshRows();
-    }
-
-    private static int SoonestFirst(ServiceItemStatus a, ServiceItemStatus b) =>
-        a.HoursLeft.CompareTo(b.HoursLeft);
-
-    // -----------------------------------------------------------------------
-    // Needs attention
-    // -----------------------------------------------------------------------
-
-    private void RefreshAttention()
-    {
         long run = schedule != null ? (long)Math.Floor(schedule.MachineRunHours) : 0;
         if (run != shownRunHours)
         {
@@ -178,51 +179,11 @@ public sealed class ServicePanelView : MonoBehaviour
             runHoursText.text = run.ToString("#,0", CultureInfo.InvariantCulture) + " H RUN";
         }
 
-        while (attentionItems.Count < attention.Count)
-            attentionItems.Add(CreateAttentionItem(attentionItems.Count));
-
-        for (int i = 0; i < attentionItems.Count; i++)
-        {
-            bool shown = i < attention.Count;
-            attentionItems[i].Root.gameObject.SetActive(shown);
-            if (shown)
-                BindAttention(attentionItems[i], items[attention[i]], attention[i] + 1);
-        }
-
-        emptyText.gameObject.SetActive(attention.Count == 0);
-
-        float listHeight = attention.Count > 0
-            ? attention.Count * AttentionItemHeight + (attention.Count - 1) * AttentionGap
-            : EmptyHeight;
-        float sectionHeight = SectionPadding + HeaderHeight + 12f + listHeight + SectionPadding;
-        attentionSection.sizeDelta = new Vector2(0f, sectionHeight);
-        attentionList.sizeDelta = new Vector2(attentionList.sizeDelta.x, listHeight);
-        divider.anchoredPosition = new Vector2(0f, -sectionHeight);
-        listRect.offsetMax = new Vector2(0f, -sectionHeight - 1.5f);
+        RefreshRows();
     }
 
-    private void BindAttention(AttentionItem item, in ServiceItemStatus status, int number)
-    {
-        Color state = StateColor(status.State);
-        item.Hover.Part = status.Part;
-        item.Frame.SetColors(state, new Color(state.r, state.g, state.b, AlertTint * 0.7f));
-        item.Badge.SetColors(Color.clear, state);
-        SetText(item.Number, number.ToString(CultureInfo.InvariantCulture));
-        item.ChipFrame.SetColors(state, Color.clear);
-        item.ChipText.color = state;
-        SetText(item.ChipText, status.State == ServiceState.Overdue ? "OVERDUE" : "DUE SOON");
-        float chipWidth = Mathf.Ceil(item.ChipText.GetPreferredValues(item.ChipText.text).x) + 16f;
-        item.ChipFrame.rectTransform.sizeDelta = new Vector2(chipWidth, 26f);
-        item.Title.rectTransform.anchoredPosition = new Vector2(64f + chipWidth + 12f, -8f);
-        SetText(item.Title, DisplayName(status.Part, false));
-
-        string action = status.State == ServiceState.Overdue
-            ? $"{TaskVerb(status.Task)} now"
-            : $"{TaskVerb(status.Task)} by {schedule.DateAfter(status.HoursLeft).ToString("d MMM", CultureInfo.InvariantCulture)}";
-        SetText(item.Action, action);
-        item.Hours.color = state;
-        SetText(item.Hours, HoursText(status.HoursLeft));
-    }
+    private static int SoonestFirst(ServiceItemStatus a, ServiceItemStatus b) =>
+        a.HoursLeft.CompareTo(b.HoursLeft);
 
     // -----------------------------------------------------------------------
     // Rows
@@ -252,7 +213,7 @@ public sealed class ServicePanelView : MonoBehaviour
         row.Accent.SetColors(Color.clear, state);
         row.Badge.SetColors(Color.clear, alert ? state : new Color(normal.r, normal.g, normal.b, 0.55f));
         SetText(row.Number, number.ToString(CultureInfo.InvariantCulture));
-        SetText(row.Name, DisplayName(status.Part, true));
+        SetText(row.Name, DisplayName(status.Part));
         SetText(row.Task, TaskLabel(status.Task));
         row.Hours.color = alert ? state : ink;
         SetText(row.Hours, HoursText(status.HoursLeft));
@@ -295,11 +256,8 @@ public sealed class ServicePanelView : MonoBehaviour
         return Math.Ceiling(hoursLeft).ToString("#,0", CultureInfo.InvariantCulture) + suffix;
     }
 
-    private static string DisplayName(MachinePartGroup part, bool upper)
-    {
-        string name = part != null ? part.DisplayName : string.Empty;
-        return upper ? name.ToUpperInvariant() : name;
-    }
+    private static string DisplayName(MachinePartGroup part) =>
+        part != null ? part.DisplayName.ToUpperInvariant() : string.Empty;
 
     public static string TaskLabel(ServiceTask task) => task switch
     {
@@ -307,14 +265,6 @@ public sealed class ServicePanelView : MonoBehaviour
         ServiceTask.OilChange => "OIL CHANGE",
         ServiceTask.Replace => "REPLACE",
         _ => "INSPECT"
-    };
-
-    private static string TaskVerb(ServiceTask task) => task switch
-    {
-        ServiceTask.Regrease => "Regrease",
-        ServiceTask.OilChange => "Change oil",
-        ServiceTask.Replace => "Replace",
-        _ => "Inspect"
     };
 
     private static void SetText(TMP_Text text, string value)
@@ -341,20 +291,6 @@ public sealed class ServicePanelView : MonoBehaviour
         public UIServiceBarGraphic Bar;
     }
 
-    private sealed class AttentionItem
-    {
-        public RectTransform Root;
-        public ServiceHoverTarget Hover;
-        public UIFrameGraphic Frame;
-        public UIFrameGraphic Badge;
-        public TextMeshProUGUI Number;
-        public UIFrameGraphic ChipFrame;
-        public TextMeshProUGUI ChipText;
-        public TextMeshProUGUI Title;
-        public TextMeshProUGUI Action;
-        public TextMeshProUGUI Hours;
-    }
-
     private void Build()
     {
         if (built)
@@ -364,59 +300,57 @@ public sealed class ServicePanelView : MonoBehaviour
         RectTransform root = (RectTransform)transform;
 
         RectTransform fill = CreateRect("Backdrop", root);
-        Stretch(fill, 2f, 2f, 2f, 2f);
-        AddFrame(fill, backdrop, 0f, false);
+        Stretch(fill, 0f, 0f, 0f, 0f);
+        // Catches the pointer over the whole panel, so the wheel and drags
+        // here never reach the model behind it.
+        AddFrame(fill, backdrop, 0f, true);
 
-        // Needs attention, pinned to the top.
-        attentionSection = CreateRect("Needs Attention", root);
-        attentionSection.anchorMin = new Vector2(0f, 1f);
-        attentionSection.anchorMax = Vector2.one;
-        attentionSection.pivot = new Vector2(0.5f, 1f);
-        attentionSection.anchoredPosition = Vector2.zero;
+        border = CreateRect("Border", root);
+        Stretch(border, 0f, 0f, 0f, 0f);
+        UIFrameGraphic edge = AddFrame(border, Color.clear, 2f, false);
+        edge.SetColors(new Color(normal.r, normal.g, normal.b, 0.5f), Color.clear);
 
-        TextMeshProUGUI heading = CreateText("Heading", attentionSection, 19f, false, label, TextAlignmentOptions.MidlineLeft);
-        heading.characterSpacing = 6f;
-        heading.text = "NEEDS ATTENTION";
-        Place(heading.rectTransform, inset, -SectionPadding, 300f, HeaderHeight, left: true);
+        header = CreateRect("Header", root);
+        header.anchorMin = new Vector2(0f, 1f);
+        header.anchorMax = Vector2.one;
+        header.pivot = new Vector2(0.5f, 1f);
+        header.anchoredPosition = Vector2.zero;
 
-        runHoursText = CreateText("Run Hours", attentionSection, 19f, false, Muted, TextAlignmentOptions.MidlineRight);
-        Place(runHoursText.rectTransform, inset, -SectionPadding, 240f, HeaderHeight, left: false);
+        headerText = CreateRect("Content", header);
+        Stretch(headerText, inset, inset + ScrollGutter, 0f, 0f);
 
-        attentionList = CreateRect("Items", attentionSection);
-        attentionList.anchorMin = new Vector2(0f, 1f);
-        attentionList.anchorMax = Vector2.one;
-        attentionList.pivot = new Vector2(0.5f, 1f);
-        // Items sit a little wider than the text column so their frames align with it.
-        attentionList.sizeDelta = new Vector2(-2f * (inset - 8f), 0f);
-        attentionList.anchoredPosition = new Vector2(0f, -(SectionPadding + HeaderHeight + 12f));
+        TextMeshProUGUI title = CreateText("Title", headerText, 20f, false, label, TextAlignmentOptions.MidlineLeft);
+        title.characterSpacing = 6f;
+        title.text = "SERVICE SCHEDULE";
+        Stretch(title.rectTransform, 0f, 0f, 0f, 0f);
 
-        emptyText = CreateText("All On Track", attentionList, 20f, false, Muted, TextAlignmentOptions.MidlineLeft);
-        emptyText.text = "All parts on track";
-        Stretch(emptyText.rectTransform, 8f, 0f, 0f, 0f);
+        runHoursText = CreateText("Run Hours", headerText, 20f, false, Muted, TextAlignmentOptions.MidlineRight);
+        Stretch(runHoursText.rectTransform, 0f, 0f, 0f, 0f);
 
-        divider = CreateRect("Divider", root);
-        divider.anchorMin = new Vector2(0f, 1f);
-        divider.anchorMax = Vector2.one;
-        divider.pivot = new Vector2(0.5f, 1f);
-        divider.sizeDelta = new Vector2(0f, 1.5f);
-        AddFrame(divider, new Color(normal.r, normal.g, normal.b, 0.3f), 0f, true);
+        AddDivider(header, false);
 
-        // The list scrolls between the attention section and the legend.
+        BuildList(root);
+        BuildLegend(root);
+        SetBands(0f, 0f, 0f);
+    }
+
+    private void BuildList(RectTransform root)
+    {
         listRect = CreateRect("Service List", root);
         listRect.anchorMin = Vector2.zero;
         listRect.anchorMax = Vector2.one;
-        listRect.offsetMin = new Vector2(0f, LegendHeight);
         ScrollRect scroll = listRect.gameObject.AddComponent<ScrollRect>();
         scroll.horizontal = false;
         scroll.movementType = ScrollRect.MovementType.Clamped;
         scroll.scrollSensitivity = 30f;
         scroll.inertia = true;
+        List = scroll;
 
         RectTransform viewport = CreateRect("Viewport", listRect);
         Stretch(viewport, 0f, 0f, 0f, 0f);
         viewport.gameObject.AddComponent<RectMask2D>();
         // Invisible, but catches the wheel and drags between rows.
-        AddFrame(viewport, Color.clear, 0f, true).raycastTarget = true;
+        AddFrame(viewport, Color.clear, 0f, true);
         scroll.viewport = viewport;
 
         listContent = CreateRect("Rows", viewport);
@@ -433,7 +367,61 @@ public sealed class ServicePanelView : MonoBehaviour
         fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         scroll.content = listContent;
 
-        BuildLegend(root);
+        Scrollbar = BuildScrollbar(listRect);
+        scroll.verticalScrollbar = Scrollbar;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+    }
+
+    /// <summary>
+    /// A hairline track down the right edge with a solid thumb riding on it:
+    /// its length is the share of the list in view, its place how far down it
+    /// is. The thumb and track take a pointer across a wider strip than they
+    /// draw, so the thin bar is still easy to drag.
+    /// </summary>
+    private Scrollbar BuildScrollbar(RectTransform parent)
+    {
+        RectTransform bar = CreateRect("Scrollbar", parent);
+        bar.anchorMin = new Vector2(1f, 0f);
+        bar.anchorMax = Vector2.one;
+        bar.pivot = new Vector2(1f, 0.5f);
+        bar.offsetMin = new Vector2(-ScrollHitWidth - 2f, 14f);
+        bar.offsetMax = new Vector2(-2f, -14f);
+        AddFrame(bar, Color.clear, 0f, true);
+
+        // Centred under the thumb's right edge, as in the track-and-block style.
+        float lineRight = 8f;
+        RectTransform track = CreateRect("Track", bar);
+        track.anchorMin = new Vector2(1f, 0f);
+        track.anchorMax = Vector2.one;
+        track.pivot = new Vector2(1f, 0.5f);
+        track.offsetMin = new Vector2(-lineRight - ScrollTrackWidth, 0f);
+        track.offsetMax = new Vector2(-lineRight, 0f);
+        AddFrame(track, new Color(normal.r, normal.g, normal.b, 0.35f), 0f, false);
+
+        RectTransform area = CreateRect("Sliding Area", bar);
+        Stretch(area, 0f, 0f, 0f, 0f);
+
+        RectTransform handle = CreateRect("Handle", area);
+        Stretch(handle, 0f, 0f, 0f, 0f);
+        AddFrame(handle, Color.clear, 0f, true);
+
+        RectTransform thumb = CreateRect("Thumb", handle);
+        thumb.anchorMin = new Vector2(1f, 0f);
+        thumb.anchorMax = Vector2.one;
+        thumb.pivot = new Vector2(1f, 0.5f);
+        thumb.offsetMin = new Vector2(-lineRight - ScrollThumbWidth, 0f);
+        thumb.offsetMax = new Vector2(-lineRight, 0f);
+        UIFrameGraphic thumbGraphic = AddFrame(thumb, ink, 0f, false);
+
+        Scrollbar scrollbar = bar.gameObject.AddComponent<Scrollbar>();
+        // No tint, set before the graphic: the panel starts hidden and not
+        // interactable, and a tint would dim the thumb for good.
+        scrollbar.transition = Selectable.Transition.None;
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        scrollbar.handleRect = handle;
+        scrollbar.targetGraphic = thumbGraphic;
+        scrollbar.navigation = new Navigation { mode = Navigation.Mode.None };
+        return scrollbar;
     }
 
     private Row CreateRow(int index)
@@ -463,7 +451,7 @@ public sealed class ServicePanelView : MonoBehaviour
         AddFrame(line, new Color(normal.r, normal.g, normal.b, 0.14f), 0f, false);
 
         RectTransform inner = CreateRect("Content", row.Root);
-        Stretch(inner, inset, inset, 0f, 0f);
+        Stretch(inner, inset, inset + ScrollGutter, 0f, 0f);
 
         RectTransform badge = CreateRect("Badge", inner);
         badge.anchorMin = badge.anchorMax = new Vector2(0f, 1f);
@@ -476,14 +464,16 @@ public sealed class ServicePanelView : MonoBehaviour
 
         row.Name = CreateText("Name", inner, 24f, true, ink, TextAlignmentOptions.MidlineLeft);
         row.Name.characterSpacing = 4f;
-        Place(row.Name.rectTransform, 54f, -8f, 300f, 36f, left: true);
+        // Names take the width left of the hours, and cut short where a
+        // narrow panel leaves too little.
+        PlaceBeside(row.Name.rectTransform, 54f, HoursWidth + 12f, -8f, 36f);
 
         row.Task = CreateText("Task", inner, 19f, false, Muted, TextAlignmentOptions.MidlineLeft);
         row.Task.characterSpacing = 3f;
-        Place(row.Task.rectTransform, 54f, -44f, 300f, 30f, left: true);
+        PlaceBeside(row.Task.rectTransform, 54f, HoursWidth + 12f, -44f, 30f);
 
         row.Hours = CreateText("Hours", inner, 40f, true, ink, TextAlignmentOptions.MidlineRight);
-        Place(row.Hours.rectTransform, 0f, -6f, 200f, 62f, left: false);
+        Place(row.Hours.rectTransform, 0f, -6f, HoursWidth, 62f, left: false);
 
         RectTransform bar = CreateRect("Bar", inner);
         bar.anchorMin = Vector2.zero;
@@ -496,72 +486,19 @@ public sealed class ServicePanelView : MonoBehaviour
         return row;
     }
 
-    private AttentionItem CreateAttentionItem(int index)
-    {
-        AttentionItem item = new() { Root = CreateRect($"Item {index + 1}", attentionList) };
-        item.Root.anchorMin = new Vector2(0f, 1f);
-        item.Root.anchorMax = Vector2.one;
-        item.Root.pivot = new Vector2(0.5f, 1f);
-        item.Root.sizeDelta = new Vector2(0f, AttentionItemHeight);
-        item.Root.anchoredPosition = new Vector2(0f, -index * (AttentionItemHeight + AttentionGap));
-
-        item.Frame = AddFrame(item.Root, Color.clear, 2f, true);
-        item.Frame.raycastTarget = true;
-        item.Hover = item.Root.gameObject.AddComponent<ServiceHoverTarget>();
-        item.Hover.HoverChanged += HandleHover;
-
-        RectTransform badge = CreateRect("Badge", item.Root);
-        badge.anchorMin = badge.anchorMax = new Vector2(0f, 0.5f);
-        badge.pivot = new Vector2(0f, 0.5f);
-        badge.anchoredPosition = new Vector2(14f, 0f);
-        badge.sizeDelta = new Vector2(36f, 36f);
-        item.Badge = AddFrame(badge, Color.clear, 0f, false);
-        item.Number = CreateText("Number", badge, 21f, true, onBadge, TextAlignmentOptions.Center);
-        Stretch(item.Number.rectTransform, 0f, 0f, 0f, 0f);
-
-        RectTransform chip = CreateRect("State", item.Root);
-        chip.anchorMin = chip.anchorMax = new Vector2(0f, 1f);
-        chip.pivot = new Vector2(0f, 1f);
-        chip.anchoredPosition = new Vector2(64f, -12f);
-        item.ChipFrame = AddFrame(chip, Color.clear, 1.5f, false);
-        item.ChipText = CreateText("Label", chip, 16f, true, warning, TextAlignmentOptions.Center);
-        item.ChipText.characterSpacing = 4f;
-        Stretch(item.ChipText.rectTransform, 0f, 0f, 0f, 0f);
-
-        item.Title = CreateText("Part", item.Root, 22f, true, ink, TextAlignmentOptions.MidlineLeft);
-        item.Title.characterSpacing = 1f;
-        item.Title.rectTransform.anchorMin = item.Title.rectTransform.anchorMax = new Vector2(0f, 1f);
-        item.Title.rectTransform.pivot = new Vector2(0f, 1f);
-        item.Title.rectTransform.sizeDelta = new Vector2(260f, 34f);
-
-        item.Action = CreateText("Action", item.Root, 19f, false, Muted, TextAlignmentOptions.MidlineLeft);
-        Place(item.Action.rectTransform, 64f, -42f, 320f, 30f, left: true);
-
-        item.Hours = CreateText("Hours", item.Root, 30f, true, warning, TextAlignmentOptions.MidlineRight);
-        item.Hours.rectTransform.anchorMin = item.Hours.rectTransform.anchorMax = new Vector2(1f, 0.5f);
-        item.Hours.rectTransform.pivot = new Vector2(1f, 0.5f);
-        item.Hours.rectTransform.anchoredPosition = new Vector2(-16f, 0f);
-        item.Hours.rectTransform.sizeDelta = new Vector2(150f, 48f);
-        return item;
-    }
-
     private void BuildLegend(RectTransform root)
     {
-        RectTransform legend = CreateRect("Legend", root);
+        legend = CreateRect("Legend", root);
         legend.anchorMin = Vector2.zero;
         legend.anchorMax = new Vector2(1f, 0f);
         legend.pivot = new Vector2(0.5f, 0f);
-        legend.sizeDelta = new Vector2(0f, LegendHeight);
+        legend.anchoredPosition = Vector2.zero;
 
-        RectTransform line = CreateRect("Divider", legend);
-        line.anchorMin = new Vector2(0f, 1f);
-        line.anchorMax = Vector2.one;
-        line.pivot = new Vector2(0.5f, 1f);
-        line.sizeDelta = new Vector2(0f, 1.5f);
-        AddFrame(line, new Color(normal.r, normal.g, normal.b, 0.3f), 0f, false);
+        AddDivider(legend, true);
 
         RectTransform row = CreateRect("Keys", legend);
-        Stretch(row, inset, inset, 0f, 0f);
+        Stretch(row, inset, inset + ScrollGutter, 0f, 0f);
+        legendKeys = row;
         HorizontalLayoutGroup keys = row.gameObject.AddComponent<HorizontalLayoutGroup>();
         keys.childAlignment = TextAnchor.MiddleLeft;
         keys.childControlWidth = true;
@@ -597,6 +534,18 @@ public sealed class ServicePanelView : MonoBehaviour
         TextMeshProUGUI caption = CreateText("Label", key, 17f, false, Muted, TextAlignmentOptions.MidlineLeft);
         caption.characterSpacing = 3f;
         caption.text = text;
+    }
+
+    /// <summary>A line along the inside of the band's bottom edge, or its top edge.</summary>
+    private void AddDivider(RectTransform band, bool top)
+    {
+        RectTransform line = CreateRect("Divider", band);
+        line.anchorMin = new Vector2(0f, top ? 1f : 0f);
+        line.anchorMax = new Vector2(1f, top ? 1f : 0f);
+        line.pivot = new Vector2(0.5f, top ? 1f : 0f);
+        line.anchoredPosition = Vector2.zero;
+        line.sizeDelta = new Vector2(0f, 1.5f);
+        AddFrame(line, new Color(normal.r, normal.g, normal.b, 0.3f), 0f, false);
     }
 
     private static RectTransform CreateRect(string name, Transform parent)
@@ -643,6 +592,16 @@ public sealed class ServicePanelView : MonoBehaviour
         rect.anchorMax = Vector2.one;
         rect.offsetMin = new Vector2(left, bottom);
         rect.offsetMax = new Vector2(-right, -top);
+    }
+
+    /// <summary>Places a rect from the parent's top edge, <paramref name="left"/> and <paramref name="right"/> in from its sides.</summary>
+    private static void PlaceBeside(RectTransform rect, float left, float right, float y, float height)
+    {
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0f, 1f);
+        rect.offsetMin = new Vector2(left, y - height);
+        rect.offsetMax = new Vector2(-right, y);
     }
 
     /// <summary>Places a rect from the parent's top-left or top-right corner.</summary>

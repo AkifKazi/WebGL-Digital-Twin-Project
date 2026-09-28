@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 /// <summary>
-/// Reports the pointer entering and leaving one service row or attention item,
+/// Reports the pointer entering and leaving one service row,
 /// so the part it lists can be marked on the model. Touch never hovers.
 /// </summary>
 [DisallowMultipleComponent]

@@ -325,10 +325,16 @@ public class OrbitCameraController : MonoBehaviour
 
         float scroll = Input.mouseScrollDelta.y;
 
-        if (Mathf.Abs(scroll) > 0.001f)
-        {
-            desiredDistance -= scroll * mouseWheelZoomSpeed;
-        }
+        if (Mathf.Abs(scroll) <= 0.001f)
+            return;
+
+        // The wheel over a panel scrolls or belongs to that panel, as a drag
+        // there does, rather than zooming the model behind it.
+        if (ignoreMouseWhenPointerOverUI && UnityEngine.EventSystems.EventSystem.current != null &&
+            UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+            return;
+
+        desiredDistance -= scroll * mouseWheelZoomSpeed;
     }
 
     private void HandleMouseDragInput()

@@ -10,9 +10,11 @@ using UnityEngine.Rendering.Universal;
 /// <summary>
 /// Batch-only play test of the service view in the wide layout. Switches to
 /// Service and checks that every telemetry element is hidden and inert, the
-/// panel lists every plan soonest first, the parts due get pins, the model is
-/// moved beside the panel, and hovering a row pins and outlines its part. Then
-/// switches back and checks telemetry returns exactly as it was. Saves a
+/// panel runs down the right of the screen with the viewport's controls
+/// beside it, the list is soonest first with a scrollbar that scrolls it, the
+/// wheel over the panel leaves the model's zoom alone, the parts due get pins,
+/// the model is moved beside the panel, and hovering a row pins and outlines
+/// its part. Then switches back and checks telemetry returns exactly as it was. Saves a
 /// 1920x1080 capture of each step, UI included, to Logs/ServiceModeTest.
 ///
 /// Run without -quit: the editor has to stay open while play mode runs.
@@ -37,6 +39,8 @@ public static class ServiceModePlayTest
     private static ServicePinLayer pinLayer;
     private static TelemetryServiceSchedule schedule;
     private static int telemetryCards;
+    private static Rect telemetryContent;
+    private static Rect telemetryZoom;
     private static ServiceHoverTarget hovered;
 
     static ServiceModePlayTest()
@@ -87,6 +91,8 @@ public static class ServiceModePlayTest
 
             case 1:
                 telemetryCards = VisibleCards();
+                telemetryContent = ScreenRect(ContentArea());
+                telemetryZoom = ScreenRect(ZoomControls());
                 Expect(controller.CurrentMode == DigitalTwinMode.Telemetry, "the app starts in Telemetry");
                 Expect(telemetryCards > 0, $"telemetry shows its cards ({telemetryCards})");
                 Expect(TelemetryGroups().All(g => g.alpha > 0.99f && g.blocksRaycasts || !g.gameObject.activeInHierarchy),
@@ -119,7 +125,7 @@ public static class ServiceModePlayTest
             case 4:
                 Capture("04-hover");
                 Expect(panel.HoveredPart != null && panel.HoveredPart.name == HoverPart, "hovering a row marks its part");
-                Expect(ActivePins() == panel.AttentionCount + 1, "the hovered part gets a pin too");
+                Expect(ActivePins() == DueCount() + 1, "the hovered part gets a pin too");
                 Expect(SelectionOutline.Targets.Count > 0 && SelectionOutline.Strength > 0.9f, "the hovered part is outlined");
                 if (hovered != null)
                     Pointer(hovered.gameObject, ExecuteEvents.pointerExitHandler);
@@ -138,6 +144,8 @@ public static class ServiceModePlayTest
                 Expect(SelectionOutline.Strength <= 0f, "the service outline is gone");
                 int cards = VisibleCards();
                 Expect(cards == telemetryCards, $"the same cards are back ({cards} of {telemetryCards})");
+                Expect(Same(ScreenRect(ZoomControls()), telemetryZoom), "the bottom controls are back in place");
+                Expect(Same(ScreenRect(ContentArea()), telemetryContent), "the content area is unchanged");
                 Finish(failures == 0 ? "passed" : $"failed={failures}");
                 break;
         }
@@ -157,12 +165,41 @@ public static class ServiceModePlayTest
             sorted &= panel.Items[i - 1].HoursLeft <= panel.Items[i].HoursLeft;
         Expect(sorted, "the list is soonest first");
 
-        int due = panel.Items.Count(item => item.State != ServiceState.OnTrack);
-        Expect(panel.AttentionCount == Mathf.Min(due, 3) && due > 0, $"Needs Attention lists the parts due ({panel.AttentionCount}, {due} due)");
         foreach (ServiceItemStatus item in panel.Items.Take(4))
             Debug.Log($"SERVICE_MODE_TEST row '{item.Part.DisplayName}' {item.Task} left={item.HoursLeft:0} state={item.State}");
 
-        Expect(ActivePins() == panel.AttentionCount, $"a pin on each part due ({ActivePins()})");
+        int due = DueCount();
+        Expect(due > 0 && ActivePins() == due, $"a pin on each part due ({ActivePins()} of {due})");
+
+        // The panel is a column of its own: full height at the right edge,
+        // with the viewport's controls left of it and the hidden content
+        // area kept at its full width.
+        Rect panelRect = ScreenRect((RectTransform)panel.transform);
+        Rect zoom = ScreenRect(ZoomControls());
+        Expect(controller.PanelBesideViewport, "the panel sits beside the viewport at 1920x1080");
+        Expect(panelRect.xMax >= 1919f && panelRect.yMin <= 1f && panelRect.yMax >= 1079f,
+            $"the panel runs the full height at the right edge ({panelRect})");
+        Expect(zoom.xMax <= panelRect.xMin - 20f && zoom.xMax < telemetryZoom.xMax - 500f,
+            $"the zoom controls moved left of the panel ({telemetryZoom.xMax:0} to {zoom.xMax:0}, panel at {panelRect.xMin:0})");
+        Expect(Same(ScreenRect(ContentArea()), telemetryContent), "the hidden content area keeps its layout");
+
+        // The rows do not all fit, so the scrollbar shows, and moving it
+        // scrolls the list.
+        Expect(panel.Scrollbar != null && panel.Scrollbar.gameObject.activeInHierarchy &&
+               panel.Scrollbar.size > 0.05f && panel.Scrollbar.size < 1f,
+            $"the scrollbar shows the share of the list in view ({panel.Scrollbar?.size:0.00})");
+        if (panel.Scrollbar != null)
+        {
+            float before = panel.List.verticalNormalizedPosition;
+            panel.Scrollbar.value = 0.5f;
+            Expect(Mathf.Abs(panel.List.verticalNormalizedPosition - 0.5f) < 0.01f && before > 0.99f,
+                "the scrollbar scrolls the list");
+        }
+
+        // The panel takes the pointer, which is how the camera tells the wheel
+        // over it from the wheel over the model.
+        Vector2 inPanel = new(panelRect.center.x, panelRect.center.y);
+        Expect(RaycastHitsPanel(inPanel), "the pointer over the panel lands on the panel, not the model");
         Expect(mainCamera.projectionMatrix.m02 > 0.2f, $"the model moved beside the panel (shift {mainCamera.projectionMatrix.m02:0.00})");
         Expect(VisibleCards() == telemetryCards, "the telemetry cards are kept, only hidden");
     }
@@ -178,6 +215,34 @@ public static class ServiceModePlayTest
             .Select(i => array.GetArrayElementAtIndex(i).objectReferenceValue as CanvasGroup)
             .Where(group => group != null)
             .ToArray();
+    }
+
+    private static int DueCount() => panel.Items.Count(item => item.State != ServiceState.OnTrack);
+
+    private static RectTransform ContentArea() =>
+        Object.FindObjectsByType<RectTransform>().First(rect => rect.name == "Content area" && rect.parent.parent.name == "Wide layout");
+
+    private static RectTransform ZoomControls() =>
+        Object.FindObjectsByType<RectTransform>().First(rect => rect.name == "Camera Zoom Controls" && rect.gameObject.activeInHierarchy);
+
+    private static Rect ScreenRect(RectTransform rect)
+    {
+        Vector3[] corners = new Vector3[4];
+        rect.GetWorldCorners(corners);
+        Vector2 min = RectTransformUtility.WorldToScreenPoint(uiCamera, corners[0]);
+        Vector2 max = RectTransformUtility.WorldToScreenPoint(uiCamera, corners[2]);
+        return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+    }
+
+    private static bool Same(Rect a, Rect b) =>
+        Mathf.Abs(a.xMin - b.xMin) < 1f && Mathf.Abs(a.xMax - b.xMax) < 1f &&
+        Mathf.Abs(a.yMin - b.yMin) < 1f && Mathf.Abs(a.yMax - b.yMax) < 1f;
+
+    private static bool RaycastHitsPanel(Vector2 screenPoint)
+    {
+        System.Collections.Generic.List<RaycastResult> hits = new();
+        EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = screenPoint }, hits);
+        return hits.Count > 0 && hits[0].gameObject.transform.IsChildOf(panel.transform);
     }
 
     private static int VisibleCards() =>

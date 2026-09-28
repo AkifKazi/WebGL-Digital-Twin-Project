@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// Marks parts on the model in the service view: a numbered pin, matching the
-/// part's row, on every part that needs attention, and on the part whose row
+/// part's row, on every part due soon or overdue, and on the part whose row
 /// the pointer is over, which is also outlined. Parts on track carry no pin,
 /// so the model stays quiet until something is due.
 /// </summary>
@@ -73,7 +73,7 @@ public sealed class ServicePinLayer : MonoBehaviour
 
         foreach (ServiceItemStatus item in panel.Items)
         {
-            if (item.Part == hovered || panel.NeedsAttention(item.Part))
+            if (item.Part == hovered || item.State != ServiceState.OnTrack)
                 shown.Add(item);
         }
     }

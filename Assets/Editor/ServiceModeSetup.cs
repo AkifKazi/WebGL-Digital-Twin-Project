@@ -10,8 +10,9 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Adds the service view to the wide layout: the Telemetry / Service switch at
-/// the top left, the service panel on the right of the content area, the pins
-/// on the model, and the controller that switches between the two. Also fills
+/// the top left, the service panel as a column down the right of the screen
+/// that the viewport narrows beside, the pins on the model, and the controller
+/// that switches between the two. Also fills
 /// the service schedule with the demonstration plans below.
 ///
 /// Safe to run again: everything it built before is replaced.
@@ -100,6 +101,7 @@ public static class ServiceModeSetup
 
         RemoveChild(wide, "Service Mode");
         RemoveChild(wide, "Service Pin Layer");
+        RemoveChild(wide, "Service Panel");
         RemoveChild(content, "Service Panel");
         RemoveChild(topBar, "Mode Switch");
 
@@ -121,8 +123,8 @@ public static class ServiceModeSetup
             Group(Child(content, "Telemetry Detail Layer"))
         };
 
-        RectTransform panel = CreatePanel(content, viewMode, schedule, labelFont, valueFont);
         RectTransform pinLayer = CreatePinLayer(wide, leaderLayer, labelFont);
+        RectTransform panel = CreatePanel(wide, schedule, labelFont, valueFont);
 
         GameObject modeObject = new("Service Mode", typeof(RectTransform));
         modeObject.layer = wide.gameObject.layer;
@@ -131,6 +133,9 @@ public static class ServiceModeSetup
         SerializedObject data = new(controller);
         data.FindProperty("targetCamera").objectReferenceValue = camera;
         data.FindProperty("servicePanel").objectReferenceValue = panel;
+        data.FindProperty("viewport").objectReferenceValue = baseLayout;
+        data.FindProperty("contentArea").objectReferenceValue = content;
+        data.FindProperty("panelWidth").floatValue = PanelWidth;
         SetArray(data.FindProperty("serviceGroups"), new UnityEngine.Object[] { panel.GetComponent<CanvasGroup>(), pinLayer.GetComponent<CanvasGroup>() });
         SetArray(data.FindProperty("telemetryGroups"), telemetryGroups.Cast<UnityEngine.Object>().ToArray());
         data.FindProperty("detailPanels").objectReferenceValue =
@@ -275,26 +280,20 @@ public static class ServiceModeSetup
     // -----------------------------------------------------------------------
 
     private static RectTransform CreatePanel(
-        Transform content,
-        ViewModeSegmentedControl viewMode,
+        Transform wide,
         TelemetryServiceSchedule schedule,
         TMP_FontAsset labelFont,
         TMP_FontAsset valueFont)
     {
-        RectTransform panel = NewRect("Service Panel", content);
+        // Over everything else in the wide layout. The controller places it
+        // and slides it in; it starts beyond the right edge.
+        RectTransform panel = NewRect("Service Panel", wide);
         panel.SetAsLastSibling();
-        LayoutElement layout = panel.gameObject.AddComponent<LayoutElement>();
-        layout.ignoreLayout = true;
         panel.anchorMin = new Vector2(1f, 0f);
         panel.anchorMax = Vector2.one;
         panel.pivot = new Vector2(1f, 0.5f);
-        panel.anchoredPosition = Vector2.zero;
-        panel.sizeDelta = new Vector2(PanelWidth, 0f);
-
-        // The same framed background as every other control.
-        Image background = panel.gameObject.AddComponent<Image>();
-        CopyImage(viewMode.GetComponent<Image>(), background);
-        background.raycastTarget = true;
+        panel.offsetMin = Vector2.zero;
+        panel.offsetMax = new Vector2(PanelWidth, 0f);
 
         CanvasGroup group = panel.gameObject.AddComponent<CanvasGroup>();
         group.alpha = 0f;
