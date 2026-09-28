@@ -7,8 +7,9 @@ using UnityEngine.UI;
 /// one as a dotted tick, and the stretch between the two hatched. The bar is
 /// as long as the later of the two points, so either can be the one at the end.
 ///
-/// The fill brightens towards the hours run so far and carries a soft glow,
-/// strongest at its leading end, drawn as quads fading to clear.
+/// The fill brightens towards the hours run so far and carries a soft glow
+/// that fades in towards its leading end. With the run bar shader, a bright
+/// pulse travels along the fill into the lead.
 /// </summary>
 [RequireComponent(typeof(CanvasRenderer))]
 public sealed class UIServiceBarGraphic : MaskableGraphic
@@ -24,9 +25,23 @@ public sealed class UIServiceBarGraphic : MaskableGraphic
     [SerializeField] private Color planColor = new(1f, 1f, 1f, 0.7f);
     [SerializeField] private Color hatchColor = new(1f, 1f, 1f, 0.55f);
 
+    private float pulsePhase;
     private float run;
     private float plan = 1f;
     private float estimate = 1f;
+
+    /// <summary>
+    /// Where this bar's pulse is in its cycle, 0 to 1, so neighbouring bars do
+    /// not pulse in step. Only drawn by the run bar shader.
+    /// </summary>
+    public void SetPulsePhase(float phase)
+    {
+        phase = Mathf.Repeat(phase, 1f);
+        if (Mathf.Approximately(pulsePhase, phase))
+            return;
+        pulsePhase = phase;
+        SetVerticesDirty();
+    }
 
     /// <summary>Sets the bar. Rebuilds the mesh only when something changed.</summary>
     public void SetValues(float runHours, float planHours, float estimateHours, Color fill)
@@ -80,41 +95,67 @@ public sealed class UIServiceBarGraphic : MaskableGraphic
         Color end = fillColor * color;
         Color start = new(end.r * fillStartBrightness, end.g * fillStartBrightness, end.b * fillStartBrightness, end.a);
 
+        // UV x runs along the fill and y marks fill (1) or glow (2), plus this
+        // bar's phase, for the run bar shader's travelling pulse.
+        float fillMark = 1f + pulsePhase;
+        float glowMark = 2f + pulsePhase;
+
         if (glowSize > 0f && glowStrength > 0f)
         {
-            // Faint along the start, full at the leading end.
+            // Nothing at the start, full at the leading end: the glow fades in
+            // along the bar rather than sitting over all of it.
             Color glowEnd = new(end.r, end.g, end.b, end.a * glowStrength);
-            Color glowStart = new(end.r, end.g, end.b, glowEnd.a * 0.25f);
             Color clear = new(end.r, end.g, end.b, 0f);
+            Vector2 atStart = new(0f, glowMark);
+            Vector2 atEnd = new(1f, glowMark);
 
-            UIMesh.AddQuad(vh,
+            AddQuad(vh,
                 new Vector2(x0, y1), new Vector2(x0, y1 + glowSize),
                 new Vector2(x1, y1 + glowSize), new Vector2(x1, y1),
-                glowStart, clear, clear, glowEnd);
-            UIMesh.AddQuad(vh,
+                clear, clear, clear, glowEnd,
+                atStart, atStart, atEnd, atEnd);
+            AddQuad(vh,
                 new Vector2(x0, y0 - glowSize), new Vector2(x0, y0),
                 new Vector2(x1, y0), new Vector2(x1, y0 - glowSize),
-                clear, glowStart, glowEnd, clear);
+                clear, clear, glowEnd, clear,
+                atStart, atStart, atEnd, atEnd);
 
             // Past the leading end, and its two corners.
-            UIMesh.AddQuad(vh,
+            AddQuad(vh,
                 new Vector2(x1, y0), new Vector2(x1, y1),
                 new Vector2(x1 + glowSize, y1), new Vector2(x1 + glowSize, y0),
-                glowEnd, glowEnd, clear, clear);
-            UIMesh.AddQuad(vh,
+                glowEnd, glowEnd, clear, clear,
+                atEnd, atEnd, atEnd, atEnd);
+            AddQuad(vh,
                 new Vector2(x1, y1), new Vector2(x1, y1 + glowSize),
                 new Vector2(x1 + glowSize, y1 + glowSize), new Vector2(x1 + glowSize, y1),
-                glowEnd, clear, clear, clear);
-            UIMesh.AddQuad(vh,
+                glowEnd, clear, clear, clear,
+                atEnd, atEnd, atEnd, atEnd);
+            AddQuad(vh,
                 new Vector2(x1, y0 - glowSize), new Vector2(x1, y0),
                 new Vector2(x1 + glowSize, y0), new Vector2(x1 + glowSize, y0 - glowSize),
-                clear, glowEnd, clear, clear);
+                clear, glowEnd, clear, clear,
+                atEnd, atEnd, atEnd, atEnd);
         }
 
-        UIMesh.AddQuad(vh,
+        AddQuad(vh,
             new Vector2(x0, y0), new Vector2(x0, y1),
             new Vector2(x1, y1), new Vector2(x1, y0),
-            start, start, end, end);
+            start, start, end, end,
+            new Vector2(0f, fillMark), new Vector2(0f, fillMark),
+            new Vector2(1f, fillMark), new Vector2(1f, fillMark));
+    }
+
+    private static void AddQuad(VertexHelper vh, Vector2 a, Vector2 b, Vector2 c, Vector2 d,
+        Color32 ca, Color32 cb, Color32 cc, Color32 cd, Vector2 ua, Vector2 ub, Vector2 uc, Vector2 ud)
+    {
+        int first = vh.currentVertCount;
+        vh.AddVert(a, ca, ua);
+        vh.AddVert(b, cb, ub);
+        vh.AddVert(c, cc, uc);
+        vh.AddVert(d, cd, ud);
+        vh.AddTriangle(first, first + 1, first + 2);
+        vh.AddTriangle(first, first + 2, first + 3);
     }
 
     /// <summary>Diagonal stripes between two x positions, clipped to the band.</summary>

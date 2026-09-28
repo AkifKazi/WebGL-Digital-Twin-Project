@@ -589,6 +589,78 @@ public class OrbitCameraController : MonoBehaviour
     }
 
     /// <summary>
+    /// Pulls the camera back just far enough for all of <paramref name="bounds"/>
+    /// to sit inside <paramref name="window"/>, a region of the screen in
+    /// normalised device coordinates (-1 to 1), with <paramref name="margin"/>
+    /// kept clear inside it. Allows for an off-centre projection, such as the
+    /// service view's. Like <see cref="EnsureWorldPointVisible"/> it never moves
+    /// closer or turns the camera. False when the bounds already fit, or when
+    /// nothing could be done.
+    /// </summary>
+    public bool EnsureBoundsVisible(Bounds bounds, Rect window, float margin)
+    {
+        if (target == null || introPlaying)
+            return false;
+
+        Camera view = GetComponent<Camera>();
+        if (view == null)
+            return false;
+
+        window = Rect.MinMaxRect(window.xMin + margin, window.yMin + margin, window.xMax - margin, window.yMax - margin);
+        if (window.width <= 0.01f || window.height <= 0.01f)
+            return false;
+
+        if (AreBoundsFramed(bounds, desiredDistance, view, window))
+            return false;
+
+        float near = desiredDistance;
+        float far = maxDistance;
+        if (near >= far - 0.05f)
+            return false;
+        if (AreBoundsFramed(bounds, far, view, window))
+        {
+            for (int i = 0; i < 12 && far - near > 0.05f; i++)
+            {
+                float middle = (near + far) * 0.5f;
+                if (AreBoundsFramed(bounds, middle, view, window))
+                    far = middle;
+                else
+                    near = middle;
+            }
+        }
+
+        // Too large to fit even at the furthest distance: as far as allowed.
+        BeginFramingZoom(far);
+        return true;
+    }
+
+    /// <summary>True when all of <paramref name="bounds"/> sits inside <paramref name="window"/> as the camera stands.</summary>
+    public bool AreBoundsVisible(Bounds bounds, Rect window, float margin)
+    {
+        Camera view = GetComponent<Camera>();
+        if (target == null || view == null)
+            return false;
+        window = Rect.MinMaxRect(window.xMin + margin, window.yMin + margin, window.xMax - margin, window.yMax - margin);
+        return AreBoundsFramed(bounds, desiredDistance, view, window);
+    }
+
+    private bool AreBoundsFramed(Bounds bounds, float distance, Camera view, Rect window)
+    {
+        Vector3 min = bounds.min;
+        Vector3 max = bounds.max;
+        for (int i = 0; i < 8; i++)
+        {
+            Vector3 corner = new(
+                (i & 1) == 0 ? min.x : max.x,
+                (i & 2) == 0 ? min.y : max.y,
+                (i & 4) == 0 ? min.z : max.z);
+            if (!TryProjectAt(corner, distance, view, out Vector2 point) || !window.Contains(point))
+                return false;
+        }
+        return true;
+    }
+
+    /// <summary>
     /// Eases the orbit distance to <paramref name="distance"/> over
     /// <see cref="framingZoomDuration"/>, slow at both ends, instead of letting
     /// the general smoothing jump most of the way in the first frames.
@@ -629,6 +701,18 @@ public class OrbitCameraController : MonoBehaviour
     /// <summary>True when the point sits inside the margins at the given orbit distance.</summary>
     private bool IsPointFramed(Vector3 worldPoint, float distance, Camera view)
     {
+        return TryProjectAt(worldPoint, distance, view, out Vector2 point) &&
+               Mathf.Abs(point.x) <= 1f - framingMarginX && Mathf.Abs(point.y) <= 1f - framingMarginY;
+    }
+
+    /// <summary>
+    /// Where <paramref name="worldPoint"/> would land on screen, in normalised
+    /// device coordinates, with the camera at the given orbit distance and its
+    /// current angles and projection. False when it would be behind the camera.
+    /// </summary>
+    private bool TryProjectAt(Vector3 worldPoint, float distance, Camera view, out Vector2 point)
+    {
+        point = default;
         Vector3 center = target.position + targetOffset;
         Quaternion rotation = Quaternion.Euler(desiredPitch, desiredYaw, 0f);
         Vector3 position = center - rotation * Vector3.forward * distance;
@@ -646,10 +730,13 @@ public class OrbitCameraController : MonoBehaviour
 
         float halfHeight = depth * Mathf.Tan(view.fieldOfView * 0.5f * Mathf.Deg2Rad);
         float halfWidth = halfHeight * view.aspect;
-        float x = Vector3.Dot(offset, right) / Mathf.Max(halfWidth, 0.0001f);
-        float y = Vector3.Dot(offset, up) / Mathf.Max(halfHeight, 0.0001f);
-
-        return Mathf.Abs(x) <= 1f - framingMarginX && Mathf.Abs(y) <= 1f - framingMarginY;
+        // An off-centre projection moves every point by the same share of the
+        // screen: x lands at -m02 for a point straight ahead.
+        Matrix4x4 projection = view.projectionMatrix;
+        point = new Vector2(
+            Vector3.Dot(offset, right) / Mathf.Max(halfWidth, 0.0001f) - projection.m02,
+            Vector3.Dot(offset, up) / Mathf.Max(halfHeight, 0.0001f) - projection.m12);
+        return true;
     }
 
     private void PublishZoomAvailability(bool force)

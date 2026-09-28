@@ -6,16 +6,20 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// The service panel: every part's service position sorted by hours left, in a
-/// scrolling list between a header and a legend for the bars. Parts due soon
-/// or overdue are marked in their state colour; parts on track stay quiet.
+/// The service panel: a component card for every part's service position,
+/// sorted by hours left, in a scrolling list between a header and a legend for
+/// the bars. Parts due soon or overdue are marked in their state colour; parts
+/// on track stay quiet.
 ///
 /// Built at runtime from the service schedule, like the detail panel's graphs,
-/// so adding a plan to the schedule adds a row with no other authoring. The
+/// so adding a plan to the schedule adds a card with no other authoring. The
 /// header and legend line up with the viewport's top and bottom bars when the
 /// panel runs the full height beside it (see <see cref="SetBands"/>).
-/// Clicking a row opens that part's detail in place of the list (see
+/// Clicking a card opens that part's detail in place of the list (see
 /// ServicePanelView.Detail.cs).
+///
+/// Room for the scrollbar is only kept while the content scrolls; when every
+/// card fits, the cards take the full width.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed partial class ServicePanelView : MonoBehaviour
@@ -24,10 +28,16 @@ public sealed partial class ServicePanelView : MonoBehaviour
     [SerializeField] private TMP_FontAsset labelFont;
     [SerializeField] private TMP_FontAsset valueFont;
 
+    [Tooltip("The hover look the other controls use, laid over a card or button while the pointer is on it.")]
+    [SerializeField] private Sprite hoverSprite;
+
+    [Tooltip("Draws the run bars with a pulse travelling into their leading end. Empty: plain bars.")]
+    [SerializeField] private Material runBarMaterial;
+
     [Tooltip("Seconds between refreshes of the hours shown.")]
     [SerializeField, Min(0.1f)] private float refreshInterval = 1f;
 
-    [Tooltip("Space between the panel's edges and its content.")]
+    [Tooltip("Space between the panel's edges and the header's text.")]
     [SerializeField, Min(0f)] private float inset = 28f;
 
     [Header("Colours")]
@@ -41,13 +51,14 @@ public sealed partial class ServicePanelView : MonoBehaviour
     [Tooltip("The panel's fill. Near opaque, so the model does not show through the list.")]
     [SerializeField] private Color backdrop = new(0.031f, 0.086f, 0.118f, 0.96f);
 
-    [Tooltip("Each row's card: a solid step lighter than the panel, so the rows need no dividers.")]
+    [Tooltip("Every card's fill, whatever its state: a solid step lighter than the panel.")]
     [SerializeField] private Color card = new(0.063f, 0.122f, 0.153f, 1f);
 
-    private const float RowHeight = 104f;
-    private const float RowGap = 12f;
+    private const float CardHeight = 104f;
+    private const float CardGap = 12f;
     private const float CardPadding = 22f;
-    // The cards' margins in the list: the right one clears the scrollbar.
+    // The cards' margins in a scroll view; the right one widens to clear the
+    // scrollbar while the content scrolls.
     private const float ListLeft = 16f;
     private const float ListRight = 38f;
     private const float HoursWidth = 170f;
@@ -56,19 +67,18 @@ public sealed partial class ServicePanelView : MonoBehaviour
     private const float ScrollHitWidth = 24f;
     private const float ScrollTrackWidth = 2f;
     private const float ScrollThumbWidth = 6f;
-    // How far a due row's card leans towards its state colour.
-    private const float AlertTint = 0.14f;
+    // Neighbouring bars' pulses are this far apart in their cycle.
+    private const float PulseStagger = 0.13f;
 
     private readonly List<ServiceItemStatus> statusBuffer = new();
     private readonly List<ServiceItemStatus> items = new();
-    private readonly List<Row> rows = new();
+    private readonly List<ComponentCard> cards = new();
 
     private RectTransform border;
     private RectTransform header;
     private RectTransform headerText;
     private TextMeshProUGUI runHoursText;
-    private RectTransform listRect;
-    private RectTransform listContent;
+    private ScrollView listView;
     private RectTransform legend;
     private RectTransform legendKeys;
     private bool built;
@@ -80,16 +90,22 @@ public sealed partial class ServicePanelView : MonoBehaviour
     /// <summary>Every part's service position, soonest first.</summary>
     public IReadOnlyList<ServiceItemStatus> Items => items;
 
-    /// <summary>The part whose row the pointer is over, if any.</summary>
+    /// <summary>The part whose card the pointer is over, if any.</summary>
     public MachinePartGroup HoveredPart => hoveredPart;
 
     /// <summary>The list's scroll view.</summary>
-    public ScrollRect List { get; private set; }
+    public ScrollRect List => listView?.Scroll;
 
-    /// <summary>The list's scrollbar, shown while the rows do not all fit.</summary>
-    public Scrollbar Scrollbar { get; private set; }
+    /// <summary>The list's scrollbar, shown while the cards do not all fit.</summary>
+    public Scrollbar Scrollbar => listView?.Bar;
+
+    /// <summary>Space right of the list's cards: wider while the list scrolls.</summary>
+    public float ListRightMargin => listView != null ? listView.Stack.padding.right : 0f;
 
     public event Action<MachinePartGroup> HoveredPartChanged;
+
+    /// <summary>Raised when a card is clicked and its part's detail opens.</summary>
+    public event Action<MachinePartGroup> PartOpened;
 
     private Color Muted => new(ink.r, ink.g, ink.b, 0.62f);
 
@@ -100,7 +116,7 @@ public sealed partial class ServicePanelView : MonoBehaviour
         _ => normal
     };
 
-    /// <summary>The number shown on the part's row and pin, 1 for the soonest.</summary>
+    /// <summary>The number shown on the part's card and pin, 1 for the soonest.</summary>
     public bool TryGetNumber(MachinePartGroup part, out int number)
     {
         for (int i = 0; i < items.Count; i++)
@@ -140,16 +156,23 @@ public sealed partial class ServicePanelView : MonoBehaviour
         headerText.offsetMax = new Vector2(headerText.offsetMax.x, -margin);
         legend.sizeDelta = new Vector2(0f, bottom);
         legendKeys.offsetMin = new Vector2(legendKeys.offsetMin.x, margin);
-        listRect.offsetMin = new Vector2(0f, bottom);
-        listRect.offsetMax = new Vector2(0f, -top);
-        detailBody.offsetMin = listRect.offsetMin;
-        detailBody.offsetMax = listRect.offsetMax;
+        foreach (ScrollView view in ScrollViews())
+        {
+            view.Root.offsetMin = new Vector2(0f, bottom);
+            view.Root.offsetMax = new Vector2(0f, -top);
+        }
 
         // Beside the viewport only the left edge is drawn: the others fall on
         // the screen's edges. Over the content area the panel is framed.
         float outside = beside ? 2f : 0f;
         border.offsetMin = new Vector2(0f, -outside);
         border.offsetMax = new Vector2(outside, outside);
+    }
+
+    private IEnumerable<ScrollView> ScrollViews()
+    {
+        yield return listView;
+        yield return detailView;
     }
 
     private void Awake() => Build();
@@ -167,6 +190,35 @@ public sealed partial class ServicePanelView : MonoBehaviour
         if (Time.unscaledTime < nextRefresh)
             return;
         Refresh();
+    }
+
+    // After layout has settled for the frame's changes: the gutter follows
+    // whether the view on show needs to scroll.
+    private void LateUpdate()
+    {
+        if (!built)
+            return;
+
+        ScrollView shown = DetailOpen ? detailView : listView;
+        UpdateGutter(shown);
+
+        // The header's text and the legend line up with the cards.
+        float right = shown.Stack.padding.right;
+        float headerRight = right + (inset - ListLeft);
+        if (!Mathf.Approximately(headerText.offsetMax.x, -headerRight))
+            headerText.offsetMax = new Vector2(-headerRight, headerText.offsetMax.y);
+        if (!Mathf.Approximately(legendKeys.offsetMax.x, -right))
+            legendKeys.offsetMax = new Vector2(-right, legendKeys.offsetMax.y);
+    }
+
+    private static void UpdateGutter(ScrollView view)
+    {
+        if (!view.Root.gameObject.activeInHierarchy)
+            return;
+        int right = Mathf.RoundToInt(view.NeedsScroll ? ListRight : ListLeft);
+        RectOffset padding = view.Stack.padding;
+        if (padding.right != right)
+            view.Stack.padding = new RectOffset(padding.left, right, padding.top, padding.bottom);
     }
 
     public void Refresh()
@@ -189,7 +241,7 @@ public sealed partial class ServicePanelView : MonoBehaviour
             runHoursText.text = run.ToString("#,0", CultureInfo.InvariantCulture) + " H RUN";
         }
 
-        RefreshRows();
+        RefreshCards();
         RefreshDetail();
     }
 
@@ -197,37 +249,35 @@ public sealed partial class ServicePanelView : MonoBehaviour
         a.HoursLeft.CompareTo(b.HoursLeft);
 
     // -----------------------------------------------------------------------
-    // Rows
+    // Component cards
     // -----------------------------------------------------------------------
 
-    private void RefreshRows()
+    private void RefreshCards()
     {
-        while (rows.Count < items.Count)
-            rows.Add(CreateRow(rows.Count));
+        while (cards.Count < items.Count)
+            cards.Add(CreateCard(cards.Count));
 
-        for (int i = 0; i < rows.Count; i++)
+        for (int i = 0; i < cards.Count; i++)
         {
             bool shown = i < items.Count;
-            rows[i].Root.gameObject.SetActive(shown);
+            cards[i].Root.gameObject.SetActive(shown);
             if (shown)
-                BindRow(rows[i], items[i], i + 1);
+                BindCard(cards[i], items[i], i + 1);
         }
     }
 
-    private void BindRow(Row row, in ServiceItemStatus status, int number)
+    private void BindCard(ComponentCard card, in ServiceItemStatus status, int number)
     {
         bool alert = status.State != ServiceState.OnTrack;
         Color state = StateColor(status.State);
-        row.Hover.Part = status.Part;
-        Color fill = alert ? Color.Lerp(card, new Color(state.r, state.g, state.b, 1f), AlertTint) : card;
-        row.Background.SetColors(Color.clear, fill);
-        row.Number.color = state;
-        SetText(row.Number, number.ToString(CultureInfo.InvariantCulture));
-        SetText(row.Name, DisplayName(status.Part));
-        SetText(row.Task, TaskLabel(status.Task));
-        row.Hours.color = alert ? state : ink;
-        SetText(row.Hours, HoursText(status.HoursLeft));
-        row.Bar.SetValues(
+        card.Hover.Part = status.Part;
+        card.Number.color = state;
+        SetText(card.Number, number.ToString(CultureInfo.InvariantCulture));
+        SetText(card.Name, DisplayName(status.Part));
+        SetText(card.Task, TaskLabel(status.Task));
+        card.Hours.color = alert ? state : ink;
+        SetText(card.Hours, HoursText(status.HoursLeft));
+        card.Bar.SetValues(
             (float)status.RunHours,
             (float)status.PlanHours,
             (float)status.EstimateHours,
@@ -235,10 +285,15 @@ public sealed partial class ServicePanelView : MonoBehaviour
     }
 
     // -----------------------------------------------------------------------
-    // Hover
+    // Pointer
     // -----------------------------------------------------------------------
 
-    private void HandleClicked(ServiceHoverTarget target) => ShowDetail(target.Part);
+    private void HandleClicked(ServiceHoverTarget target)
+    {
+        ShowDetail(target.Part);
+        if (DetailOpen)
+            PartOpened?.Invoke(selectedPart);
+    }
 
     private void HandleHover(ServiceHoverTarget target, bool hovered)
     {
@@ -289,16 +344,28 @@ public sealed partial class ServicePanelView : MonoBehaviour
     // Building
     // -----------------------------------------------------------------------
 
-    private sealed class Row
+    /// <summary>One part's card in the list: number, name, task, hours left and bar.</summary>
+    private sealed class ComponentCard
     {
         public RectTransform Root;
         public ServiceHoverTarget Hover;
-        public UIFrameGraphic Background;
         public TextMeshProUGUI Number;
         public TextMeshProUGUI Name;
         public TextMeshProUGUI Task;
         public TextMeshProUGUI Hours;
         public UIServiceBarGraphic Bar;
+    }
+
+    /// <summary>A vertical stack of cards that scrolls, with the panel's scrollbar.</summary>
+    private sealed class ScrollView
+    {
+        public RectTransform Root;
+        public ScrollRect Scroll;
+        public RectTransform Content;
+        public VerticalLayoutGroup Stack;
+        public Scrollbar Bar;
+
+        public bool NeedsScroll => Content.rect.height > Scroll.viewport.rect.height + 0.5f;
     }
 
     private void Build()
@@ -327,8 +394,7 @@ public sealed partial class ServicePanelView : MonoBehaviour
         header.anchoredPosition = Vector2.zero;
 
         headerText = CreateRect("Content", header);
-        // Right edge in line with the cards' clearance of the scrollbar.
-        Stretch(headerText, inset, ListRight + 4f, 0f, 0f);
+        Stretch(headerText, inset, inset, 0f, 0f);
 
         listHeader = CreateRect("List", headerText);
         Stretch(listHeader, 0f, 0f, 0f, 0f);
@@ -343,58 +409,58 @@ public sealed partial class ServicePanelView : MonoBehaviour
 
         AddDivider(header, false);
 
-        BuildList(root);
+        listView = BuildScrollView("Service List", root);
         BuildDetail(root, headerText);
         BuildLegend(root);
         SetBands(0f, 0f, 0f);
         ShowList();
     }
 
-    private void BuildList(RectTransform root)
+    private ScrollView BuildScrollView(string name, RectTransform root)
     {
-        listRect = CreateRect("Service List", root);
-        listRect.anchorMin = Vector2.zero;
-        listRect.anchorMax = Vector2.one;
-        ScrollRect scroll = listRect.gameObject.AddComponent<ScrollRect>();
-        scroll.horizontal = false;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-        scroll.scrollSensitivity = 30f;
-        scroll.inertia = true;
-        List = scroll;
+        ScrollView view = new() { Root = CreateRect(name, root) };
+        view.Root.anchorMin = Vector2.zero;
+        view.Root.anchorMax = Vector2.one;
+        view.Scroll = view.Root.gameObject.AddComponent<ScrollRect>();
+        view.Scroll.horizontal = false;
+        view.Scroll.movementType = ScrollRect.MovementType.Clamped;
+        view.Scroll.scrollSensitivity = 30f;
+        view.Scroll.inertia = true;
 
-        RectTransform viewport = CreateRect("Viewport", listRect);
+        RectTransform viewport = CreateRect("Viewport", view.Root);
         Stretch(viewport, 0f, 0f, 0f, 0f);
         viewport.gameObject.AddComponent<RectMask2D>();
-        // Invisible, but catches the wheel and drags between rows.
+        // Invisible, but catches the wheel and drags between cards.
         AddFrame(viewport, Color.clear, 0f, true);
-        scroll.viewport = viewport;
+        view.Scroll.viewport = viewport;
 
-        listContent = CreateRect("Rows", viewport);
-        listContent.anchorMin = new Vector2(0f, 1f);
-        listContent.anchorMax = Vector2.one;
-        listContent.pivot = new Vector2(0.5f, 1f);
-        listContent.sizeDelta = Vector2.zero;
-        VerticalLayoutGroup stack = listContent.gameObject.AddComponent<VerticalLayoutGroup>();
-        stack.padding = new RectOffset((int)ListLeft, (int)ListRight, (int)RowGap, (int)RowGap);
-        stack.spacing = RowGap;
-        stack.childControlWidth = true;
-        stack.childControlHeight = true;
-        stack.childForceExpandWidth = true;
-        stack.childForceExpandHeight = false;
-        ContentSizeFitter fit = listContent.gameObject.AddComponent<ContentSizeFitter>();
+        view.Content = CreateRect("Cards", viewport);
+        view.Content.anchorMin = new Vector2(0f, 1f);
+        view.Content.anchorMax = Vector2.one;
+        view.Content.pivot = new Vector2(0.5f, 1f);
+        view.Content.sizeDelta = Vector2.zero;
+        view.Stack = view.Content.gameObject.AddComponent<VerticalLayoutGroup>();
+        view.Stack.padding = new RectOffset((int)ListLeft, (int)ListLeft, (int)CardGap, (int)CardGap);
+        view.Stack.spacing = CardGap;
+        view.Stack.childControlWidth = true;
+        view.Stack.childControlHeight = true;
+        view.Stack.childForceExpandWidth = true;
+        view.Stack.childForceExpandHeight = false;
+        ContentSizeFitter fit = view.Content.gameObject.AddComponent<ContentSizeFitter>();
         fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        scroll.content = listContent;
+        view.Scroll.content = view.Content;
 
-        Scrollbar = BuildScrollbar(listRect);
-        scroll.verticalScrollbar = Scrollbar;
-        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        view.Bar = BuildScrollbar(view.Root);
+        view.Scroll.verticalScrollbar = view.Bar;
+        view.Scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        return view;
     }
 
     /// <summary>
-    /// A hairline track down the right edge with a solid thumb riding on it:
-    /// its length is the share of the list in view, its place how far down it
-    /// is. The thumb and track take a pointer across a wider strip than they
-    /// draw, so the thin bar is still easy to drag.
+    /// A hairline track down the right edge with a thicker thumb of the same
+    /// colour riding on it: its length is the share of the content in view,
+    /// its place how far down it is. The thumb and track take a pointer across
+    /// a wider strip than they draw, so the thin bar is still easy to drag.
     /// </summary>
     private Scrollbar BuildScrollbar(RectTransform parent)
     {
@@ -406,7 +472,9 @@ public sealed partial class ServicePanelView : MonoBehaviour
         bar.offsetMax = new Vector2(-2f, -14f);
         AddFrame(bar, Color.clear, 0f, true);
 
-        // Centred under the thumb's right edge, as in the track-and-block style.
+        Color line = new(normal.r, normal.g, normal.b, 0.35f);
+
+        // The track runs along the thumb's right edge.
         float lineRight = 8f;
         RectTransform track = CreateRect("Track", bar);
         track.anchorMin = new Vector2(1f, 0f);
@@ -414,7 +482,7 @@ public sealed partial class ServicePanelView : MonoBehaviour
         track.pivot = new Vector2(1f, 0.5f);
         track.offsetMin = new Vector2(-lineRight - ScrollTrackWidth, 0f);
         track.offsetMax = new Vector2(-lineRight, 0f);
-        AddFrame(track, new Color(normal.r, normal.g, normal.b, 0.35f), 0f, false);
+        AddFrame(track, line, 0f, false);
 
         RectTransform area = CreateRect("Sliding Area", bar);
         Stretch(area, 0f, 0f, 0f, 0f);
@@ -429,7 +497,7 @@ public sealed partial class ServicePanelView : MonoBehaviour
         thumb.pivot = new Vector2(1f, 0.5f);
         thumb.offsetMin = new Vector2(-lineRight - ScrollThumbWidth, 0f);
         thumb.offsetMax = new Vector2(-lineRight, 0f);
-        UIFrameGraphic thumbGraphic = AddFrame(thumb, ink, 0f, false);
+        UIFrameGraphic thumbGraphic = AddFrame(thumb, line, 0f, false);
 
         Scrollbar scrollbar = bar.gameObject.AddComponent<Scrollbar>();
         // No tint, set before the graphic: the panel starts hidden and not
@@ -442,39 +510,39 @@ public sealed partial class ServicePanelView : MonoBehaviour
         return scrollbar;
     }
 
-    private Row CreateRow(int index)
+    private ComponentCard CreateCard(int index)
     {
-        Row row = new() { Root = CreateRect($"Row {index + 1}", listContent) };
-        LayoutElement size = row.Root.gameObject.AddComponent<LayoutElement>();
-        size.preferredHeight = RowHeight;
-        size.minHeight = RowHeight;
+        ComponentCard card = new() { Root = CreateRect($"Component Card {index + 1}", listView.Content) };
+        LayoutElement size = card.Root.gameObject.AddComponent<LayoutElement>();
+        size.preferredHeight = CardHeight;
+        size.minHeight = CardHeight;
 
-        row.Background = AddFrame(row.Root, Color.clear, 0f, true);
-        row.Background.raycastTarget = true;
-        row.Hover = row.Root.gameObject.AddComponent<ServiceHoverTarget>();
-        row.Hover.HoverChanged += HandleHover;
-        row.Hover.Clicked += HandleClicked;
+        AddFrame(card.Root, this.card, 0f, true);
+        card.Hover = card.Root.gameObject.AddComponent<ServiceHoverTarget>();
+        card.Hover.HoverChanged += HandleHover;
+        card.Hover.Clicked += HandleClicked;
+        AddHoverLook(card.Root);
 
-        RectTransform inner = CreateRect("Content", row.Root);
+        RectTransform inner = CreateRect("Content", card.Root);
         Stretch(inner, CardPadding, CardPadding, 0f, 0f);
 
         // A plain number in the state colour: easier to read than one set in a square.
-        row.Number = CreateText("Number", inner, 32f, true, normal, TextAlignmentOptions.MidlineLeft);
-        row.Number.overflowMode = TextOverflowModes.Overflow;
-        Place(row.Number.rectTransform, 0f, -8f, 44f, 48f, left: true);
+        card.Number = CreateText("Number", inner, 32f, true, normal, TextAlignmentOptions.MidlineLeft);
+        card.Number.overflowMode = TextOverflowModes.Overflow;
+        Place(card.Number.rectTransform, 0f, -8f, 44f, 48f, left: true);
 
-        row.Name = CreateText("Name", inner, 24f, true, ink, TextAlignmentOptions.MidlineLeft);
-        row.Name.characterSpacing = 3f;
+        card.Name = CreateText("Name", inner, 24f, true, ink, TextAlignmentOptions.MidlineLeft);
+        card.Name.characterSpacing = 3f;
         // Names take the width left of the hours, and cut short where a
         // narrow panel leaves too little.
-        PlaceBeside(row.Name.rectTransform, 46f, HoursWidth + 12f, -10f, 36f);
+        PlaceBeside(card.Name.rectTransform, 46f, HoursWidth + 12f, -10f, 36f);
 
-        row.Task = CreateText("Task", inner, 19f, false, Muted, TextAlignmentOptions.MidlineLeft);
-        row.Task.characterSpacing = 3f;
-        PlaceBeside(row.Task.rectTransform, 46f, HoursWidth + 12f, -42f, 30f);
+        card.Task = CreateText("Task", inner, 19f, false, Muted, TextAlignmentOptions.MidlineLeft);
+        card.Task.characterSpacing = 3f;
+        PlaceBeside(card.Task.rectTransform, 46f, HoursWidth + 12f, -42f, 30f);
 
-        row.Hours = CreateText("Hours", inner, 40f, true, ink, TextAlignmentOptions.MidlineRight);
-        Place(row.Hours.rectTransform, 0f, -4f, HoursWidth, 62f, left: false);
+        card.Hours = CreateText("Hours", inner, 40f, true, ink, TextAlignmentOptions.MidlineRight);
+        Place(card.Hours.rectTransform, 0f, -4f, HoursWidth, 62f, left: false);
 
         RectTransform bar = CreateRect("Bar", inner);
         bar.anchorMin = Vector2.zero;
@@ -482,9 +550,39 @@ public sealed partial class ServicePanelView : MonoBehaviour
         bar.pivot = new Vector2(0.5f, 0f);
         bar.anchoredPosition = new Vector2(0f, 12f);
         bar.sizeDelta = new Vector2(0f, 22f);
-        row.Bar = bar.gameObject.AddComponent<UIServiceBarGraphic>();
-        row.Bar.raycastTarget = false;
-        return row;
+        card.Bar = CreateBar(bar, index * PulseStagger);
+        return card;
+    }
+
+    private UIServiceBarGraphic CreateBar(RectTransform rect, float pulsePhase)
+    {
+        UIServiceBarGraphic bar = rect.gameObject.AddComponent<UIServiceBarGraphic>();
+        bar.raycastTarget = false;
+        if (runBarMaterial != null)
+            bar.material = runBarMaterial;
+        bar.SetPulsePhase(pulsePhase);
+        return bar;
+    }
+
+    /// <summary>
+    /// The other controls' hover look over <paramref name="target"/>, shown
+    /// while a mouse is on it. <paramref name="target"/> must take the pointer.
+    /// </summary>
+    private void AddHoverLook(RectTransform target)
+    {
+        if (hoverSprite == null)
+            return;
+
+        RectTransform rect = CreateRect("Hover", target);
+        Stretch(rect, 0f, 0f, 0f, 0f);
+        Image image = rect.gameObject.AddComponent<Image>();
+        image.sprite = hoverSprite;
+        image.type = Image.Type.Sliced;
+        image.raycastTarget = false;
+        // Switched off: shown only while hovered.
+        image.enabled = false;
+
+        target.gameObject.AddComponent<UIHoverSprite>().Configure(image, hoverSprite, null, null);
     }
 
     private void BuildLegend(RectTransform root)
@@ -499,7 +597,7 @@ public sealed partial class ServicePanelView : MonoBehaviour
 
         RectTransform row = CreateRect("Keys", legend);
         // Centred under the cards.
-        Stretch(row, ListLeft, ListRight, 0f, 0f);
+        Stretch(row, ListLeft, ListLeft, 0f, 0f);
         legendKeys = row;
         HorizontalLayoutGroup keys = row.gameObject.AddComponent<HorizontalLayoutGroup>();
         keys.spacing = 44f;

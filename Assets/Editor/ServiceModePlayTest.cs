@@ -1,22 +1,35 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.UI;
 
 /// <summary>
-/// Batch-only play test of the service view in the wide layout. Switches to
-/// Service and checks that every telemetry element is hidden and inert, the
-/// panel runs down the right of the screen with the viewport's controls
-/// beside it, the list is soonest first with a scrollbar that scrolls it, the
-/// wheel over the panel leaves the model's zoom alone, the parts due get pins,
-/// the model is moved beside the panel, hovering a row pins and outlines its
-/// part, and clicking it opens the part's detail, which the back arrow closes. Then switches back and checks telemetry returns exactly as it was. Saves a
-/// 1920x1080 capture of each step, UI included, to Logs/ServiceModeTest.
+/// Batch-only play and stress test of the service view in the wide layout.
 ///
+/// The main path: switches to Service and checks that every telemetry element
+/// is hidden and inert, the panel runs down the right of the screen with the
+/// viewport's controls beside it, the list is soonest first with a scrollbar
+/// that scrolls it, the wheel over the panel leaves the model's zoom alone,
+/// the parts due get pins, and the model is moved beside the panel. Hovering a
+/// component card shows the hover look, pins and outlines its part and leaves
+/// the camera alone; clicking it opens the part's detail, which the back arrow
+/// closes. Then switches back and checks telemetry returns exactly as it was.
+///
+/// Edge cases: a part out of view when its card is clicked pulls the camera
+/// back until it fits; a part that goes overdue; a part that leaves the
+/// schedule while its detail is open; too few parts to scroll, which gives the
+/// cards the scrollbar's room; switching views with the detail open; and a
+/// window too narrow for the panel beside the viewport. No errors may be
+/// logged throughout.
+///
+/// Saves a capture of each step, UI included, to Logs/ServiceModeTest.
 /// Run without -quit: the editor has to stay open while play mode runs.
 /// </summary>
 [InitializeOnLoad]
@@ -27,21 +40,33 @@ public static class ServiceModePlayTest
     private const string ActiveKey = "ServiceModePlayTest.Active";
     private const string StartKey = "ServiceModePlayTest.Start";
     private const string HoverPart = "Drive Roller";
+    private const string FarPart = "Conveyor Belts";
+    private const string DuePart = "Bearings";
+
+    private static readonly FieldInfo PlansField =
+        typeof(TelemetryServiceSchedule).GetField("plans", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    private static readonly FieldInfo DesiredDistance =
+        typeof(OrbitCameraController).GetField("desiredDistance", BindingFlags.Instance | BindingFlags.NonPublic);
 
     private static int step;
     private static float stepTime;
     private static int failures;
+    private static readonly List<string> errors = new();
     private static Camera mainCamera;
     private static Camera uiCamera;
+    private static OrbitCameraController orbit;
     private static ServiceModeController controller;
     private static DigitalTwinModeSwitch modeSwitch;
     private static ServicePanelView panel;
     private static ServicePinLayer pinLayer;
     private static TelemetryServiceSchedule schedule;
+    private static List<TelemetryServiceSchedule.ServicePlan> originalPlans;
     private static int telemetryCards;
     private static Rect telemetryContent;
     private static Rect telemetryZoom;
     private static ServiceHoverTarget hovered;
+    private static float distanceBefore;
 
     static ServiceModePlayTest()
     {
@@ -66,7 +91,7 @@ public static class ServiceModePlayTest
 
     private static void Tick()
     {
-        if (EditorApplication.timeSinceStartup - SessionState.GetFloat(StartKey, 0f) > 240f)
+        if (EditorApplication.timeSinceStartup - SessionState.GetFloat(StartKey, 0f) > 300f)
         {
             Finish("timeout");
             return;
@@ -113,10 +138,11 @@ public static class ServiceModePlayTest
             case 3:
                 Capture("03-service");
                 CheckService();
-                hovered = Object.FindObjectsByType<ServiceHoverTarget>()
-                    .FirstOrDefault(target => target.Part != null && target.Part.name == HoverPart &&
-                                              target.transform.parent.name == "Rows");
-                Expect(hovered != null, $"the '{HoverPart}' row exists");
+                // Back to the top, where the hovered card is in view.
+                panel.List.verticalNormalizedPosition = 1f;
+                hovered = Card(HoverPart);
+                Expect(hovered != null, $"the '{HoverPart}' card exists");
+                distanceBefore = Distance();
                 if (hovered != null)
                     Pointer(hovered.gameObject, ExecuteEvents.pointerEnterHandler);
                 Next(0.4f);
@@ -124,9 +150,11 @@ public static class ServiceModePlayTest
 
             case 4:
                 Capture("04-hover");
-                Expect(panel.HoveredPart != null && panel.HoveredPart.name == HoverPart, "hovering a row marks its part");
+                Expect(panel.HoveredPart != null && panel.HoveredPart.name == HoverPart, "hovering a card marks its part");
+                Expect(hovered != null && hovered.GetComponent<UIHoverSprite>().IsShowingHover, "the hovered card shows the hover look");
                 Expect(ActivePins() == DueCount() + 1, "the hovered part gets a pin too");
                 Expect(SelectionOutline.Targets.Count > 0 && SelectionOutline.Strength > 0.9f, "the hovered part is outlined");
+                Expect(Mathf.Abs(Distance() - distanceBefore) < 0.01f, "hovering leaves the camera alone");
                 if (hovered != null)
                 {
                     Pointer(hovered.gameObject, ExecuteEvents.pointerExitHandler);
@@ -138,23 +166,126 @@ public static class ServiceModePlayTest
             case 5:
                 Capture("05-detail");
                 Expect(panel.DetailOpen && panel.SelectedPart != null && panel.SelectedPart.name == HoverPart,
-                    "clicking a row opens its part's detail");
+                    "clicking a card opens its part's detail");
                 Expect(!panel.List.gameObject.activeInHierarchy, "the detail takes the list's place");
+                Expect(panel.DetailStateText == "ON TRACK", $"the detail shows the part's state ({panel.DetailStateText})");
                 Expect(ActivePins() == DueCount() + 1, "the open part keeps its pin");
                 Expect(SelectionOutline.Targets.Count > 0 && SelectionOutline.Strength > 0.9f, "the open part stays outlined");
-                panel.BackButton.onClick.Invoke();
+                CheckGutter(panel.Detail, panel.DetailRightMargin, "detail");
+                panel.Detail.verticalNormalizedPosition = 0f;
+                Pointer(panel.BackButton.gameObject, ExecuteEvents.pointerEnterHandler);
                 Next(0.3f);
                 break;
 
             case 6:
+                Capture("06-detail-scrolled");
+                Expect(panel.BackButton.GetComponent<UIHoverSprite>().IsShowingHover, "the back arrow shows the hover look");
+                Pointer(panel.BackButton.gameObject, ExecuteEvents.pointerExitHandler);
+                panel.BackButton.onClick.Invoke();
+                Next(0.3f);
+                break;
+
+            case 7:
                 Expect(!panel.DetailOpen && panel.List.gameObject.activeInHierarchy, "the back arrow returns to the list");
-                Expect(Mathf.Abs(panel.List.verticalNormalizedPosition - 0.5f) < 0.01f, "the list is still where it was scrolled to");
+                Expect(panel.List.verticalNormalizedPosition > 0.99f, "the list is still where it was scrolled to");
+                // Edge: close in, so a large part is out of view when opened.
+                DesiredDistance.SetValue(orbit, orbit.minDistance);
+                Next(2f);
+                break;
+
+            case 8:
+                distanceBefore = Distance();
+                MachinePartGroup far = Part(FarPart);
+                Expect(far != null && !controller.IsPartInView(far), $"'{FarPart}' is out of view close in");
+                Pointer(Card(FarPart).gameObject, ExecuteEvents.pointerClickHandler);
+                Next(2.2f);
+                break;
+
+            case 9:
+                Capture("09-framed-for-part");
+                Expect(Distance() > distanceBefore + 0.5f,
+                    $"opening a part out of view pulls the camera back ({distanceBefore:0.0} to {Distance():0.0})");
+                Expect(controller.IsPartInView(Part(FarPart)) || Distance() >= orbit.maxDistance - 0.05f,
+                    "the part now fits, or the camera is as far back as it goes");
+                panel.ShowList();
+
+                // Edge: a part goes overdue.
+                SetPlan(DuePart, plan => plan.FindPropertyRelative("hoursSinceService").floatValue = 950f);
+                panel.Refresh();
+                panel.ShowDetail(Part(DuePart));
+                Next(0.3f);
+                break;
+
+            case 10:
+                Capture("10-overdue");
+                Expect(panel.Items[0].Part.name == DuePart && panel.Items[0].State == ServiceState.Overdue,
+                    "an overdue part goes to the top of the list");
+                Expect(panel.DetailStateText == "OVERDUE", $"its detail says so ({panel.DetailStateText})");
+
+                // Edge: the open part leaves the schedule.
+                int before = panel.Items.Count;
+                SetPlan(DuePart, plan => plan.FindPropertyRelative("part").objectReferenceValue = null);
+                panel.Refresh();
+                Expect(!panel.DetailOpen && panel.List.gameObject.activeInHierarchy, "a part leaving the schedule closes its detail");
+                Expect(panel.Items.Count == before - 1, "and leaves the list");
+
+                // Edge: few enough parts to fit without scrolling.
+                SerializedObject data = new(schedule);
+                data.FindProperty("plans").arraySize = 3;
+                data.ApplyModifiedPropertiesWithoutUndo();
+                panel.Refresh();
+                Next(0.3f);
+                break;
+
+            case 11:
+                Capture("11-few-parts");
+                Expect(!panel.Scrollbar.gameObject.activeInHierarchy, "no scrollbar when every card fits");
+                Expect(Mathf.Approximately(panel.ListRightMargin, 16f), $"and the cards take its room ({panel.ListRightMargin})");
+
+                RestoreSchedule();
+                panel.Refresh();
+                Expect(panel.Items.Count == originalPlans.Count, $"the full schedule is back ({panel.Items.Count})");
+
+                // Edge: switch views with a detail open.
+                panel.ShowDetail(Part(HoverPart));
                 modeSwitch.TelemetryButton.onClick.Invoke();
                 Next(0.8f);
                 break;
 
-            case 7:
-                Capture("07-back-to-telemetry");
+            case 12:
+                Expect(TelemetryGroups().All(g => g.alpha > 0.99f && g.blocksRaycasts || !g.gameObject.activeInHierarchy),
+                    "telemetry comes back with a detail open");
+                modeSwitch.ServiceButton.onClick.Invoke();
+                Next(0.8f);
+                break;
+
+            case 13:
+                Expect(panel.DetailOpen && ServiceGroups().All(g => g.alpha > 0.99f), "the detail is still open on return");
+                panel.ShowList();
+
+                // Edge: a window too narrow for the panel beside the viewport.
+                Resize(800, 1000);
+                Next(0.8f);
+                break;
+
+            case 14:
+                Capture("14-narrow");
+                Rect narrowPanel = ScreenRect((RectTransform)panel.transform);
+                Expect(!controller.PanelBesideViewport, "a narrow window puts the panel over the content");
+                Expect(narrowPanel.xMin >= 0f && narrowPanel.xMax <= 800.5f && narrowPanel.yMin > 1f,
+                    $"and it stays on screen, between the bars ({narrowPanel})");
+                Resize(1920, 1080);
+                Next(0.8f);
+                break;
+
+            case 15:
+                Expect(controller.PanelBesideViewport, "the panel goes back beside the viewport when there is room");
+                modeSwitch.TelemetryButton.onClick.Invoke();
+                Next(0.8f);
+                break;
+
+            case 16:
+                Capture("16-back-to-telemetry");
                 Expect(controller.CurrentMode == DigitalTwinMode.Telemetry, "Telemetry is selected again");
                 Expect(TelemetryGroups().All(g => g.alpha > 0.99f && g.blocksRaycasts || !g.gameObject.activeInHierarchy),
                     "every telemetry element is back");
@@ -166,6 +297,9 @@ public static class ServiceModePlayTest
                 Expect(cards == telemetryCards, $"the same cards are back ({cards} of {telemetryCards})");
                 Expect(Same(ScreenRect(ZoomControls()), telemetryZoom), "the bottom controls are back in place");
                 Expect(Same(ScreenRect(ContentArea()), telemetryContent), "the content area is unchanged");
+                foreach (string error in errors.Take(10))
+                    Debug.Log("SERVICE_MODE_TEST logged: " + error);
+                Expect(errors.Count == 0, $"nothing logged an error ({errors.Count})");
                 Finish(failures == 0 ? "passed" : $"failed={failures}");
                 break;
         }
@@ -186,7 +320,7 @@ public static class ServiceModePlayTest
         Expect(sorted, "the list is soonest first");
 
         foreach (ServiceItemStatus item in panel.Items.Take(4))
-            Debug.Log($"SERVICE_MODE_TEST row '{item.Part.DisplayName}' {item.Task} left={item.HoursLeft:0} state={item.State}");
+            Debug.Log($"SERVICE_MODE_TEST card '{item.Part.DisplayName}' {item.Task} left={item.HoursLeft:0} state={item.State}");
 
         int due = DueCount();
         Expect(due > 0 && ActivePins() == due, $"a pin on each part due ({ActivePins()} of {due})");
@@ -203,11 +337,12 @@ public static class ServiceModePlayTest
             $"the zoom controls moved left of the panel ({telemetryZoom.xMax:0} to {zoom.xMax:0}, panel at {panelRect.xMin:0})");
         Expect(Same(ScreenRect(ContentArea()), telemetryContent), "the hidden content area keeps its layout");
 
-        // The rows do not all fit, so the scrollbar shows, and moving it
+        // The cards do not all fit, so the scrollbar shows, and moving it
         // scrolls the list.
         Expect(panel.Scrollbar != null && panel.Scrollbar.gameObject.activeInHierarchy &&
                panel.Scrollbar.size > 0.05f && panel.Scrollbar.size < 1f,
             $"the scrollbar shows the share of the list in view ({panel.Scrollbar?.size:0.00})");
+        CheckGutter(panel.List, panel.ListRightMargin, "list");
         if (panel.Scrollbar != null)
         {
             float before = panel.List.verticalNormalizedPosition;
@@ -220,8 +355,14 @@ public static class ServiceModePlayTest
         // over it from the wheel over the model.
         Vector2 inPanel = new(panelRect.center.x, panelRect.center.y);
         Expect(RaycastHitsPanel(inPanel), "the pointer over the panel lands on the panel, not the model");
-        Expect(mainCamera.projectionMatrix.m02 > 0.2f, $"the model moved beside the panel (shift {mainCamera.projectionMatrix.m02:0.00})");
-        Expect(VisibleCards() == telemetryCards, "the telemetry cards are kept, only hidden");
+    }
+
+    /// <summary>The cards keep the scrollbar's room exactly while the view scrolls.</summary>
+    private static void CheckGutter(ScrollRect view, float margin, string name)
+    {
+        bool scrolls = view.content.rect.height > view.viewport.rect.height + 0.5f;
+        Expect(Mathf.Approximately(margin, scrolls ? 38f : 16f),
+            $"the {name}'s cards leave room for the scrollbar only while it scrolls (scrolls={scrolls}, margin={margin})");
     }
 
     private static CanvasGroup[] TelemetryGroups() => Groups("telemetryGroups");
@@ -236,6 +377,32 @@ public static class ServiceModePlayTest
             .Where(group => group != null)
             .ToArray();
     }
+
+    private static ServiceHoverTarget Card(string part) =>
+        Object.FindObjectsByType<ServiceHoverTarget>(FindObjectsInactive.Include)
+            .FirstOrDefault(target => target.Part != null && target.Part.name == part);
+
+    private static MachinePartGroup Part(string name) =>
+        Object.FindObjectsByType<MachinePartGroup>(FindObjectsInactive.Include).FirstOrDefault(part => part.name == name);
+
+    private static float Distance() => (float)DesiredDistance.GetValue(orbit);
+
+    private static void SetPlan(string part, System.Action<SerializedProperty> change)
+    {
+        SerializedObject data = new(schedule);
+        SerializedProperty plans = data.FindProperty("plans");
+        for (int i = 0; i < plans.arraySize; i++)
+        {
+            SerializedProperty plan = plans.GetArrayElementAtIndex(i);
+            Object target = plan.FindPropertyRelative("part").objectReferenceValue;
+            if (target != null && target.name == part)
+                change(plan);
+        }
+        data.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    private static void RestoreSchedule() =>
+        PlansField.SetValue(schedule, new List<TelemetryServiceSchedule.ServicePlan>(originalPlans));
 
     private static int DueCount() => panel.Items.Count(item => item.State != ServiceState.OnTrack);
 
@@ -260,7 +427,7 @@ public static class ServiceModePlayTest
 
     private static bool RaycastHitsPanel(Vector2 screenPoint)
     {
-        System.Collections.Generic.List<RaycastResult> hits = new();
+        List<RaycastResult> hits = new();
         EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = screenPoint }, hits);
         return hits.Count > 0 && hits[0].gameObject.transform.IsChildOf(panel.transform);
     }
@@ -280,11 +447,13 @@ public static class ServiceModePlayTest
 
     private static void Prepare()
     {
+        Application.logMessageReceived += RecordError;
         controller = Object.FindAnyObjectByType<ServiceModeController>();
         modeSwitch = Object.FindAnyObjectByType<DigitalTwinModeSwitch>();
         panel = Object.FindAnyObjectByType<ServicePanelView>();
         pinLayer = Object.FindAnyObjectByType<ServicePinLayer>();
         schedule = Object.FindAnyObjectByType<TelemetryServiceSchedule>();
+        originalPlans = new List<TelemetryServiceSchedule.ServicePlan>(schedule.Plans);
 
         // Screen-space-overlay UI is not part of a camera render. The model
         // and the UI are drawn into separate targets and composited, so the
@@ -292,17 +461,17 @@ public static class ServiceModePlayTest
         // moves only the model, as it does on screen. The UI shaders write
         // premultiplied alpha, so the composite is exact.
         mainCamera = Camera.main;
-        mainCamera.targetTexture = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32);
+        orbit = mainCamera.GetComponent<OrbitCameraController>();
         mainCamera.cullingMask &= ~(1 << LayerMask.NameToLayer("UI"));
         if (mainCamera.TryGetComponent(out UniversalAdditionalCameraData mainData))
             mainData.renderPostProcessing = false; // UI colours as authored
 
         uiCamera = new GameObject("Service Test UI Camera").AddComponent<Camera>();
         uiCamera.enabled = false;
-        uiCamera.targetTexture = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32);
         uiCamera.clearFlags = CameraClearFlags.SolidColor;
         uiCamera.backgroundColor = Color.clear;
         uiCamera.cullingMask = 1 << LayerMask.NameToLayer("UI");
+        Resize(1920, 1080);
 
         Canvas canvas = Object.FindObjectsByType<Canvas>().First(c => c.name == "Main UI Canvas");
         canvas.renderMode = RenderMode.ScreenSpaceCamera;
@@ -313,6 +482,19 @@ public static class ServiceModePlayTest
         // a frame, which batch play mode never presents; build them directly,
         // as the detail panel test does.
         Object.FindAnyObjectByType<WideStatRailManager>()?.RebuildLayout();
+    }
+
+    private static void RecordError(string message, string stackTrace, LogType type)
+    {
+        if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
+            errors.Add(message);
+    }
+
+    /// <summary>Renders the model and the UI at a new size, as a resized window would.</summary>
+    private static void Resize(int width, int height)
+    {
+        mainCamera.targetTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+        uiCamera.targetTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
     }
 
     private static void Capture(string name)
@@ -332,7 +514,8 @@ public static class ServiceModePlayTest
                 255);
         }
 
-        Texture2D image = new(1920, 1080, TextureFormat.RGBA32, false);
+        RenderTexture target = mainCamera.targetTexture;
+        Texture2D image = new(target.width, target.height, TextureFormat.RGBA32, false);
         image.SetPixels32(model);
         image.Apply();
         File.WriteAllBytes(Path.Combine(OutputDirectory, name + ".png"), image.EncodeToPNG());
@@ -366,6 +549,7 @@ public static class ServiceModePlayTest
 
     private static void Finish(string result)
     {
+        Application.logMessageReceived -= RecordError;
         EditorApplication.update -= Tick;
         SessionState.EraseBool(ActiveKey);
         Debug.Log($"SERVICE_MODE_TEST_RESULT {result}");

@@ -22,6 +22,14 @@ public enum ServiceTask
     Replace = 3
 }
 
+/// <summary>What a part's failure would do to production.</summary>
+public enum ServiceCriticality
+{
+    Low = 0,
+    Medium = 1,
+    High = 2
+}
+
 /// <summary>How close a part is to its service, by the estimated interval.</summary>
 public enum ServiceState
 {
@@ -98,6 +106,25 @@ public sealed class TelemetryServiceSchedule : MonoBehaviour, ITelemetryServiceL
 
         [Tooltip("Operating hours run since the last service, when the scene starts.")]
         [Min(0f)] public float hoursSinceService;
+
+        [Header("Detail")]
+        [Tooltip("What a failure of the part would do to production.")]
+        public ServiceCriticality criticality;
+
+        [Tooltip("Why the estimate sits where it does against the plan.")]
+        public string likelyCause;
+
+        [Tooltip("What the service involves, in a few words.")]
+        public string suggestedFix;
+
+        [Tooltip("Lubricant or spare parts the service needs, with amounts.")]
+        public string materials;
+
+        [Tooltip("Typical time the service takes, in minutes. 0 hides it.")]
+        [Min(0f)] public float durationMinutes;
+
+        [Tooltip("Operating hours the part ran before each of its last services, oldest first.")]
+        public float[] pastIntervals;
 
         /// <summary>The interval the schedule works to: the estimate, or the plan without one.</summary>
         public float EffectiveIntervalHours =>
@@ -183,6 +210,25 @@ public sealed class TelemetryServiceSchedule : MonoBehaviour, ITelemetryServiceL
                 StateFor(estimate, estimate - run)));
         }
     }
+
+    /// <summary>The plan covering <paramref name="part"/>, if any.</summary>
+    public bool TryGetPlan(MachinePartGroup part, out ServicePlan plan)
+    {
+        foreach (ServicePlan candidate in plans)
+        {
+            if (candidate.part != null && candidate.part == part)
+            {
+                plan = candidate;
+                return true;
+            }
+        }
+        plan = default;
+        return false;
+    }
+
+    /// <summary>Calendar date the given operating hours before now fell on.</summary>
+    public DateTime DateBefore(double operatingHours) =>
+        DateTime.Now.AddDays(-Math.Max(0d, operatingHours) / operatingHoursPerDay);
 
     /// <summary>Calendar date the given operating hours from now fall on.</summary>
     public DateTime DateAfter(double operatingHours) =>

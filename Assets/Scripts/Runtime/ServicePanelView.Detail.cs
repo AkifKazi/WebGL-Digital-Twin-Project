@@ -5,25 +5,40 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// The part detail: clicking a row opens that part in place of the list, with
-/// its hours to service, the date that falls on, its bar, and the numbers the
-/// bar is drawn from: hours run, the estimated and planned intervals, and how
-/// far the estimate sits from the plan. The back arrow returns to the list,
-/// where it was scrolled to.
+/// The part detail: clicking a component card opens that part in place of the
+/// list, as three cards that scroll together.
+///
+/// Overview: hours to service and the date that falls on, the part's bar, the
+/// numbers it is drawn from (hours run, the estimated and planned intervals,
+/// how far the estimate sits from the plan), then the likely cause of that
+/// difference and the suggested fix.
+///
+/// Service history: the hours the part ran before each past service against
+/// the plan, then the current interval, as columns.
+///
+/// Service data: when it was last serviced, how critical it is, how long the
+/// service takes and what it needs.
+///
+/// Information only: nothing here starts or records work. The back arrow
+/// returns to the list, where it was scrolled to.
 /// </summary>
 public sealed partial class ServicePanelView
 {
-    private const float DetailCardHeight = 272f;
+    private const float OverviewHeight = 414f;
+    private const float HistoryHeight = 248f;
+    private const float ServiceDataHeight = 260f;
+    private const float ChartTop = 66f;
+    private const float ChartHeight = 132f;
+    private const int MaximumHistoryColumns = 5;
 
     private RectTransform listHeader;
     private RectTransform detailHeader;
-    private RectTransform detailBody;
+    private ScrollView detailView;
     private Button backButton;
     private TextMeshProUGUI detailName;
-    private TextMeshProUGUI detailTask;
     private UIFrameGraphic detailChip;
     private TextMeshProUGUI detailChipText;
-    private UIFrameGraphic detailCard;
+
     private TextMeshProUGUI detailHours;
     private TextMeshProUGUI detailDue;
     private UIServiceBarGraphic detailBar;
@@ -31,6 +46,21 @@ public sealed partial class ServicePanelView
     private TextMeshProUGUI detailEstimate;
     private TextMeshProUGUI detailPlan;
     private TextMeshProUGUI detailDifference;
+    private TextMeshProUGUI detailCause;
+    private TextMeshProUGUI detailFix;
+
+    private TextMeshProUGUI historyPlan;
+    private UIServiceHistoryGraphic historyChart;
+    private readonly TextMeshProUGUI[] historyValues = new TextMeshProUGUI[MaximumHistoryColumns + 1];
+    private readonly TextMeshProUGUI[] historyDates = new TextMeshProUGUI[MaximumHistoryColumns + 1];
+    private readonly float[] historyBuffer = new float[MaximumHistoryColumns];
+    private readonly ArraySegmentList historyShown = new();
+
+    private TextMeshProUGUI dataLastService;
+    private TextMeshProUGUI dataCriticality;
+    private TextMeshProUGUI dataDuration;
+    private TextMeshProUGUI dataMaterials;
+
     private MachinePartGroup selectedPart;
 
     /// <summary>The part whose detail is open, if any.</summary>
@@ -41,7 +71,16 @@ public sealed partial class ServicePanelView
     /// <summary>Returns from the detail to the list.</summary>
     public Button BackButton => backButton;
 
-    /// <summary>The part to mark on the model: the hovered row's, else the open detail's.</summary>
+    /// <summary>The detail's scroll view.</summary>
+    public ScrollRect Detail => detailView?.Scroll;
+
+    /// <summary>Space right of the detail's cards: wider while the detail scrolls.</summary>
+    public float DetailRightMargin => detailView != null ? detailView.Stack.padding.right : 0f;
+
+    /// <summary>The state shown in the detail's header.</summary>
+    public string DetailStateText => detailChipText != null ? detailChipText.text : string.Empty;
+
+    /// <summary>The part to mark on the model: the hovered card's, else the open detail's.</summary>
     public MachinePartGroup HighlightedPart => hoveredPart != null ? hoveredPart : selectedPart;
 
     public void ShowDetail(MachinePartGroup part)
@@ -53,9 +92,12 @@ public sealed partial class ServicePanelView
             return;
         }
 
+        bool changed = selectedPart != part;
         selectedPart = part;
         SetView(true);
         RefreshDetail();
+        if (changed)
+            detailView.Content.anchoredPosition = Vector2.zero;
     }
 
     public void ShowList()
@@ -68,9 +110,9 @@ public sealed partial class ServicePanelView
     private void SetView(bool detail)
     {
         listHeader.gameObject.SetActive(!detail);
-        listRect.gameObject.SetActive(!detail);
+        listView.Root.gameObject.SetActive(!detail);
         detailHeader.gameObject.SetActive(detail);
-        detailBody.gameObject.SetActive(detail);
+        detailView.Root.gameObject.SetActive(detail);
     }
 
     private bool TryGetStatus(MachinePartGroup part, out ServiceItemStatus status)
@@ -91,17 +133,27 @@ public sealed partial class ServicePanelView
     {
         if (selectedPart == null)
             return;
+        // The part left the schedule, or was destroyed: back to the list.
         if (!TryGetStatus(selectedPart, out ServiceItemStatus status))
         {
             ShowList();
             return;
         }
 
+        TelemetryServiceSchedule.ServicePlan plan = default;
+        schedule?.TryGetPlan(selectedPart, out plan);
         bool alert = status.State != ServiceState.OnTrack;
         Color state = StateColor(status.State);
 
+        RefreshDetailHeader(status, state);
+        RefreshOverview(status, plan, alert, state);
+        RefreshHistory(status, plan, state);
+        RefreshServiceData(status, plan);
+    }
+
+    private void RefreshDetailHeader(in ServiceItemStatus status, Color state)
+    {
         SetText(detailName, DisplayName(status.Part));
-        SetText(detailTask, TaskLabel(status.Task));
 
         string chip = status.State switch
         {
@@ -115,9 +167,10 @@ public sealed partial class ServicePanelView
         float chipWidth = Mathf.Ceil(detailChipText.GetPreferredValues(chip).x) + 24f;
         detailChip.rectTransform.sizeDelta = new Vector2(chipWidth, 36f);
         detailName.rectTransform.offsetMax = new Vector2(-(chipWidth + 12f), detailName.rectTransform.offsetMax.y);
-        detailTask.rectTransform.offsetMax = new Vector2(-(chipWidth + 12f), detailTask.rectTransform.offsetMax.y);
+    }
 
-        detailCard.SetColors(Color.clear, alert ? Color.Lerp(card, new Color(state.r, state.g, state.b, 1f), AlertTint) : card);
+    private void RefreshOverview(in ServiceItemStatus status, in TelemetryServiceSchedule.ServicePlan plan, bool alert, Color state)
+    {
         detailHours.color = alert ? state : ink;
         bool overdue = status.HoursLeft <= 0d;
         SetText(detailHours, WithSuffix(
@@ -125,7 +178,10 @@ public sealed partial class ServicePanelView
             overdue ? " H OVERDUE" : " H TO SERVICE",
             40));
         if (schedule != null)
-            SetText(detailDue, "DUE " + schedule.DateAfter(status.HoursLeft).ToString("d MMM", CultureInfo.InvariantCulture).ToUpperInvariant());
+        {
+            DateTime due = overdue ? schedule.DateBefore(-status.HoursLeft) : schedule.DateAfter(status.HoursLeft);
+            SetText(detailDue, (overdue ? "WAS DUE " : "DUE ") + ShortDate(due));
+        }
 
         detailBar.SetValues((float)status.RunHours, (float)status.PlanHours, (float)status.EstimateHours, state);
         SetText(detailRun, WithSuffix(Number(status.RunHours), " H", 75));
@@ -138,6 +194,115 @@ public sealed partial class ServicePanelView
         string sign = difference > 0d ? "+" : difference < 0d ? "-" : string.Empty;
         detailDifference.color = difference < 0d ? warning : difference > 0d ? ink : Muted;
         SetText(detailDifference, WithSuffix(sign + Number(Math.Abs(difference)), " H", 75));
+
+        SetText(detailCause, string.IsNullOrWhiteSpace(plan.likelyCause) ? DefaultCause(difference) : plan.likelyCause);
+        SetText(detailFix, string.IsNullOrWhiteSpace(plan.suggestedFix) ? DefaultFix(status.Task) : plan.suggestedFix);
+    }
+
+    private void RefreshHistory(in ServiceItemStatus status, in TelemetryServiceSchedule.ServicePlan plan, Color state)
+    {
+        SetText(historyPlan, "PLAN " + Number(status.PlanHours) + " H");
+
+        // The latest past intervals that fit, oldest first.
+        float[] source = plan.pastIntervals ?? Array.Empty<float>();
+        int count = Mathf.Min(source.Length, MaximumHistoryColumns);
+        int first = source.Length - count;
+        for (int i = 0; i < count; i++)
+            historyBuffer[i] = source[first + i];
+        historyShown.Set(historyBuffer, count);
+
+        historyChart.SetValues(
+            historyShown,
+            (float)status.PlanHours,
+            (float)status.EstimateHours,
+            (float)status.RunHours,
+            new Color(normal.r, normal.g, normal.b, 0.32f),
+            new Color(warning.r, warning.g, warning.b, 0.6f),
+            state);
+
+        // Each past service is dated back from the last one, which was the
+        // hours run ago.
+        int columns = count + 1;
+        float scale = ChartHeight / historyChart.Ceiling;
+        double hoursAgo = status.RunHours;
+        for (int i = historyValues.Length - 1; i >= 0; i--)
+        {
+            bool shown = i < columns;
+            historyValues[i].gameObject.SetActive(shown);
+            historyDates[i].gameObject.SetActive(shown);
+            if (!shown)
+                continue;
+
+            bool current = i == columns - 1;
+            float value = current ? (float)status.EstimateHours : historyBuffer[i];
+            PlaceColumn(historyValues[i].rectTransform, i, columns, value * scale + 4f);
+            PlaceColumn(historyDates[i].rectTransform, i, columns, -6f);
+            SetText(historyValues[i], Number(value));
+            historyValues[i].color = current ? state : ink;
+
+            if (current)
+            {
+                SetText(historyDates[i], "NEXT");
+                historyDates[i].color = ink;
+            }
+            else
+            {
+                SetText(historyDates[i], schedule != null ? MonthYear(schedule.DateBefore(hoursAgo)) : string.Empty);
+                historyDates[i].color = Muted;
+                hoursAgo += historyBuffer[i];
+            }
+        }
+    }
+
+    private static void PlaceColumn(RectTransform rect, int column, int columns, float y)
+    {
+        float centre = (column + 0.5f) / columns;
+        rect.anchorMin = rect.anchorMax = new Vector2(centre, 0f);
+        rect.anchoredPosition = new Vector2(0f, y);
+    }
+
+    private void RefreshServiceData(in ServiceItemStatus status, in TelemetryServiceSchedule.ServicePlan plan)
+    {
+        if (schedule != null)
+            SetText(dataLastService, ShortDate(schedule.DateBefore(status.RunHours)) + " " +
+                                     schedule.DateBefore(status.RunHours).Year.ToString(CultureInfo.InvariantCulture));
+        SetText(dataCriticality, plan.criticality switch
+        {
+            ServiceCriticality.High => "High, stops production",
+            ServiceCriticality.Medium => "Medium, reduces output",
+            _ => "Low, no production loss"
+        });
+        SetText(dataDuration, plan.durationMinutes > 0f ? Duration(plan.durationMinutes) : "Not recorded");
+        SetText(dataMaterials, string.IsNullOrWhiteSpace(plan.materials) ? "None" : plan.materials);
+    }
+
+    private static string DefaultCause(double difference) => difference switch
+    {
+        < 0d => "Running conditions wear it faster than planned",
+        > 0d => "Running conditions are easier than planned",
+        _ => "Wear follows the planned rate"
+    };
+
+    private static string DefaultFix(ServiceTask task) => task switch
+    {
+        ServiceTask.Regrease => "Regrease as planned",
+        ServiceTask.OilChange => "Change the oil as planned",
+        ServiceTask.Replace => "Replace as planned",
+        _ => "Inspect as planned"
+    };
+
+    private static string ShortDate(DateTime date) =>
+        date.ToString("d MMM", CultureInfo.InvariantCulture).ToUpperInvariant();
+
+    private static string MonthYear(DateTime date) =>
+        date.ToString("MMM yy", CultureInfo.InvariantCulture).ToUpperInvariant();
+
+    private static string Duration(float minutes)
+    {
+        if (minutes < 60f)
+            return Mathf.RoundToInt(minutes).ToString(CultureInfo.InvariantCulture) + " min";
+        float hours = Mathf.Round(minutes / 30f) * 0.5f;
+        return hours.ToString("0.#", CultureInfo.InvariantCulture) + " h";
     }
 
     private static string Number(double hours) =>
@@ -153,6 +318,16 @@ public sealed partial class ServicePanelView
 
     private void BuildDetail(RectTransform root, RectTransform headerContent)
     {
+        BuildDetailHeader(headerContent);
+
+        detailView = BuildScrollView("Part Detail", root);
+        BuildOverview(DetailCard("Overview", OverviewHeight));
+        BuildHistory(DetailCard("Service History", HistoryHeight));
+        BuildServiceData(DetailCard("Service Data", ServiceDataHeight));
+    }
+
+    private void BuildDetailHeader(RectTransform headerContent)
+    {
         detailHeader = CreateRect("Detail", headerContent);
         Stretch(detailHeader, 0f, 0f, 0f, 0f);
 
@@ -164,6 +339,7 @@ public sealed partial class ServicePanelView
         back.anchoredPosition = new Vector2(-12f, 0f);
         back.sizeDelta = new Vector2(48f, 48f);
         UIFrameGraphic hit = AddFrame(back, Color.clear, 0f, true);
+        AddHoverLook(back);
         RectTransform arrowRect = CreateRect("Arrow", back);
         Stretch(arrowRect, 0f, 0f, 0f, 0f);
         UIBackArrowGraphic arrow = arrowRect.gameObject.AddComponent<UIBackArrowGraphic>();
@@ -179,11 +355,11 @@ public sealed partial class ServicePanelView
 
         detailName = CreateText("Name", detailHeader, 24f, true, ink, TextAlignmentOptions.MidlineLeft);
         detailName.characterSpacing = 3f;
-        PlaceAcrossMiddle(detailName.rectTransform, -1f, 35f);
-
-        detailTask = CreateText("Task", detailHeader, 19f, false, Muted, TextAlignmentOptions.MidlineLeft);
-        detailTask.characterSpacing = 3f;
-        PlaceAcrossMiddle(detailTask.rectTransform, -31f, -1f);
+        detailName.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+        detailName.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+        detailName.rectTransform.pivot = new Vector2(0f, 0.5f);
+        detailName.rectTransform.offsetMin = new Vector2(44f, -18f);
+        detailName.rectTransform.offsetMax = new Vector2(0f, 18f);
 
         RectTransform chip = CreateRect("State", detailHeader);
         chip.anchorMin = chip.anchorMax = new Vector2(1f, 0.5f);
@@ -194,22 +370,24 @@ public sealed partial class ServicePanelView
         detailChipText.characterSpacing = 3f;
         detailChipText.overflowMode = TextOverflowModes.Overflow;
         Stretch(detailChipText.rectTransform, 0f, 0f, 0f, 0f);
+    }
 
-        detailBody = CreateRect("Part Detail", root);
-        detailBody.anchorMin = Vector2.zero;
-        detailBody.anchorMax = Vector2.one;
-
-        RectTransform cardRect = CreateRect("Card", detailBody);
-        cardRect.anchorMin = new Vector2(0f, 1f);
-        cardRect.anchorMax = Vector2.one;
-        cardRect.pivot = new Vector2(0.5f, 1f);
-        cardRect.offsetMin = new Vector2(ListLeft, -RowGap - DetailCardHeight);
-        cardRect.offsetMax = new Vector2(-ListRight, -RowGap);
-        detailCard = AddFrame(cardRect, card, 0f, false);
+    /// <summary>A card in the detail's stack; returns its content area, inside the card's padding.</summary>
+    private RectTransform DetailCard(string name, float height)
+    {
+        RectTransform cardRect = CreateRect(name, detailView.Content);
+        LayoutElement size = cardRect.gameObject.AddComponent<LayoutElement>();
+        size.preferredHeight = height;
+        size.minHeight = height;
+        AddFrame(cardRect, card, 0f, false);
 
         RectTransform inner = CreateRect("Content", cardRect);
         Stretch(inner, CardPadding, CardPadding, 0f, 0f);
+        return inner;
+    }
 
+    private void BuildOverview(RectTransform inner)
+    {
         detailHours = CreateText("Hours To Service", inner, 60f, true, ink, TextAlignmentOptions.MidlineLeft);
         PlaceBeside(detailHours.rectTransform, 0f, 0f, -12f, 90f);
 
@@ -219,24 +397,25 @@ public sealed partial class ServicePanelView
 
         RectTransform bar = CreateRect("Bar", inner);
         PlaceBeside(bar, 0f, 0f, -146f, 28f);
-        detailBar = bar.gameObject.AddComponent<UIServiceBarGraphic>();
-        detailBar.raycastTarget = false;
+        detailBar = CreateBar(bar, 0f);
 
-        detailRun = AddFigure(inner, 0, "RUN");
-        detailEstimate = AddFigure(inner, 1, "ESTIMATE");
-        detailPlan = AddFigure(inner, 2, "PLAN");
-        detailDifference = AddFigure(inner, 3, "VS PLAN");
+        detailRun = AddFigure(inner, 0, 4, -190f, "RUN");
+        detailEstimate = AddFigure(inner, 1, 4, -190f, "ESTIMATE");
+        detailPlan = AddFigure(inner, 2, 4, -190f, "PLAN");
+        detailDifference = AddFigure(inner, 3, 4, -190f, "VS PLAN");
+
+        RectTransform line = CreateRect("Divider", inner);
+        PlaceBeside(line, 0f, 0f, -272f, 1.5f);
+        AddFrame(line, new Color(normal.r, normal.g, normal.b, 0.14f), 0f, false);
+
+        detailCause = AddNote(inner, 0, "LIKELY CAUSE");
+        detailFix = AddNote(inner, 1, "SUGGESTED FIX");
     }
 
-    /// <summary>A labelled number in one of four columns under the bar.</summary>
-    private TextMeshProUGUI AddFigure(RectTransform parent, int column, string caption)
+    /// <summary>A labelled number in one of the columns under the bar.</summary>
+    private TextMeshProUGUI AddFigure(RectTransform parent, int column, int columns, float y, string caption)
     {
-        RectTransform cell = CreateRect(caption, parent);
-        cell.anchorMin = new Vector2(column / 4f, 1f);
-        cell.anchorMax = new Vector2((column + 1) / 4f, 1f);
-        cell.pivot = new Vector2(0f, 1f);
-        cell.offsetMin = new Vector2(0f, -250f);
-        cell.offsetMax = new Vector2(0f, -190f);
+        RectTransform cell = Column(parent, caption, column, columns, y, 60f);
 
         TextMeshProUGUI heading = CreateText("Label", cell, 16f, false, label, TextAlignmentOptions.MidlineLeft);
         heading.characterSpacing = 2f;
@@ -248,13 +427,118 @@ public sealed partial class ServicePanelView
         return value;
     }
 
-    /// <summary>Spans the header from right of the back arrow, between two heights about its middle.</summary>
-    private static void PlaceAcrossMiddle(RectTransform rect, float bottom, float top)
+    /// <summary>A labelled line of text, up to three lines long, in one of two columns.</summary>
+    private TextMeshProUGUI AddNote(RectTransform parent, int column, string caption)
     {
-        rect.anchorMin = new Vector2(0f, 0.5f);
-        rect.anchorMax = new Vector2(1f, 0.5f);
-        rect.pivot = new Vector2(0f, 0.5f);
-        rect.offsetMin = new Vector2(44f, bottom);
-        rect.offsetMax = new Vector2(0f, top);
+        RectTransform cell = Column(parent, caption, column, 2, -290f, 104f);
+
+        TextMeshProUGUI heading = CreateText("Label", cell, 16f, false, label, TextAlignmentOptions.MidlineLeft);
+        heading.characterSpacing = 2f;
+        heading.text = caption;
+        PlaceBeside(heading.rectTransform, 0f, 12f, 0f, 26f);
+
+        TextMeshProUGUI text = CreateText("Text", cell, 19f, false, ink, TextAlignmentOptions.TopLeft);
+        text.textWrappingMode = TextWrappingModes.Normal;
+        text.lineSpacing = -8f;
+        PlaceBeside(text.rectTransform, 0f, 12f, -30f, 74f);
+        return text;
+    }
+
+    private static RectTransform Column(RectTransform parent, string name, int column, int columns, float y, float height)
+    {
+        RectTransform cell = CreateRect(name, parent);
+        cell.anchorMin = new Vector2((float)column / columns, 1f);
+        cell.anchorMax = new Vector2((float)(column + 1) / columns, 1f);
+        cell.pivot = new Vector2(0f, 1f);
+        cell.offsetMin = new Vector2(0f, y - height);
+        cell.offsetMax = new Vector2(0f, y);
+        return cell;
+    }
+
+    private void BuildHistory(RectTransform inner)
+    {
+        TextMeshProUGUI title = CreateText("Title", inner, 16f, false, label, TextAlignmentOptions.MidlineLeft);
+        title.characterSpacing = 2f;
+        title.text = "SERVICE HISTORY";
+        PlaceBeside(title.rectTransform, 0f, 0f, -18f, 30f);
+
+        historyPlan = CreateText("Plan", inner, 16f, false, Muted, TextAlignmentOptions.MidlineRight);
+        historyPlan.characterSpacing = 2f;
+        PlaceBeside(historyPlan.rectTransform, 0f, 0f, -18f, 30f);
+
+        RectTransform chart = CreateRect("Chart", inner);
+        PlaceBeside(chart, 0f, 0f, -ChartTop, ChartHeight);
+        historyChart = chart.gameObject.AddComponent<UIServiceHistoryGraphic>();
+        historyChart.raycastTarget = false;
+
+        for (int i = 0; i < historyValues.Length; i++)
+        {
+            historyValues[i] = CreateText($"Value {i + 1}", chart, 17f, true, ink, TextAlignmentOptions.Bottom);
+            historyValues[i].rectTransform.pivot = new Vector2(0.5f, 0f);
+            historyValues[i].rectTransform.sizeDelta = new Vector2(96f, 26f);
+            historyValues[i].overflowMode = TextOverflowModes.Overflow;
+
+            historyDates[i] = CreateText($"Date {i + 1}", chart, 15f, false, Muted, TextAlignmentOptions.Top);
+            historyDates[i].characterSpacing = 1f;
+            historyDates[i].rectTransform.pivot = new Vector2(0.5f, 1f);
+            historyDates[i].rectTransform.sizeDelta = new Vector2(96f, 24f);
+            historyDates[i].overflowMode = TextOverflowModes.Overflow;
+        }
+    }
+
+    private void BuildServiceData(RectTransform inner)
+    {
+        TextMeshProUGUI title = CreateText("Title", inner, 16f, false, label, TextAlignmentOptions.MidlineLeft);
+        title.characterSpacing = 2f;
+        title.text = "SERVICE DATA";
+        PlaceBeside(title.rectTransform, 0f, 0f, -18f, 30f);
+
+        dataLastService = AddDataRow(inner, "LAST SERVICE", -62f, 40f);
+        dataCriticality = AddDataRow(inner, "CRITICALITY", -102f, 40f);
+        dataDuration = AddDataRow(inner, "DURATION", -142f, 40f);
+        dataMaterials = AddDataRow(inner, "MATERIALS", -182f, 60f);
+        dataMaterials.textWrappingMode = TextWrappingModes.Normal;
+        dataMaterials.lineSpacing = -8f;
+        dataMaterials.alignment = TextAlignmentOptions.TopLeft;
+    }
+
+    /// <summary>A label and its value on one row, like a data sheet.</summary>
+    private TextMeshProUGUI AddDataRow(RectTransform parent, string caption, float y, float height)
+    {
+        TextMeshProUGUI heading = CreateText(caption, parent, 16f, false, Muted, TextAlignmentOptions.TopLeft);
+        heading.characterSpacing = 2f;
+        heading.text = caption;
+        PlaceBeside(heading.rectTransform, 0f, 0f, y - 6f, 26f);
+        heading.rectTransform.anchorMax = new Vector2(0f, 1f);
+        heading.rectTransform.offsetMax = new Vector2(160f, heading.rectTransform.offsetMax.y);
+
+        TextMeshProUGUI value = CreateText(caption + " Value", parent, 19f, false, ink, TextAlignmentOptions.TopLeft);
+        PlaceBeside(value.rectTransform, 164f, 0f, y - 4f, height - 4f);
+        return value;
+    }
+
+    /// <summary>A fixed array seen as a list of its first entries, without allocating.</summary>
+    private sealed class ArraySegmentList : System.Collections.Generic.IReadOnlyList<float>
+    {
+        private float[] values = Array.Empty<float>();
+        private int count;
+
+        public void Set(float[] source, int length)
+        {
+            values = source;
+            count = Mathf.Clamp(length, 0, source.Length);
+        }
+
+        public float this[int index] => values[index];
+
+        public int Count => count;
+
+        public System.Collections.Generic.IEnumerator<float> GetEnumerator()
+        {
+            for (int i = 0; i < count; i++)
+                yield return values[i];
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

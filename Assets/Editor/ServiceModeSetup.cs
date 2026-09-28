@@ -22,6 +22,9 @@ public static class ServiceModeSetup
     private const string ScenePath = "Assets/Scenes/SampleScene.unity";
     private const string LabelFontPath = "Assets/UI/Fonts/Rajdhani-Medium SDF.asset";
     private const string ValueFontPath = "Assets/UI/Fonts/Rajdhani-SemiBold SDF.asset";
+    private const string HoverSpritePath = "Assets/UI/Sprites/Button Hover Background.png";
+    private const string RunBarShaderPath = "Assets/Materials/UI/ServiceRunBar.shader";
+    private const string RunBarMaterialPath = "Assets/Materials/UI/Service Run Bar.mat";
 
     private const float PanelWidth = 560f;
     private const float SwitchSegmentWidth = 166f;
@@ -34,38 +37,98 @@ public static class ServiceModeSetup
         public readonly float Plan;
         public readonly float Since;
         public readonly float Estimate;
+        public readonly ServiceCriticality Criticality;
+        public readonly string Cause;
+        public readonly string Fix;
+        public readonly string Materials;
+        public readonly float Minutes;
+        public readonly float[] History;
 
-        public PlanRow(string part, ServiceTask task, float plan, float since, float estimate)
+        public PlanRow(string part, ServiceTask task, float plan, float since, float estimate,
+            ServiceCriticality criticality, string cause, string fix, string materials, float minutes, params float[] history)
         {
             Part = part;
             Task = task;
             Plan = plan;
             Since = since;
             Estimate = estimate;
+            Criticality = criticality;
+            Cause = cause;
+            Fix = fix;
+            Materials = materials;
+            Minutes = minutes;
+            History = history ?? Array.Empty<float>();
         }
     }
 
+    private const string PlannedRate = "Wear follows the planned rate";
+
     /// <summary>
     /// Demonstration plans by machine part: task, the manufacturer's interval,
-    /// hours run since the last service, and the interval estimated for this
-    /// machine's conditions. Replace with the site's maintenance plan.
+    /// hours run since the last service, the interval estimated for this
+    /// machine's conditions, then the detail view's data: criticality, likely
+    /// cause, suggested fix, materials, minutes the service takes, and the
+    /// hours run before each past service, oldest first. Replace with the
+    /// site's maintenance plan.
     /// </summary>
     public static readonly PlanRow[] Plans =
     {
-        new("Bearings", ServiceTask.Regrease, 1000f, 740f, 900f),
-        new("Screen Deck", ServiceTask.Replace, 1500f, 1180f, 1350f),
-        new("Drive Roller", ServiceTask.Regrease, 2000f, 1460f, 2200f),
-        new("Motor Frame", ServiceTask.Inspect, 2000f, 1210f, 2000f),
-        new("Upper Mixer Rotor", ServiceTask.Inspect, 3000f, 1740f, 2800f),
-        new("Lower Rotor", ServiceTask.Inspect, 3000f, 1740f, 2800f),
-        new("Drive Shaft", ServiceTask.Inspect, 4000f, 2480f, 3800f),
-        new("Discharge Outlets", ServiceTask.Inspect, 2000f, 610f, 2000f),
-        new("Idler Rollers", ServiceTask.Inspect, 5000f, 2150f, 5000f),
-        new("Stator Windings", ServiceTask.Inspect, 8000f, 5210f, 8000f),
-        new("Rotor Core", ServiceTask.Inspect, 8000f, 5210f, 8000f),
-        new("Bunker", ServiceTask.Inspect, 8760f, 4020f, 8760f),
-        new("Conveyor Belts", ServiceTask.Replace, 20000f, 11700f, 18500f),
-        new("Support Frame", ServiceTask.Inspect, 17520f, 6300f, 17520f)
+        new("Bearings", ServiceTask.Regrease, 1000f, 740f, 900f, ServiceCriticality.High,
+            "Bearings run 8 \u00b0C above normal, so the grease breaks down sooner",
+            "Regrease both bearings, then check the temperature settles",
+            "Lithium complex grease, NLGI 2, 30 g per bearing", 30f, 980f, 930f, 890f),
+        new("Screen Deck", ServiceTask.Replace, 1500f, 1180f, 1350f, ServiceCriticality.High,
+            "Feed heavier than rated wears the mesh faster",
+            "Replace the screen panels and re-tension the deck",
+            "Polyurethane screen panels, 20 mm aperture, full deck", 120f, 1490f, 1410f, 1330f),
+        new("Drive Roller", ServiceTask.Regrease, 2000f, 1460f, 2200f, ServiceCriticality.Medium,
+            "Light belt load keeps the roller bearings cool",
+            "Regrease the roller bearings",
+            "Lithium complex grease, NLGI 2, 20 g per bearing", 20f, 2150f, 2240f, 2180f),
+        new("Motor Frame", ServiceTask.Inspect, 2000f, 1210f, 2000f, ServiceCriticality.Medium,
+            PlannedRate,
+            "Check the mounting bolts and the frame for cracks",
+            "None", 30f, 2000f, 1990f, 2010f),
+        new("Upper Mixer Rotor", ServiceTask.Inspect, 3000f, 1740f, 2800f, ServiceCriticality.High,
+            "Abrasive feed wears the rotor tips faster",
+            "Measure rotor tip wear and check the balance",
+            "None for the inspection. Rotor tip set held in stock", 45f, 2950f, 2860f, 2790f),
+        new("Lower Rotor", ServiceTask.Inspect, 3000f, 1740f, 2800f, ServiceCriticality.High,
+            "Abrasive feed wears the rotor tips faster",
+            "Measure rotor tip wear and check the balance",
+            "None for the inspection. Rotor tip set held in stock", 45f, 2980f, 2840f, 2800f),
+        new("Drive Shaft", ServiceTask.Inspect, 4000f, 2480f, 3800f, ServiceCriticality.Medium,
+            "Vibration slightly above baseline loads the couplings",
+            "Check coupling alignment and shaft run-out",
+            "None for the inspection. Coupling insert held in stock", 60f, 3950f, 3860f),
+        new("Discharge Outlets", ServiceTask.Inspect, 2000f, 610f, 2000f, ServiceCriticality.Low,
+            PlannedRate,
+            "Clear build-up and check the liners",
+            "None", 30f, 2000f, 1980f, 2020f),
+        new("Idler Rollers", ServiceTask.Inspect, 5000f, 2150f, 5000f, ServiceCriticality.Low,
+            PlannedRate,
+            "Spin-check the idlers and replace any that drag",
+            "Idler rollers, 89 mm, as needed", 60f, 4950f, 5020f),
+        new("Stator Windings", ServiceTask.Inspect, 8000f, 5210f, 8000f, ServiceCriticality.High,
+            PlannedRate,
+            "Measure insulation resistance and check the terminals",
+            "None", 90f, 8000f, 7900f),
+        new("Rotor Core", ServiceTask.Inspect, 8000f, 5210f, 8000f, ServiceCriticality.Medium,
+            PlannedRate,
+            "Check the rotor core and the air gap",
+            "None", 90f, 8050f, 7980f),
+        new("Bunker", ServiceTask.Inspect, 8760f, 4020f, 8760f, ServiceCriticality.Low,
+            PlannedRate,
+            "Inspect the liners and welds for wear",
+            "None", 60f, 8760f),
+        new("Conveyor Belts", ServiceTask.Replace, 20000f, 11700f, 18500f, ServiceCriticality.High,
+            "Sharp rock edges cut the top cover faster",
+            "Replace the belt and re-tension it",
+            "EP 400/3 belt, 6 + 2 mm covers, 24 m", 480f, 19200f),
+        new("Support Frame", ServiceTask.Inspect, 17520f, 6300f, 17520f, ServiceCriticality.Low,
+            PlannedRate,
+            "Check welds, bolts and corrosion",
+            "None", 120f, 17500f)
     };
 
     public static void WritePlan(SerializedProperty plan, MachinePartGroup part, in PlanRow row)
@@ -75,6 +138,15 @@ public static class ServiceModeSetup
         plan.FindPropertyRelative("serviceIntervalHours").floatValue = row.Plan;
         plan.FindPropertyRelative("estimatedIntervalHours").floatValue = row.Estimate;
         plan.FindPropertyRelative("hoursSinceService").floatValue = row.Since;
+        plan.FindPropertyRelative("criticality").enumValueIndex = (int)row.Criticality;
+        plan.FindPropertyRelative("likelyCause").stringValue = row.Cause;
+        plan.FindPropertyRelative("suggestedFix").stringValue = row.Fix;
+        plan.FindPropertyRelative("materials").stringValue = row.Materials;
+        plan.FindPropertyRelative("durationMinutes").floatValue = row.Minutes;
+        SerializedProperty history = plan.FindPropertyRelative("pastIntervals");
+        history.arraySize = row.History.Length;
+        for (int i = 0; i < row.History.Length; i++)
+            history.GetArrayElementAtIndex(i).floatValue = row.History[i];
     }
 
     [MenuItem("Tools/Digital Twin/Set Up Service Mode")]
@@ -305,8 +377,23 @@ public static class ServiceModeSetup
         data.FindProperty("schedule").objectReferenceValue = schedule;
         data.FindProperty("labelFont").objectReferenceValue = labelFont;
         data.FindProperty("valueFont").objectReferenceValue = valueFont;
+        data.FindProperty("hoverSprite").objectReferenceValue = Load<Sprite>(HoverSpritePath);
+        data.FindProperty("runBarMaterial").objectReferenceValue = RunBarMaterial();
         data.ApplyModifiedPropertiesWithoutUndo();
         return panel;
+    }
+
+    /// <summary>The run bars' material, made from its shader the first time.</summary>
+    private static Material RunBarMaterial()
+    {
+        Material material = AssetDatabase.LoadAssetAtPath<Material>(RunBarMaterialPath);
+        if (material != null)
+            return material;
+
+        material = new Material(Load<Shader>(RunBarShaderPath)) { name = "Service Run Bar" };
+        AssetDatabase.CreateAsset(material, RunBarMaterialPath);
+        AssetDatabase.SaveAssets();
+        return material;
     }
 
     private static RectTransform CreatePinLayer(Transform wide, Transform leaderLayer, TMP_FontAsset font)

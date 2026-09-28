@@ -67,8 +67,30 @@ public sealed class SelectionOutlineFeature : ScriptableRendererFeature
         if (material == null || !SelectionOutline.IsActive)
             return;
 
+        // Only cameras that draw the outlined parts. A UI-only, preview or
+        // reflection camera would otherwise draw the outline again from its
+        // own point of view, over whatever it renders.
+        Camera camera = renderingData.cameraData.camera;
+        if (camera.cameraType == CameraType.Preview || camera.cameraType == CameraType.Reflection ||
+            !SeesTargets(camera.cullingMask))
+            return;
+
         renderer.EnqueuePass(maskPass);
         renderer.EnqueuePass(compositePass);
+    }
+
+    private static bool SeesTargets(int cullingMask)
+    {
+        // Indexed, not foreach: this runs per camera per frame, and a foreach
+        // over the interface would allocate an enumerator each time.
+        IReadOnlyList<Renderer> targets = SelectionOutline.Targets;
+        for (int i = 0; i < targets.Count; i++)
+        {
+            Renderer target = targets[i];
+            if (target != null && (cullingMask & (1 << target.gameObject.layer)) != 0)
+                return true;
+        }
+        return false;
     }
 
     protected override void Dispose(bool disposing)

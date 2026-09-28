@@ -24,6 +24,9 @@ public enum DigitalTwinMode
 ///
 /// Where the window is too narrow for the controls beside a panel, the panel
 /// sits over the right of the content area instead, between the bars.
+///
+/// Opening a part's detail from its card pulls the camera back when the part
+/// is not all in view in the space left of the panel.
 /// </summary>
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(40)]
@@ -66,6 +69,10 @@ public sealed class ServiceModeController : MonoBehaviour
     [Tooltip("Narrowest the viewport becomes: room for the bottom controls side by side.")]
     [SerializeField, Min(0f)] private float minimumViewportWidth = 1000f;
 
+    [Tooltip("Space kept clear around an opened part when the camera pulls back to show it, " +
+             "as a share of the screen's half-width and half-height.")]
+    [SerializeField, Range(0f, 0.4f)] private float framingMargin = 0.06f;
+
     private float blend;
     private float appliedBlend = -1f;
     private bool projectionShifted;
@@ -76,6 +83,7 @@ public sealed class ServiceModeController : MonoBehaviour
     private LayoutElement contentLayout;
     private LayoutGroup viewportGroup;
     private ServicePanelView panelView;
+    private OrbitCameraController orbit;
     private Canvas rootCanvas;
     private static readonly Vector3[] Corners = new Vector3[4];
 
@@ -104,12 +112,16 @@ public sealed class ServiceModeController : MonoBehaviour
         blend = Target;
         appliedBlend = -1f;
         ApplyGroups();
+        if (panelView != null)
+            panelView.PartOpened += HandlePartOpened;
     }
 
     private void OnDisable()
     {
         // The portrait layout has no service view: leave the camera, the
         // viewport and the telemetry UI as the rest of the app expects them.
+        if (panelView != null)
+            panelView.PartOpened -= HandlePartOpened;
         ResetProjection();
         SetInset(0f);
         SetGroups(telemetryGroups, 1f, true);
@@ -297,6 +309,46 @@ public sealed class ServiceModeController : MonoBehaviour
     // -----------------------------------------------------------------------
     // Model
     // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Pulls the camera back when <paramref name="part"/> is not all inside the
+    /// space left of the panel and between the bars. Never moves closer or
+    /// turns the camera; the orbit controller eases the move.
+    /// </summary>
+    private void HandlePartOpened(MachinePartGroup part) => FramePart(part);
+
+    public bool FramePart(MachinePartGroup part) =>
+        TryGetFraming(part, out Bounds bounds, out Rect window) &&
+        orbit.EnsureBoundsVisible(bounds, window, framingMargin);
+
+    /// <summary>True when all of <paramref name="part"/> is in view left of the panel, between the bars.</summary>
+    public bool IsPartInView(MachinePartGroup part) =>
+        TryGetFraming(part, out Bounds bounds, out Rect window) &&
+        orbit.AreBoundsVisible(bounds, window, framingMargin);
+
+    /// <summary>The part's bounds, and the space it should sit in, in normalised device coordinates.</summary>
+    private bool TryGetFraming(MachinePartGroup part, out Bounds bounds, out Rect window)
+    {
+        bounds = default;
+        window = default;
+        if (part == null || targetCamera == null || servicePanel == null ||
+            !(servicePanel.parent is RectTransform space) || !part.TryGetWorldBounds(out bounds))
+            return false;
+
+        if (orbit == null && !targetCamera.TryGetComponent(out orbit))
+            return false;
+
+        float height = space.rect.height;
+        if (height <= 0f)
+            return false;
+
+        // From the screen's left edge to the panel, and between the top and
+        // bottom bars.
+        ContentBands(space, out float top, out float bottom);
+        float right = 1f - 2f * PanelScreenShare();
+        window = Rect.MinMaxRect(-1f, -1f + 2f * bottom / height, right, 1f - 2f * top / height);
+        return true;
+    }
 
     /// <summary>
     /// Moves the picture left so the orbit target sits in the middle of the
