@@ -12,7 +12,12 @@ The project supports:
 - connection-health and last-update reporting;
 - duplicate and out-of-order sample rejection;
 - desktop and mobile WebGL interaction.
-- configuration-driven adoption of additional machine types.
+- configuration-driven adoption of additional machine types;
+- a CSV language table for all on-screen copy (`Assets/StreamingAssets/Localization/ui_text.csv`), editable after a build;
+- an AI data table joining telemetry and maintenance, with time-windowed figures, published to the host page.
+
+See [Language table](Assets/Documentation/DigitalTwinIntegration.md#language-table) and
+[AI data table](Assets/Documentation/DigitalTwinIntegration.md#ai-data-table) for their formats and page API.
 
 For a non-technical walkthrough, read [`Assets/Documentation/USER_GUIDE.md`](Assets/Documentation/USER_GUIDE.md).
 

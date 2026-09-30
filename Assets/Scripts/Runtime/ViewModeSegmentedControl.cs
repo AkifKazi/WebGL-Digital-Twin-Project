@@ -138,6 +138,7 @@ public class ViewModeSegmentedControl : MonoBehaviour
     private bool logSizing;
 
     private bool listenersAdded;
+    private readonly Dictionary<TMP_Text, float> authoredLabelSizes = new();
     private Vector2 lastReferenceSize = new(-1f, -1f);
 
     private void Awake()
@@ -151,6 +152,15 @@ public class ViewModeSegmentedControl : MonoBehaviour
         ApplyAdaptiveWidth(force: true);
         SubscribeToController();
         RefreshFromController();
+        UIText.Changed -= HandleLanguageChanged;
+        UIText.Changed += HandleLanguageChanged;
+    }
+
+    // Translated copy can be longer or shorter, so the segments are fitted again.
+    private void HandleLanguageChanged()
+    {
+        ApplySegmentPresentation();
+        ApplyAdaptiveWidth(force: true);
     }
 
     private void Update()
@@ -298,9 +308,11 @@ public class ViewModeSegmentedControl : MonoBehaviour
     {
         if (applySegmentText)
         {
-            SetLabelText(exteriorLabel, exteriorText);
-            SetLabelText(sectionLabel, sectionText);
-            SetLabelText(xrayLabel, xrayText);
+            // Keyed by the authored copy (view.full_body, view.exterior), so the
+            // wide and portrait instances can be translated separately.
+            SetLabelText(exteriorLabel, UIText.GetAuthored("view", exteriorText));
+            SetLabelText(sectionLabel, UIText.GetAuthored("view", sectionText));
+            SetLabelText(xrayLabel, UIText.GetAuthored("view", xrayText));
         }
 
         SetIconVisible(exteriorIcon);
@@ -321,9 +333,20 @@ public class ViewModeSegmentedControl : MonoBehaviour
 
         // Shrinking the type is preferable to a label pushing its segment wider
         // than the space available.
+        // The authored size is read once: once auto sizing has shrunk a long
+        // label, its font size is the shrunk one, and taking that as the new
+        // maximum would stop a shorter label (another language) growing back.
+        if (!authoredLabelSizes.TryGetValue(label, out float authoredSize))
+        {
+            authoredSize = label.enableAutoSizing ? label.fontSizeMax : label.fontSize;
+            if (authoredSize <= 0f)
+                authoredSize = label.fontSizeMax;
+            authoredLabelSizes[label] = authoredSize;
+        }
+
         label.enableAutoSizing = true;
-        label.fontSizeMin = minimumLabelFontSize;
-        label.fontSizeMax = label.fontSize > 0f ? label.fontSize : label.fontSizeMax;
+        label.fontSizeMin = Mathf.Min(minimumLabelFontSize, authoredSize);
+        label.fontSizeMax = authoredSize;
         label.overflowMode = TextOverflowModes.Ellipsis;
     }
 
@@ -347,6 +370,7 @@ public class ViewModeSegmentedControl : MonoBehaviour
     private void OnDisable()
     {
         UnsubscribeFromController();
+        UIText.Changed -= HandleLanguageChanged;
     }
 
     private void OnDestroy()

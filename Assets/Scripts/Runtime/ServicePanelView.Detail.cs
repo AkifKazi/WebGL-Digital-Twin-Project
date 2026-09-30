@@ -160,14 +160,18 @@ public sealed partial class ServicePanelView
 
         string chip = status.State switch
         {
-            ServiceState.Overdue => "OVERDUE",
-            ServiceState.DueSoon => "DUE SOON",
-            _ => "ON TRACK"
+            ServiceState.Overdue => UIText.Get("service.state.overdue", "OVERDUE"),
+            ServiceState.DueSoon => UIText.Get("service.state.due_soon", "DUE SOON"),
+            _ => UIText.Get("service.state.on_track", "ON TRACK")
         };
         SetText(detailChipText, chip);
         detailChipText.color = state;
         detailChip.SetColors(state, Color.clear);
         float chipWidth = Mathf.Ceil(detailChipText.GetPreferredValues(chip).x) + 24f;
+        // A long translation is cut short rather than pushing the part's name out.
+        float chipLimit = Mathf.Max(96f, detailHeader.rect.width * 0.45f);
+        detailChipText.overflowMode = chipWidth > chipLimit ? TextOverflowModes.Ellipsis : TextOverflowModes.Overflow;
+        chipWidth = Mathf.Min(chipWidth, chipLimit);
         detailChip.rectTransform.sizeDelta = new Vector2(chipWidth, 36f);
         detailName.rectTransform.offsetMax = new Vector2(-(chipWidth + 12f), detailName.rectTransform.offsetMax.y);
     }
@@ -178,33 +182,45 @@ public sealed partial class ServicePanelView
         bool overdue = status.HoursLeft <= 0d;
         SetText(detailHours, WithSuffix(
             Number(Math.Ceiling(Math.Abs(status.HoursLeft))),
-            overdue ? " H OVERDUE" : " H TO SERVICE",
+            " " + (overdue
+                ? UIText.Get("service.hours_overdue", "H OVERDUE")
+                : UIText.Get("service.hours_to_service", "H TO SERVICE")),
             40));
         if (schedule != null)
         {
             DateTime due = overdue ? schedule.DateBefore(-status.HoursLeft) : schedule.DateAfter(status.HoursLeft);
-            SetText(detailDue, (overdue ? "WAS DUE " : "DUE ") + ShortDate(due));
+            SetText(detailDue, overdue
+                ? UIText.Format("service.was_due", "WAS DUE {0}", ShortDate(due))
+                : UIText.Format("service.due", "DUE {0}", ShortDate(due)));
         }
 
         detailBar.SetValues((float)status.RunHours, (float)status.PlanHours, (float)status.EstimateHours, state);
-        SetText(detailRun, WithSuffix(Number(status.RunHours), " H", 75));
-        SetText(detailEstimate, WithSuffix(Number(status.EstimateHours), " H", 75));
-        SetText(detailPlan, WithSuffix(Number(status.PlanHours), " H", 75));
+        string hours = " " + UIText.Get("unit.hours", "H");
+        SetText(detailRun, WithSuffix(Number(status.RunHours), hours, 75));
+        SetText(detailEstimate, WithSuffix(Number(status.EstimateHours), hours, 75));
+        SetText(detailPlan, WithSuffix(Number(status.PlanHours), hours, 75));
 
         // Earlier than plan reads as a warning: the part wears faster than
         // the manufacturer allows for.
         double difference = Math.Round(status.EstimateHours - status.PlanHours);
         string sign = difference > 0d ? "+" : difference < 0d ? "-" : string.Empty;
         detailDifference.color = difference < 0d ? warning : difference > 0d ? ink : Muted;
-        SetText(detailDifference, WithSuffix(sign + Number(Math.Abs(difference)), " H", 75));
+        SetText(detailDifference, WithSuffix(sign + Number(Math.Abs(difference)), hours, 75));
 
-        SetText(detailCause, string.IsNullOrWhiteSpace(plan.likelyCause) ? DefaultCause(difference) : plan.likelyCause);
-        SetText(detailFix, string.IsNullOrWhiteSpace(plan.suggestedFix) ? DefaultFix(status.Task) : plan.suggestedFix);
+        // Authored plan text is keyed by part (part.bearings.cause), so the
+        // language table can translate it too.
+        string partKey = PartKey(status.Part);
+        SetText(detailCause, string.IsNullOrWhiteSpace(plan.likelyCause)
+            ? DefaultCause(difference)
+            : UIText.Get(partKey + ".cause", plan.likelyCause));
+        SetText(detailFix, string.IsNullOrWhiteSpace(plan.suggestedFix)
+            ? DefaultFix(status.Task)
+            : UIText.Get(partKey + ".fix", plan.suggestedFix));
     }
 
     private void RefreshHistory(in ServiceItemStatus status, in TelemetryServiceSchedule.ServicePlan plan, Color state)
     {
-        SetText(historyPlan, "PLAN " + Number(status.PlanHours) + " H");
+        SetText(historyPlan, UIText.Format("service.history.plan", "PLAN {0} H", Number(status.PlanHours)));
 
         // The latest past intervals that fit, oldest first.
         float[] source = plan.pastIntervals ?? Array.Empty<float>();
@@ -244,7 +260,7 @@ public sealed partial class ServicePanelView
 
             if (current)
             {
-                SetText(historyDates[i], "NEXT");
+                SetText(historyDates[i], UIText.Get("service.history.next", "NEXT"));
                 historyDates[i].color = ink;
             }
             else
@@ -270,41 +286,45 @@ public sealed partial class ServicePanelView
                                      schedule.DateBefore(status.RunHours).Year.ToString(CultureInfo.InvariantCulture));
         SetText(dataCriticality, plan.criticality switch
         {
-            ServiceCriticality.High => "High, stops production",
-            ServiceCriticality.Medium => "Medium, reduces output",
-            _ => "Low, no production loss"
+            ServiceCriticality.High => UIText.Get("service.criticality.high", "High, stops production"),
+            ServiceCriticality.Medium => UIText.Get("service.criticality.medium", "Medium, reduces output"),
+            _ => UIText.Get("service.criticality.low", "Low, no production loss")
         });
-        SetText(dataDuration, plan.durationMinutes > 0f ? Duration(plan.durationMinutes) : "Not recorded");
-        SetText(dataMaterials, string.IsNullOrWhiteSpace(plan.materials) ? "None" : plan.materials);
+        SetText(dataDuration, plan.durationMinutes > 0f
+            ? Duration(plan.durationMinutes)
+            : UIText.Get("service.data.not_recorded", "Not recorded"));
+        SetText(dataMaterials, string.IsNullOrWhiteSpace(plan.materials)
+            ? UIText.Get("service.data.none", "None")
+            : UIText.Get(PartKey(status.Part) + ".materials", plan.materials));
     }
 
     private static string DefaultCause(double difference) => difference switch
     {
-        < 0d => "Running conditions wear it faster than planned",
-        > 0d => "Running conditions are easier than planned",
-        _ => "Wear follows the planned rate"
+        < 0d => UIText.Get("service.cause.faster", "Running conditions wear it faster than planned"),
+        > 0d => UIText.Get("service.cause.easier", "Running conditions are easier than planned"),
+        _ => UIText.Get("service.cause.planned", "Wear follows the planned rate")
     };
 
     private static string DefaultFix(ServiceTask task) => task switch
     {
-        ServiceTask.Regrease => "Regrease as planned",
-        ServiceTask.OilChange => "Change the oil as planned",
-        ServiceTask.Replace => "Replace as planned",
-        _ => "Inspect as planned"
+        ServiceTask.Regrease => UIText.Get("service.fix.regrease", "Regrease as planned"),
+        ServiceTask.OilChange => UIText.Get("service.fix.oil_change", "Change the oil as planned"),
+        ServiceTask.Replace => UIText.Get("service.fix.replace", "Replace as planned"),
+        _ => UIText.Get("service.fix.inspect", "Inspect as planned")
     };
 
     private static string ShortDate(DateTime date) =>
-        date.ToString("d MMM", CultureInfo.InvariantCulture).ToUpperInvariant();
+        date.Day.ToString(CultureInfo.InvariantCulture) + " " + UIText.ShortMonth(date.Month);
 
     private static string MonthYear(DateTime date) =>
-        date.ToString("MMM yy", CultureInfo.InvariantCulture).ToUpperInvariant();
+        UIText.ShortMonth(date.Month) + " " + date.ToString("yy", CultureInfo.InvariantCulture);
 
     private static string Duration(float minutes)
     {
         if (minutes < 60f)
-            return Mathf.RoundToInt(minutes).ToString(CultureInfo.InvariantCulture) + " min";
+            return UIText.Format("duration.minutes", "{0} min", Mathf.RoundToInt(minutes));
         float hours = Mathf.Round(minutes / 30f) * 0.5f;
-        return hours.ToString("0.#", CultureInfo.InvariantCulture) + " h";
+        return UIText.Format("duration.hours", "{0} h", hours.ToString("0.#", CultureInfo.InvariantCulture));
     }
 
     private static string Number(double hours) =>
@@ -401,27 +421,27 @@ public sealed partial class ServicePanelView
         PlaceBeside(bar, 0f, 0f, -146f, 28f);
         detailBar = CreateBar(bar, 0f);
 
-        detailRun = AddFigure(inner, 0, 4, -190f, "RUN");
-        detailEstimate = AddFigure(inner, 1, 4, -190f, "ESTIMATE");
-        detailPlan = AddFigure(inner, 2, 4, -190f, "PLAN");
-        detailDifference = AddFigure(inner, 3, 4, -190f, "VS PLAN");
+        detailRun = AddFigure(inner, 0, 4, -190f, "RUN", "service.figure.run");
+        detailEstimate = AddFigure(inner, 1, 4, -190f, "ESTIMATE", "service.figure.estimate");
+        detailPlan = AddFigure(inner, 2, 4, -190f, "PLAN", "service.figure.plan");
+        detailDifference = AddFigure(inner, 3, 4, -190f, "VS PLAN", "service.figure.vs_plan");
 
         RectTransform line = CreateRect("Divider", inner);
         PlaceBeside(line, 0f, 0f, -272f, 1.5f);
         AddFrame(line, new Color(normal.r, normal.g, normal.b, 0.14f), 0f, false);
 
-        detailCause = AddNote(inner, 0, "LIKELY CAUSE");
-        detailFix = AddNote(inner, 1, "SUGGESTED FIX");
+        detailCause = AddNote(inner, 0, "LIKELY CAUSE", "service.note.cause");
+        detailFix = AddNote(inner, 1, "SUGGESTED FIX", "service.note.fix");
     }
 
     /// <summary>A labelled number in one of the columns under the bar.</summary>
-    private TextMeshProUGUI AddFigure(RectTransform parent, int column, int columns, float y, string caption)
+    private TextMeshProUGUI AddFigure(RectTransform parent, int column, int columns, float y, string caption, string key)
     {
         RectTransform cell = Column(parent, caption, column, columns, y, 60f);
 
         TextMeshProUGUI heading = CreateText("Label", cell, 16f, false, label, TextAlignmentOptions.MidlineLeft);
         heading.characterSpacing = 2f;
-        heading.text = caption;
+        UITextBinding.Bind(heading, key, caption);
         PlaceBeside(heading.rectTransform, 0f, 4f, 0f, 26f);
 
         TextMeshProUGUI value = CreateText("Value", cell, 24f, true, ink, TextAlignmentOptions.MidlineLeft);
@@ -430,13 +450,13 @@ public sealed partial class ServicePanelView
     }
 
     /// <summary>A labelled line of text, up to three lines long, in one of two columns.</summary>
-    private TextMeshProUGUI AddNote(RectTransform parent, int column, string caption)
+    private TextMeshProUGUI AddNote(RectTransform parent, int column, string caption, string key)
     {
         RectTransform cell = Column(parent, caption, column, 2, -290f, 104f);
 
         TextMeshProUGUI heading = CreateText("Label", cell, 16f, false, label, TextAlignmentOptions.MidlineLeft);
         heading.characterSpacing = 2f;
-        heading.text = caption;
+        UITextBinding.Bind(heading, key, caption);
         PlaceBeside(heading.rectTransform, 0f, 12f, 0f, 26f);
 
         TextMeshProUGUI text = CreateText("Text", cell, 19f, false, ink, TextAlignmentOptions.TopLeft);
@@ -461,7 +481,7 @@ public sealed partial class ServicePanelView
     {
         TextMeshProUGUI title = CreateText("Title", inner, 16f, false, label, TextAlignmentOptions.MidlineLeft);
         title.characterSpacing = 2f;
-        title.text = "SERVICE HISTORY";
+        UITextBinding.Bind(title, "service.history.title", "SERVICE HISTORY");
         PlaceBeside(title.rectTransform, 0f, 0f, -18f, 30f);
 
         historyPlan = CreateText("Plan", inner, 16f, false, Muted, TextAlignmentOptions.MidlineRight);
@@ -492,24 +512,24 @@ public sealed partial class ServicePanelView
     {
         TextMeshProUGUI title = CreateText("Title", inner, 16f, false, label, TextAlignmentOptions.MidlineLeft);
         title.characterSpacing = 2f;
-        title.text = "SERVICE DATA";
+        UITextBinding.Bind(title, "service.data.title", "SERVICE DATA");
         PlaceBeside(title.rectTransform, 0f, 0f, -18f, 30f);
 
-        dataLastService = AddDataRow(inner, "LAST SERVICE", -62f, 40f);
-        dataCriticality = AddDataRow(inner, "CRITICALITY", -102f, 40f);
-        dataDuration = AddDataRow(inner, "DURATION", -142f, 40f);
-        dataMaterials = AddDataRow(inner, "MATERIALS", -182f, 60f);
+        dataLastService = AddDataRow(inner, "LAST SERVICE", "service.data.last_service", -62f, 40f);
+        dataCriticality = AddDataRow(inner, "CRITICALITY", "service.data.criticality", -102f, 40f);
+        dataDuration = AddDataRow(inner, "DURATION", "service.data.duration", -142f, 40f);
+        dataMaterials = AddDataRow(inner, "MATERIALS", "service.data.materials", -182f, 60f);
         dataMaterials.textWrappingMode = TextWrappingModes.Normal;
         dataMaterials.lineSpacing = -8f;
         dataMaterials.alignment = TextAlignmentOptions.TopLeft;
     }
 
     /// <summary>A label and its value on one row, like a data sheet.</summary>
-    private TextMeshProUGUI AddDataRow(RectTransform parent, string caption, float y, float height)
+    private TextMeshProUGUI AddDataRow(RectTransform parent, string caption, string key, float y, float height)
     {
         TextMeshProUGUI heading = CreateText(caption, parent, 16f, false, Muted, TextAlignmentOptions.TopLeft);
         heading.characterSpacing = 2f;
-        heading.text = caption;
+        UITextBinding.Bind(heading, key, caption);
         PlaceBeside(heading.rectTransform, 0f, 0f, y - 6f, 26f);
         heading.rectTransform.anchorMax = new Vector2(0f, 1f);
         heading.rectTransform.offsetMax = new Vector2(160f, heading.rectTransform.offsetMax.y);

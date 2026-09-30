@@ -100,6 +100,7 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
     private TelemetryDetailPanel floating;
     private float nextRefreshTime;
     private bool warnedNotReady;
+    private bool searchedForInsight;
 
     public bool IsReady =>
         secondaryRails == SecondaryRailUse.DetailPanel && isActiveAndEnabled &&
@@ -110,7 +111,20 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
     public TelemetryDetailPanel FloatingPanel => floating;
 
     private ITelemetryHistoryProvider History => historyProvider as ITelemetryHistoryProvider;
-    private ITelemetryInsightProvider Insight => insightProvider as ITelemetryInsightProvider;
+    private ITelemetryInsightProvider Insight
+    {
+        get
+        {
+            // Without an assigned provider, AI insights sent by the page (through
+            // the AI data table) fill the detail section. Looked up once.
+            if (insightProvider == null && !searchedForInsight)
+            {
+                searchedForInsight = true;
+                insightProvider = FindAnyObjectByType<TelemetryAiDataTable>();
+            }
+            return insightProvider as ITelemetryInsightProvider;
+        }
+    }
     private ITelemetryServiceLifeProvider ServiceLife => serviceLifeProvider as ITelemetryServiceLifeProvider;
     private RectTransform Layer => (RectTransform)transform;
 

@@ -1,0 +1,198 @@
+﻿# Language table for the digital twin. Edit the copy in any column; add a column per language (de, fr, es...).
+# Empty cells fall back to en, then to the copy built into the code. Keep {0} placeholders. Reload the page to see changes.
+key,en,notes
+ai.insight,AI · {0},Telemetry detail panel: AI insight text
+date.day.fri,FRI,Short day name on the week chart
+date.day.mon,MON,Short day name on the week chart
+date.day.sat,SAT,Short day name on the week chart
+date.day.sun,SUN,Short day name on the week chart
+date.day.thu,THU,Short day name on the week chart
+date.day.tue,TUE,Short day name on the week chart
+date.day.wed,WED,Short day name on the week chart
+date.month.1,JAN,Short month name on chart axes and service dates
+date.month.10,OCT,Short month name on chart axes and service dates
+date.month.11,NOV,Short month name on chart axes and service dates
+date.month.12,DEC,Short month name on chart axes and service dates
+date.month.2,FEB,Short month name on chart axes and service dates
+date.month.3,MAR,Short month name on chart axes and service dates
+date.month.4,APR,Short month name on chart axes and service dates
+date.month.5,MAY,Short month name on chart axes and service dates
+date.month.6,JUN,Short month name on chart axes and service dates
+date.month.7,JUL,Short month name on chart axes and service dates
+date.month.8,AUG,Short month name on chart axes and service dates
+date.month.9,SEP,Short month name on chart axes and service dates
+duration.days,{0} d,Telemetry detail panel: graphs
+duration.hours,{0} h,Service panel: part detail
+duration.minutes,{0} min,Service panel: part detail
+figure.average,AVERAGE,Telemetry detail panel: key figures
+figure.latest,LATEST,Telemetry detail panel: key figures
+figure.maximum,MAXIMUM,Telemetry detail panel: key figures
+figure.minimum,MINIMUM,Telemetry detail panel: key figures
+figure.overdue,OVERDUE,Telemetry detail panel: key figures
+figure.time_to_service,TIME TO SERVICE,Telemetry detail panel: key figures
+graph.end.now,now,Telemetry detail panel: graphs
+graph.legend.critical,critical,Telemetry detail panel: graphs
+graph.legend.warning,warning,Telemetry detail panel: graphs
+graph.start.day,24 h ago,Telemetry detail panel: graphs
+graph.start.hour,60 min ago,Telemetry detail panel: graphs
+graph.start.month,30 days ago,Telemetry detail panel: graphs
+graph.start.week,7 days ago,Telemetry detail panel: graphs
+graph.start.year,1 year ago,Telemetry detail panel: graphs
+health.age.hours,{0}h AGO,Connection status bar
+health.age.just_now,JUST NOW,Connection status bar
+health.age.minutes,{0}m AGO,Connection status bar
+health.age.no_data,NO DATA,Connection status bar
+health.age.seconds,{0}s AGO,Connection status bar
+health.gateway.connected,CONNECTED,Connection status bar
+health.gateway.degraded,DEGRADED,Connection status bar
+health.gateway.local_model,LOCAL MODEL,Connection status bar
+health.gateway.offline,OFFLINE,Connection status bar
+health.gateway.waiting,WAITING,Connection status bar
+health.mode.live,LIVE DATA,Connection status bar
+health.mode.simulation,SIMULATION,Connection status bar
+health.quality.all_good,{0} / {1} GOOD,Connection status bar
+health.quality.issues,{0} GOOD · {1} ISSUE,Connection status bar
+health.quality.no_sensors,NO SENSORS,Connection status bar
+mode.service,SERVICE,Telemetry / Service switch
+mode.telemetry,TELEMETRY,Telemetry / Service switch
+part.bearings,Bearings,Machine part name
+part.bearings.cause,"Bearings run 8 °C above normal, so the grease breaks down sooner",Likely cause shown for Bearings
+part.bearings.fix,"Regrease both bearings, then check the temperature settles",Suggested fix shown for Bearings
+part.bearings.materials,"Lithium complex grease, NLGI 2, 30 g per bearing",Materials listed for Bearings
+part.bunker,Bunker,Machine part name
+part.bunker.cause,Wear follows the planned rate,Likely cause shown for Bunker
+part.bunker.fix,Inspect the liners and welds for wear,Suggested fix shown for Bunker
+part.bunker.materials,None,Materials listed for Bunker
+part.conveyor_belts,Conveyor Belts,Machine part name
+part.conveyor_belts.cause,Sharp rock edges cut the top cover faster,Likely cause shown for Conveyor Belts
+part.conveyor_belts.fix,Replace the belt and re-tension it,Suggested fix shown for Conveyor Belts
+part.conveyor_belts.materials,"EP 400/3 belt, 6 + 2 mm covers, 24 m",Materials listed for Conveyor Belts
+part.conveyor_frames,Conveyor Frames,Machine part name
+part.discharge_outlets,Discharge Outlets,Machine part name
+part.discharge_outlets.cause,Wear follows the planned rate,Likely cause shown for Discharge Outlets
+part.discharge_outlets.fix,Clear build-up and check the liners,Suggested fix shown for Discharge Outlets
+part.discharge_outlets.materials,None,Materials listed for Discharge Outlets
+part.drive_roller,Drive Roller,Machine part name
+part.drive_roller.cause,Light belt load keeps the roller bearings cool,Likely cause shown for Drive Roller
+part.drive_roller.fix,Regrease the roller bearings,Suggested fix shown for Drive Roller
+part.drive_roller.materials,"Lithium complex grease, NLGI 2, 20 g per bearing",Materials listed for Drive Roller
+part.drive_shaft,Drive Shaft,Machine part name
+part.drive_shaft.cause,Vibration slightly above baseline loads the couplings,Likely cause shown for Drive Shaft
+part.drive_shaft.fix,Check coupling alignment and shaft run-out,Suggested fix shown for Drive Shaft
+part.drive_shaft.materials,None for the inspection. Coupling insert held in stock,Materials listed for Drive Shaft
+part.idler_rollers,Idler Rollers,Machine part name
+part.idler_rollers.cause,Wear follows the planned rate,Likely cause shown for Idler Rollers
+part.idler_rollers.fix,Spin-check the idlers and replace any that drag,Suggested fix shown for Idler Rollers
+part.idler_rollers.materials,"Idler rollers, 89 mm, as needed",Materials listed for Idler Rollers
+part.lower_rotor,Lower Rotor,Machine part name
+part.lower_rotor.cause,Abrasive feed wears the rotor tips faster,Likely cause shown for Lower Rotor
+part.lower_rotor.fix,Measure rotor tip wear and check the balance,Suggested fix shown for Lower Rotor
+part.lower_rotor.materials,None for the inspection. Rotor tip set held in stock,Materials listed for Lower Rotor
+part.motor_frame,Motor Frame,Machine part name
+part.motor_frame.cause,Wear follows the planned rate,Likely cause shown for Motor Frame
+part.motor_frame.fix,Check the mounting bolts and the frame for cracks,Suggested fix shown for Motor Frame
+part.motor_frame.materials,None,Materials listed for Motor Frame
+part.rotor_core,Rotor Core,Machine part name
+part.rotor_core.cause,Wear follows the planned rate,Likely cause shown for Rotor Core
+part.rotor_core.fix,Check the rotor core and the air gap,Suggested fix shown for Rotor Core
+part.rotor_core.materials,None,Materials listed for Rotor Core
+part.screen_deck,Screen Deck,Machine part name
+part.screen_deck.cause,Feed heavier than rated wears the mesh faster,Likely cause shown for Screen Deck
+part.screen_deck.fix,Replace the screen panels and re-tension the deck,Suggested fix shown for Screen Deck
+part.screen_deck.materials,"Polyurethane screen panels, 20 mm aperture, full deck",Materials listed for Screen Deck
+part.stator_windings,Stator Windings,Machine part name
+part.stator_windings.cause,Wear follows the planned rate,Likely cause shown for Stator Windings
+part.stator_windings.fix,Measure insulation resistance and check the terminals,Suggested fix shown for Stator Windings
+part.stator_windings.materials,None,Materials listed for Stator Windings
+part.support_frame,Support Frame,Machine part name
+part.support_frame.cause,Wear follows the planned rate,Likely cause shown for Support Frame
+part.support_frame.fix,"Check welds, bolts and corrosion",Suggested fix shown for Support Frame
+part.support_frame.materials,None,Materials listed for Support Frame
+part.upper_mixer_rotor,Upper Mixer Rotor,Machine part name
+part.upper_mixer_rotor.cause,Abrasive feed wears the rotor tips faster,Likely cause shown for Upper Mixer Rotor
+part.upper_mixer_rotor.fix,Measure rotor tip wear and check the balance,Suggested fix shown for Upper Mixer Rotor
+part.upper_mixer_rotor.materials,None for the inspection. Rotor tip set held in stock,Materials listed for Upper Mixer Rotor
+range.day.short,D,Range button: one day
+range.hour.short,H,Range button: one hour
+range.month.short,M,Range button: one month
+range.week.short,W,Range button: one week
+range.year.short,Y,Range button: one year
+sensor.ENV-01.AMBIENT.TEMP,AMBIENT TEMPERATURE,Sensor label (°C)
+sensor.ENV-01.RELATIVE.HUMIDITY,AMBIENT HUMIDITY,Sensor label (% RH)
+sensor.FEED-01.BEARING.TEMP,CONVEYOR BEARING TEMP,Sensor label (°C)
+sensor.FEED-01.BELT.SPEED,BELT SPEED,Sensor label (m/s)
+sensor.FEED-01.BELT.TENSION,BELT TENSION,Sensor label (kN)
+sensor.FEED-01.DRIVE.CURRENT,CONVEYOR CURRENT,Sensor label (A)
+sensor.FEED-01.FLOW.IN,INLET RATE,Sensor label (kg/s)
+sensor.FEED-01.FLOW.OUT,DISCHARGE RATE,Sensor label (kg/s)
+sensor.FEED-01.SLIP,BELT SLIP,Sensor label (%)
+sensor.HOP-01.LEVEL,FILL LEVEL,Sensor label (%)
+sensor.HOP-01.LOADCELL.IMBALANCE,LOAD IMBALANCE,Sensor label (%)
+sensor.HOP-01.MASS,MATERIAL MASS,Sensor label (t)
+sensor.HOP-01.MATERIAL.MOISTURE,MATERIAL MOISTURE,Sensor label (%)
+sensor.HOP-01.MATERIAL.TEMP,MATERIAL TEMPERATURE,Sensor label (°C)
+sensor.HOP-01.OUTLET.GATE.POSITION,GATE POSITION,Sensor label (%)
+sensor.MIX-01.ROTOR.IMBALANCE,ROTOR IMBALANCE,Sensor label (mm/s RMS)
+sensor.MIX-01.ROTOR.SPEED,ROTOR SPEED,Sensor label (rpm)
+sensor.MIX-01.ROTOR.TORQUE,ROTOR TORQUE,Sensor label (N.m)
+sensor.MIX-01.SCREEN.BLINDING,SCREEN BLINDING,Sensor label (%)
+sensor.POWER-01.POWER.FACTOR,POWER FACTOR,Sensor label (PF)
+sensor.POWER-01.SUPPLY.VOLTAGE,SUPPLY VOLTAGE,Sensor label (V)
+sensor.STRUCT-01.FRAME.VIBRATION,FRAME VIBRATION,Sensor label (mm/s RMS)
+sensor.VIB-01.BEARING.TEMP,BEARING TEMPERATURE,Sensor label (°C)
+sensor.VIB-01.BEARING.VEL_RMS,BEARING VIBRATION,Sensor label (mm/s RMS)
+sensor.VIB-01.DRIVE.FREQUENCY,DRIVE FREQUENCY,Sensor label (Hz)
+sensor.VIB-01.MOTOR.CURRENT,MOTOR CURRENT,Sensor label (A)
+sensor.VIB-01.MOTOR.LOAD,MOTOR LOAD,Sensor label (%)
+sensor.VIB-01.MOTOR.POWER,MOTOR POWER,Sensor label (kW)
+sensor.VIB-01.MOTOR.SPEED,MOTOR SPEED,Sensor label (rpm)
+sensor.VIB-01.MOTOR.TEMP,MOTOR TEMPERATURE,Sensor label (°C)
+service.cause.easier,Running conditions are easier than planned,Service panel: part detail
+service.cause.faster,Running conditions wear it faster than planned,Service panel: part detail
+service.cause.planned,Wear follows the planned rate,Service panel: part detail
+service.criticality.high,"High, stops production",Service panel: part detail
+service.criticality.low,"Low, no production loss",Service panel: part detail
+service.criticality.medium,"Medium, reduces output",Service panel: part detail
+service.data.criticality,CRITICALITY,Service panel: part detail
+service.data.duration,DURATION,Service panel: part detail
+service.data.last_service,LAST SERVICE,Service panel: part detail
+service.data.materials,MATERIALS,Service panel: part detail
+service.data.none,None,Service panel: part detail
+service.data.not_recorded,Not recorded,Service panel: part detail
+service.data.title,SERVICE DATA,Service panel: part detail
+service.due,DUE {0},Service panel: part detail
+service.figure.estimate,ESTIMATE,Service panel: part detail
+service.figure.plan,PLAN,Service panel: part detail
+service.figure.run,RUN,Service panel: part detail
+service.figure.vs_plan,VS PLAN,Service panel: part detail
+service.fix.inspect,Inspect as planned,Service panel: part detail
+service.fix.oil_change,Change the oil as planned,Service panel: part detail
+service.fix.regrease,Regrease as planned,Service panel: part detail
+service.fix.replace,Replace as planned,Service panel: part detail
+service.history.next,NEXT,Service panel: part detail
+service.history.plan,PLAN {0} H,Service panel: part detail
+service.history.title,SERVICE HISTORY,Service panel: part detail
+service.hours_overdue,H OVERDUE,Service panel: part detail
+service.hours_to_service,H TO SERVICE,Service panel: part detail
+service.legend.estimate,ESTIMATE,Service panel: list
+service.legend.gap,GAP,Service panel: list
+service.legend.plan,PLAN,Service panel: list
+service.legend.run,RUN,Service panel: list
+service.note.cause,LIKELY CAUSE,Service panel: part detail
+service.note.fix,SUGGESTED FIX,Service panel: part detail
+service.run_hours,{0} H RUN,Service panel: list
+service.state.due_soon,DUE SOON,Service panel: part detail
+service.state.on_track,ON TRACK,Service panel: part detail
+service.state.overdue,OVERDUE,Service panel: part detail
+service.title,SERVICE SCHEDULE,Service panel: list
+service.was_due,WAS DUE {0},Service panel: part detail
+task.inspect,INSPECT,Service panel: list
+task.oil_change,OIL CHANGE,Service panel: list
+task.regrease,REGREASE,Service panel: list
+task.replace,REPLACE,Service panel: list
+unit.hours,H,Service panel: part detail
+view.cross_section,CROSS SECTION,View mode segment
+view.exterior,EXTERIOR,View mode segment
+view.full_body,FULL BODY,View mode segment
+view.interior,INTERIOR,View mode segment
+view.x_ray,X-RAY,View mode segment

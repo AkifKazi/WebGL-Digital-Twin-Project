@@ -126,6 +126,13 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
             if (rangeButtons[i] != null)
                 rangeButtons[i].onClick.AddListener(() => SelectRange(buttonRange));
         }
+        for (int i = 0; i < rangeLabels.Length && i < TelemetryHistoryRanges.All.Length; i++)
+        {
+            TelemetryHistoryRange labelRange = TelemetryHistoryRanges.All[i];
+            UITextBinding.Bind(rangeLabels[i], TelemetryHistoryRanges.ShortLabelKey(labelRange),
+                TelemetryHistoryRanges.ShortLabel(labelRange));
+            UITextBinding.AllowShrinkToFit(rangeLabels[i], 0.5f);
+        }
         if (pinButton != null)
             pinButton.onClick.AddListener(() => PinToggled?.Invoke(this));
         if (closeButton != null)

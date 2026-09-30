@@ -39,17 +39,17 @@ public sealed class TelemetryStatusTimelineGraph : TelemetryGraphView
         Stretch(startLabel.rectTransform);
         TextMeshProUGUI end = CreateText("End", time, Style.labelSize, false, Style.muted, TextAlignmentOptions.MidlineRight);
         Stretch(end.rectTransform);
-        end.text = "now";
+        UITextBinding.Bind(end, "graph.end.now", "now");
 
         RectTransform legend = CreateRect("Legend", Rect);
         PlaceRow(legend, LegendTop, LegendHeight);
         HorizontalLayoutGroup row = legend.gameObject.AddComponent<HorizontalLayoutGroup>();
         ConfigureRow(row, 22f);
-        criticalValue = CreateLegendItem(legend, "critical", Style.critical);
-        warningValue = CreateLegendItem(legend, "warning", Style.warning);
+        criticalValue = CreateLegendItem(legend, "critical", "graph.legend.critical", Style.critical);
+        warningValue = CreateLegendItem(legend, "warning", "graph.legend.warning", Style.warning);
     }
 
-    private TextMeshProUGUI CreateLegendItem(RectTransform parent, string label, Color swatchColor)
+    private TextMeshProUGUI CreateLegendItem(RectTransform parent, string label, string key, Color swatchColor)
     {
         RectTransform item = CreateRect(label, parent);
         ConfigureRow(item.gameObject.AddComponent<HorizontalLayoutGroup>(), 7f);
@@ -62,8 +62,13 @@ public sealed class TelemetryStatusTimelineGraph : TelemetryGraphView
         size.minWidth = size.preferredWidth = 12f;
         size.minHeight = size.preferredHeight = 12f;
 
-        CreateText("Label", item, Style.labelSize, false, Style.muted, TextAlignmentOptions.MidlineLeft).text = label;
-        return CreateText("Value", item, Style.labelSize, true, Style.ink, TextAlignmentOptions.MidlineLeft);
+        // The row shares its width between both items; longer copy shrinks, then shortens.
+        TextMeshProUGUI caption = CreateText("Label", item, Style.labelSize, false, Style.muted, TextAlignmentOptions.MidlineLeft);
+        UITextBinding.Bind(caption, key, label);
+        UITextBinding.AllowShrinkToFit(caption);
+        TextMeshProUGUI value = CreateText("Value", item, Style.labelSize, true, Style.ink, TextAlignmentOptions.MidlineLeft);
+        UITextBinding.AllowShrinkToFit(value);
+        return value;
     }
 
     private static void ConfigureRow(HorizontalLayoutGroup row, float spacing)

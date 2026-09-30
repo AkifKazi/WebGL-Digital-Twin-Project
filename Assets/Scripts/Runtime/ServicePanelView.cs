@@ -181,9 +181,22 @@ public sealed partial class ServicePanelView : MonoBehaviour
     {
         nextRefresh = 0f;
         Refresh();
+        UIText.Changed -= HandleLanguageChanged;
+        UIText.Changed += HandleLanguageChanged;
     }
 
-    private void OnDisable() => SetHovered(null);
+    private void OnDisable()
+    {
+        SetHovered(null);
+        UIText.Changed -= HandleLanguageChanged;
+    }
+
+    private void HandleLanguageChanged()
+    {
+        // The run hours only redraw when they tick over; force them.
+        shownRunHours = long.MinValue;
+        Refresh();
+    }
 
     private void Update()
     {
@@ -238,7 +251,7 @@ public sealed partial class ServicePanelView : MonoBehaviour
         if (run != shownRunHours)
         {
             shownRunHours = run;
-            runHoursText.text = run.ToString("#,0", CultureInfo.InvariantCulture) + " H RUN";
+            runHoursText.text = UIText.Format("service.run_hours", "{0} H RUN", run.ToString("#,0", CultureInfo.InvariantCulture));
         }
 
         RefreshCards();
@@ -317,21 +330,30 @@ public sealed partial class ServicePanelView : MonoBehaviour
 
     private string HoursText(double hoursLeft)
     {
-        string suffix = "<size=55%><color=#" + ColorUtility.ToHtmlStringRGBA(Muted) + "> H</color></size>";
+        string suffix = "<size=55%><color=#" + ColorUtility.ToHtmlStringRGBA(Muted) + "> " +
+                        UIText.Get("unit.hours", "H") + "</color></size>";
         if (hoursLeft <= 0d)
             return "+" + Math.Ceiling(-hoursLeft).ToString("#,0", CultureInfo.InvariantCulture) + suffix;
         return Math.Ceiling(hoursLeft).ToString("#,0", CultureInfo.InvariantCulture) + suffix;
     }
 
     private static string DisplayName(MachinePartGroup part) =>
-        part != null ? part.DisplayName.ToUpperInvariant() : string.Empty;
+        part != null ? PartName(part).ToUpperInvariant() : string.Empty;
+
+    /// <summary>The part's name from the language table (part.bearings), or its authored name.</summary>
+    public static string PartName(MachinePartGroup part) =>
+        part != null ? UIText.Get(PartKey(part), part.DisplayName) : string.Empty;
+
+    /// <summary>Language table key of a part: part. and a slug of its authored name.</summary>
+    public static string PartKey(MachinePartGroup part) =>
+        part != null ? "part." + UIText.Slug(part.DisplayName) : string.Empty;
 
     public static string TaskLabel(ServiceTask task) => task switch
     {
-        ServiceTask.Regrease => "REGREASE",
-        ServiceTask.OilChange => "OIL CHANGE",
-        ServiceTask.Replace => "REPLACE",
-        _ => "INSPECT"
+        ServiceTask.Regrease => UIText.Get("task.regrease", "REGREASE"),
+        ServiceTask.OilChange => UIText.Get("task.oil_change", "OIL CHANGE"),
+        ServiceTask.Replace => UIText.Get("task.replace", "REPLACE"),
+        _ => UIText.Get("task.inspect", "INSPECT")
     };
 
     private static void SetText(TMP_Text text, string value)
@@ -401,7 +423,7 @@ public sealed partial class ServicePanelView : MonoBehaviour
 
         TextMeshProUGUI title = CreateText("Title", listHeader, 20f, false, label, TextAlignmentOptions.MidlineLeft);
         title.characterSpacing = 6f;
-        title.text = "SERVICE SCHEDULE";
+        UITextBinding.Bind(title, "service.title", "SERVICE SCHEDULE");
         Stretch(title.rectTransform, 0f, 0f, 0f, 0f);
 
         runHoursText = CreateText("Run Hours", listHeader, 20f, false, Muted, TextAlignmentOptions.MidlineRight);
@@ -424,8 +446,9 @@ public sealed partial class ServicePanelView : MonoBehaviour
         view.Scroll = view.Root.gameObject.AddComponent<ScrollRect>();
         view.Scroll.horizontal = false;
         view.Scroll.movementType = ScrollRect.MovementType.Clamped;
-        view.Scroll.scrollSensitivity = 30f;
         view.Scroll.inertia = true;
+        // Wheel and trackpad move the list by the browser's own distance, 1:1.
+        view.Root.gameObject.AddComponent<UIWheelScroll>();
 
         RectTransform viewport = CreateRect("Viewport", view.Root);
         Stretch(viewport, 0f, 0f, 0f, 0f);
@@ -607,13 +630,13 @@ public sealed partial class ServicePanelView : MonoBehaviour
         keys.childForceExpandWidth = false;
         keys.childForceExpandHeight = false;
 
-        AddLegendKey(row, UIServiceLegendSwatch.Kind.Run, normal, 22f, "RUN");
-        AddLegendKey(row, UIServiceLegendSwatch.Kind.Estimate, Color.white, 8f, "ESTIMATE");
-        AddLegendKey(row, UIServiceLegendSwatch.Kind.Plan, new Color(1f, 1f, 1f, 0.7f), 8f, "PLAN");
-        AddLegendKey(row, UIServiceLegendSwatch.Kind.Gap, new Color(1f, 1f, 1f, 0.55f), 22f, "GAP");
+        AddLegendKey(row, UIServiceLegendSwatch.Kind.Run, normal, 22f, "RUN", "service.legend.run");
+        AddLegendKey(row, UIServiceLegendSwatch.Kind.Estimate, Color.white, 8f, "ESTIMATE", "service.legend.estimate");
+        AddLegendKey(row, UIServiceLegendSwatch.Kind.Plan, new Color(1f, 1f, 1f, 0.7f), 8f, "PLAN", "service.legend.plan");
+        AddLegendKey(row, UIServiceLegendSwatch.Kind.Gap, new Color(1f, 1f, 1f, 0.55f), 22f, "GAP", "service.legend.gap");
     }
 
-    private void AddLegendKey(RectTransform parent, UIServiceLegendSwatch.Kind kind, Color swatchColor, float swatchWidth, string text)
+    private void AddLegendKey(RectTransform parent, UIServiceLegendSwatch.Kind kind, Color swatchColor, float swatchWidth, string text, string textKey)
     {
         RectTransform key = CreateRect(text, parent);
         HorizontalLayoutGroup pair = key.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -634,7 +657,8 @@ public sealed partial class ServicePanelView : MonoBehaviour
 
         TextMeshProUGUI caption = CreateText("Label", key, 17f, false, Muted, TextAlignmentOptions.MidlineLeft);
         caption.characterSpacing = 3f;
-        caption.text = text;
+        UITextBinding.Bind(caption, textKey, text);
+        UITextBinding.AllowShrinkToFit(caption);
     }
 
     /// <summary>A line along the inside of the band's bottom edge, or its top edge.</summary>

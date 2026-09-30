@@ -197,21 +197,20 @@ public sealed class TelemetryLineChartGraph : TelemetryGraphView
             return;
         long start = buckets[0].StartUnixMs;
         long spanMs = TelemetryHistoryRanges.SpanMilliseconds(range);
-        string format = range switch
-        {
-            TelemetryHistoryRange.Week => "ddd",
-            TelemetryHistoryRange.Month => "d MMM",
-            TelemetryHistoryRange.Year => "MMM",
-            _ => "HH:mm"
-        };
-
         for (int i = 0; i < xLabels.Count; i++)
         {
             TextMeshProUGUI label = xLabels[i];
             label.rectTransform.anchorMin = label.rectTransform.anchorMax = new Vector2(Guides[i], 0f);
             label.rectTransform.anchoredPosition = new Vector2(0f, -5f);
             DateTimeOffset time = ToViewerTime(start + (long)(spanMs * Guides[i]));
-            label.text = time.ToString(format, CultureInfo.InvariantCulture).ToUpperInvariant();
+            // Day and month names come from the language table.
+            label.text = range switch
+            {
+                TelemetryHistoryRange.Week => UIText.ShortDay(time.DayOfWeek),
+                TelemetryHistoryRange.Month => time.Day.ToString(CultureInfo.InvariantCulture) + " " + UIText.ShortMonth(time.Month),
+                TelemetryHistoryRange.Year => UIText.ShortMonth(time.Month),
+                _ => time.ToString("HH:mm", CultureInfo.InvariantCulture)
+            };
         }
     }
 

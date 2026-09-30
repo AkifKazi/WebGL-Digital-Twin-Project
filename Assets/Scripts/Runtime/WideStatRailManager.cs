@@ -150,6 +150,29 @@ public class WideStatRailManager : MonoBehaviour
         rebuildPending = layoutBuilt;
     }
 
+    private void OnEnable()
+    {
+        UIText.Changed -= HandleLanguageChanged;
+        UIText.Changed += HandleLanguageChanged;
+    }
+
+    private void OnDisable()
+    {
+        UIText.Changed -= HandleLanguageChanged;
+    }
+
+    // A translated label can wrap onto more or fewer lines, so the cards are
+    // redrawn and the rails laid out again on the next frame.
+    private void HandleLanguageChanged()
+    {
+        foreach (PerformanceStatCardView card in activeCards.Values)
+        {
+            if (card != null)
+                card.RefreshBoundSources();
+        }
+        rebuildPending = layoutBuilt;
+    }
+
     private IEnumerator Start()
     {
         // The responsive shell and parent layout groups must resolve before

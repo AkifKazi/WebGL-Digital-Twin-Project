@@ -23,6 +23,23 @@ public sealed class DigitalTwinModeSwitch : MonoBehaviour
     public Button TelemetryButton => telemetryButton;
     public Button ServiceButton => serviceButton;
 
+    private void Awake()
+    {
+        BindLabel(telemetryButton, "mode.telemetry");
+        BindLabel(serviceButton, "mode.service");
+    }
+
+    // The authored label text is the English fallback.
+    private static void BindLabel(Button button, string key)
+    {
+        TMP_Text label = button != null ? button.GetComponentInChildren<TMP_Text>(true) : null;
+        if (label == null || label.TryGetComponent(out UITextBinding _))
+            return;
+        UITextBinding.Bind(label, key, label.text);
+        // A longer translation shrinks inside its segment rather than running into the other.
+        UITextBinding.AllowShrinkToFit(label, 0.6f);
+    }
+
     private void OnEnable()
     {
         if (telemetryButton != null)

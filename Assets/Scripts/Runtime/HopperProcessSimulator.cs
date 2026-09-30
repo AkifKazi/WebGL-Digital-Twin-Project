@@ -31,6 +31,25 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
     [SerializeField, Min(0.05f)] private float visibleVariationFrequency = 0.65f;
     [SerializeField] private int deterministicSeed = 1731;
 
+    [Header("Operating Variation")]
+    [Tooltip("How far production demand dips below the nominal feed, as a share of it. The " +
+             "plant runs at or under its rated point, so the swing never raises a load alarm " +
+             "on its own. 0 holds the process at its nominal point, which draws flat charts.")]
+    [SerializeField, Range(0f, 0.3f)] private float demandVariation = 0.12f;
+
+    [Tooltip("Seconds the discharge gate takes to follow a change in demand. The lag moves " +
+             "the hopper level while the gate catches up.")]
+    [SerializeField, Min(1f)] private float gateResponseSeconds = 90f;
+
+    [Tooltip("Seconds for the motor temperature to settle after a change in load.")]
+    [SerializeField, Min(1f)] private float motorThermalSeconds = 90f;
+
+    [Tooltip("Minutes between screen cleaning cycles. Screen blinding builds up in between.")]
+    [SerializeField, Min(1f)] private float screenCleaningMinutes = 20f;
+
+    [SerializeField, Min(1f)] private float nominalRotorSpeedRpm = 980f;
+    [SerializeField, Min(1f)] private float nominalRotorTorqueNm = 142f;
+
     private PerformanceStatSource inletFlow;
     private PerformanceStatSource dischargeFlow;
     private PerformanceStatSource motorTemperature;
@@ -57,6 +76,10 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
     private PerformanceStatSource ambientHumidity;
     private PerformanceStatSource supplyVoltage;
     private PerformanceStatSource supplyPowerFactor;
+    private PerformanceStatSource rotorSpeed;
+    private PerformanceStatSource rotorTorque;
+    private PerformanceStatSource rotorImbalance;
+    private PerformanceStatSource screenBlinding;
 
     private float accumulatedTime;
     private float fillPercent;
@@ -64,6 +87,8 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
     private float temperatureC;
     private float powerKw;
     private float vibrationMmPerSecond;
+    private float demand = 1f;
+    private float gateDemand = 1f;
     private ulong sequenceNumber;
 
     private void Awake()
@@ -93,7 +118,7 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
         float maximumStep = Mathf.Max(MaximumStepSeconds, updateInterval * 2f);
         float deltaTime = Mathf.Min(accumulatedTime, maximumStep) * processTimeScale;
         accumulatedTime = 0f;
-        StepModel(deltaTime);
+        StepModel(deltaTime, Time.unscaledTime);
     }
 
     [ContextMenu("Reset Process Model")]
@@ -104,8 +129,10 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
         temperatureC = 65f;
         powerKw = motorRatedPowerKw * 0.84f;
         vibrationMmPerSecond = 4.2f;
+        demand = Demand(Time.unscaledTime + deterministicSeed);
+        gateDemand = demand;
         accumulatedTime = 0f;
-        Publish(nominalInletKgPerSecond, nominalDischargeKgPerSecond);
+        Publish(nominalInletKgPerSecond, nominalDischargeKgPerSecond, Time.unscaledTime + deterministicSeed);
     }
 
     public void ResetSimulation()
@@ -113,25 +140,38 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
         ResetModel();
     }
 
-    private void StepModel(float deltaTime)
+    /// <summary>
+    /// Advances the model by <paramref name="deltaTime"/> seconds at
+    /// <paramref name="clockSeconds"/> on the unscaled clock. Taking the clock
+    /// as an argument lets a test run hours of process in a moment.
+    /// </summary>
+    internal void StepModel(float deltaTime, float clockSeconds)
     {
-        float time = Time.unscaledTime + deterministicSeed;
+        float time = clockSeconds + deterministicSeed;
         float slowNoise = SignedPerlin(time * 0.07f, deterministicSeed * 0.013f);
         float fastNoise = SignedPerlin(time * 0.31f, deterministicSeed * 0.029f);
         float visibleNoise = SignedPerlin(
             time * visibleVariationFrequency,
             deterministicSeed * 0.047f);
 
-        float inletKgPerSecond = nominalInletKgPerSecond *
+        // Production demand moves over minutes to an hour, as feed and trucks
+        // come and go. Without it every signal settles on one value and the
+        // history charts draw flat lines.
+        demand = Demand(time);
+        gateDemand = FirstOrder(gateDemand, demand, gateResponseSeconds, deltaTime);
+
+        float inletKgPerSecond = nominalInletKgPerSecond * demand *
             (1f + (slowNoise + visibleNoise * 0.8f) * noiseAmount);
 
         float fillFactor = Mathf.Sqrt(Mathf.Max(0.05f, fillPercent / initialFillPercent));
+        // The drive trims its speed a little with demand; drive frequency
+        // limits sit only 2% above nominal, so the trim stays small.
         float targetSpeed = nominalSpeedRpm *
-            (1f + (fastNoise * 0.35f + visibleNoise * 0.2f) * noiseAmount);
+            (1f + (demand - 1f) * 0.12f + (fastNoise * 0.35f + visibleNoise * 0.2f) * noiseAmount);
         speedRpm = FirstOrder(speedRpm, targetSpeed, 1.5f, deltaTime);
 
         float speedFraction = speedRpm / nominalSpeedRpm;
-        float dischargeKgPerSecond = nominalDischargeKgPerSecond * speedFraction * fillFactor;
+        float dischargeKgPerSecond = nominalDischargeKgPerSecond * speedFraction * fillFactor * gateDemand;
         dischargeKgPerSecond *= 1f + fastNoise * noiseAmount * 0.5f;
 
         float capacityKg = hopperVolumeCubicMetres * bulkDensityKgPerCubicMetre;
@@ -145,17 +185,23 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
         float targetPowerKw = motorRatedPowerKw * loadFraction / motorEfficiency;
         powerKw = FirstOrder(powerKw, targetPowerKw, 2f, deltaTime);
 
-        float targetTemperatureC = ambientTemperatureC + 48f * loadFraction;
-        temperatureC = FirstOrder(temperatureC, targetTemperatureC, 120f, deltaTime);
+        // Winding losses grow with the square of the current, so the rise
+        // follows load more than linearly; the cube used here keeps a load
+        // swing readable on the charts. 40 degC over ambient at the nominal
+        // load point, close to the previous 40.8.
+        const float nominalLoadFraction = 0.85f;
+        float relativeLoad = loadFraction / nominalLoadFraction;
+        float targetTemperatureC = ambientTemperatureC + 40f * relativeLoad * relativeLoad * relativeLoad;
+        temperatureC = FirstOrder(temperatureC, targetTemperatureC, motorThermalSeconds, deltaTime);
 
         float targetVibration = 2.8f + 1.6f * loadFraction +
             fastNoise * 0.15f + visibleNoise * 0.18f;
         vibrationMmPerSecond = FirstOrder(vibrationMmPerSecond, targetVibration, 1f, deltaTime);
 
-        Publish(inletKgPerSecond, dischargeKgPerSecond);
+        Publish(inletKgPerSecond, dischargeKgPerSecond, time);
     }
 
-    private void Publish(float inletKgPerSecond, float dischargeKgPerSecond)
+    private void Publish(float inletKgPerSecond, float dischargeKgPerSecond, float time)
     {
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         sequenceNumber++;
@@ -170,7 +216,6 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
         float beltSpeedMetresPerSecond = 0.80f * speedFraction;
         float hopperMassTonnes = hopperVolumeCubicMetres * bulkDensityKgPerCubicMetre *
             (fillPercent / 100f) / 1000f;
-        float time = Time.unscaledTime + deterministicSeed;
         float environmentalDrift = SignedPerlin(time * 0.015f, 4.17f);
         float mechanicalNoise = SignedPerlin(time * 0.19f, 8.31f);
         float simulatedAmbientC = ambientTemperatureC + environmentalDrift * 1.2f;
@@ -188,8 +233,23 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
         float structureVibration = Mathf.Max(0f, 1.1f + vibrationMmPerSecond * 0.16f +
             mechanicalNoise * 0.08f);
         float simulatedVoltage = 400f + environmentalDrift * 2.5f;
+        // An induction motor's power factor improves with load and drops off
+        // steeply below about 65 %.
         float simulatedPowerFactor = Mathf.Clamp(
-            powerFactor - Mathf.Max(0f, 0.65f - loadPercent / 100f) * 0.12f, 0.6f, 0.95f);
+            powerFactor + (loadPercent / 100f - 0.85f) * 0.3f + mechanicalNoise * 0.004f -
+            Mathf.Max(0f, 0.65f - loadPercent / 100f) * 0.12f, 0.6f, 0.95f);
+
+        // The separator's rotors take the discharged material.
+        float throughput = dischargeKgPerSecond / Mathf.Max(0.01f, nominalDischargeKgPerSecond);
+        float rotorSpeedRpm = nominalRotorSpeedRpm * (1f + (demand - 1f) * 0.25f + mechanicalNoise * 0.008f);
+        float rotorTorqueNm = nominalRotorTorqueNm * Mathf.Clamp(throughput, 0.3f, 1.3f) *
+            (1f + mechanicalNoise * 0.03f);
+        float rotorImbalanceMmPerSecond = Mathf.Max(0f, 2.1f + mechanicalNoise * 0.25f +
+            SignedPerlin(time * 0.004f, 12.7f) * 0.35f);
+        // Blinding builds up between cleaning cycles, faster with wet feed.
+        float cleaningCycle = Mathf.Repeat(time, screenCleaningMinutes * 60f) / (screenCleaningMinutes * 60f);
+        float screenBlindingPercent = Mathf.Clamp(
+            4.8f + 3.2f * cleaningCycle + (moisturePercent - 6.8f) * 2.5f + mechanicalNoise * 0.2f, 0f, 100f);
 
         Apply(inletFlow, inletKgPerSecond, now);
         Apply(dischargeFlow, dischargeKgPerSecond, now);
@@ -217,6 +277,10 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
         Apply(ambientHumidity, relativeHumidity, now);
         Apply(supplyVoltage, simulatedVoltage, now);
         Apply(supplyPowerFactor, simulatedPowerFactor, now);
+        Apply(rotorSpeed, rotorSpeedRpm, now);
+        Apply(rotorTorque, rotorTorqueNm, now);
+        Apply(rotorImbalance, rotorImbalanceMmPerSecond, now);
+        Apply(screenBlinding, screenBlindingPercent, now);
 
         if (driveParticleControlsFromProcess && particleFlowController != null)
         {
@@ -270,6 +334,10 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
         TryGet("ENV-01.RELATIVE.HUMIDITY", out ambientHumidity);
         TryGet("POWER-01.SUPPLY.VOLTAGE", out supplyVoltage);
         TryGet("POWER-01.POWER.FACTOR", out supplyPowerFactor);
+        TryGet("MIX-01.ROTOR.SPEED", out rotorSpeed);
+        TryGet("MIX-01.ROTOR.TORQUE", out rotorTorque);
+        TryGet("MIX-01.ROTOR.IMBALANCE", out rotorImbalance);
+        TryGet("MIX-01.SCREEN.BLINDING", out screenBlinding);
     }
 
     private void TryGet(string id, out PerformanceStatSource source)
@@ -284,6 +352,24 @@ public sealed class HopperProcessSimulator : MonoBehaviour, ITelemetrySimulation
     {
         float blend = 1f - Mathf.Exp(-deltaTime / Mathf.Max(0.001f, timeConstant));
         return Mathf.Lerp(current, target, blend);
+    }
+
+    /// <summary>
+    /// Production demand as a share of nominal, between 1 - demandVariation
+    /// and 1: swings of a few minutes, a quarter of an hour and most of an
+    /// hour, layered.
+    /// </summary>
+    private float Demand(float time)
+    {
+        if (demandVariation <= 0f)
+            return 1f;
+
+        float swing =
+            0.50f * SignedPerlin(time / 240f, deterministicSeed * 0.011f) +
+            0.35f * SignedPerlin(time / 900f, deterministicSeed * 0.017f + 3.1f) +
+            0.25f * SignedPerlin(time / 3000f, deterministicSeed * 0.023f + 7.3f);
+        float share = Mathf.Clamp01(0.5f - swing);
+        return 1f - demandVariation * share;
     }
 
     private static float SignedPerlin(float x, float y)

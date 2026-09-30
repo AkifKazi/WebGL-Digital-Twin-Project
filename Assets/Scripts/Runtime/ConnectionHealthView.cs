@@ -29,12 +29,22 @@ public sealed class ConnectionHealthView : MonoBehaviour
             monitor.Changed += Render;
             Render(monitor.Current);
         }
+
+        UIText.Changed -= HandleLanguageChanged;
+        UIText.Changed += HandleLanguageChanged;
     }
 
     private void OnDisable()
     {
         if (monitor != null)
             monitor.Changed -= Render;
+        UIText.Changed -= HandleLanguageChanged;
+    }
+
+    private void HandleLanguageChanged()
+    {
+        if (monitor != null)
+            Render(monitor.Current);
     }
 
     public void Bind(ConnectionHealthMonitor target)
@@ -54,17 +64,19 @@ public sealed class ConnectionHealthView : MonoBehaviour
     private void Render(ConnectionHealthSnapshot snapshot)
     {
         if (modeValue != null)
-            modeValue.text = snapshot.Mode == TelemetryOperatingMode.Live ? "LIVE DATA" : "SIMULATION";
+            modeValue.text = snapshot.Mode == TelemetryOperatingMode.Live
+                ? UIText.Get("health.mode.live", "LIVE DATA")
+                : UIText.Get("health.mode.simulation", "SIMULATION");
 
         if (gatewayValue != null)
         {
             gatewayValue.text = snapshot.GatewayState switch
             {
-                GatewayHealthState.LocalSimulation => "LOCAL MODEL",
-                GatewayHealthState.WaitingForData => "WAITING",
-                GatewayHealthState.Connected => "CONNECTED",
-                GatewayHealthState.Degraded => "DEGRADED",
-                _ => "OFFLINE"
+                GatewayHealthState.LocalSimulation => UIText.Get("health.gateway.local_model", "LOCAL MODEL"),
+                GatewayHealthState.WaitingForData => UIText.Get("health.gateway.waiting", "WAITING"),
+                GatewayHealthState.Connected => UIText.Get("health.gateway.connected", "CONNECTED"),
+                GatewayHealthState.Degraded => UIText.Get("health.gateway.degraded", "DEGRADED"),
+                _ => UIText.Get("health.gateway.offline", "OFFLINE")
             };
         }
 
@@ -75,10 +87,10 @@ public sealed class ConnectionHealthView : MonoBehaviour
         if (qualityValue != null)
         {
             qualityValue.text = snapshot.TotalCount == 0
-                ? "NO SENSORS"
+                ? UIText.Get("health.quality.no_sensors", "NO SENSORS")
                 : issues == 0
-                    ? $"{snapshot.GoodCount} / {snapshot.TotalCount} GOOD"
-                    : $"{snapshot.GoodCount} GOOD · {issues} ISSUE";
+                    ? UIText.Format("health.quality.all_good", "{0} / {1} GOOD", snapshot.GoodCount, snapshot.TotalCount)
+                    : UIText.Format("health.quality.issues", "{0} GOOD · {1} ISSUE", snapshot.GoodCount, issues);
         }
 
         Color stateColor = ResolveColor(snapshot);
@@ -111,18 +123,18 @@ public sealed class ConnectionHealthView : MonoBehaviour
     private static string FormatAge(long timestampUnixMs)
     {
         if (timestampUnixMs <= 0)
-            return "NO DATA";
+            return UIText.Get("health.age.no_data", "NO DATA");
 
         long ageSeconds = Math.Max(
             0,
             (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - timestampUnixMs) / 1000);
 
         if (ageSeconds < 2)
-            return "JUST NOW";
+            return UIText.Get("health.age.just_now", "JUST NOW");
         if (ageSeconds < 60)
-            return $"{ageSeconds}s AGO";
+            return UIText.Format("health.age.seconds", "{0}s AGO", ageSeconds);
         if (ageSeconds < 3600)
-            return $"{ageSeconds / 60}m AGO";
-        return $"{ageSeconds / 3600}h AGO";
+            return UIText.Format("health.age.minutes", "{0}m AGO", ageSeconds / 60);
+        return UIText.Format("health.age.hours", "{0}h AGO", ageSeconds / 3600);
     }
 }

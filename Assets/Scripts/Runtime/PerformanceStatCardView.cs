@@ -821,6 +821,18 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
             return 1;
         }
 
+        // A single word wider than the card (a long compound word in another
+        // language) would be broken mid-word. Reporting it as too many lines
+        // sends the label to the sliding layout instead.
+        foreach (string word in text.Split(' '))
+        {
+            if (word.Length > 0 && textComponent.GetPreferredValues(word, 100000f, 1000f).x > width + 0.5f)
+            {
+                textComponent.textWrappingMode = previousWrapping;
+                return int.MaxValue;
+            }
+        }
+
         textComponent.textWrappingMode = TextWrappingModes.Normal;
 
         // Measure the same glyphs in both cases. Using a different baseline

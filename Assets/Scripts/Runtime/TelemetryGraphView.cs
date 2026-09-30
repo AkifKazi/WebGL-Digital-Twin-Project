@@ -214,19 +214,19 @@ public abstract class TelemetryGraphView : MonoBehaviour
     protected static string FormatDuration(float seconds)
     {
         if (seconds < 7200f)
-            return $"{Mathf.RoundToInt(seconds / 60f)} min";
+            return UIText.Format("duration.minutes", "{0} min", Mathf.RoundToInt(seconds / 60f));
         if (seconds < 172800f)
-            return $"{(seconds / 3600f).ToString("0.#", CultureInfo.InvariantCulture)} h";
-        return $"{(seconds / 86400f).ToString("0.#", CultureInfo.InvariantCulture)} d";
+            return UIText.Format("duration.hours", "{0} h", (seconds / 3600f).ToString("0.#", CultureInfo.InvariantCulture));
+        return UIText.Format("duration.days", "{0} d", (seconds / 86400f).ToString("0.#", CultureInfo.InvariantCulture));
     }
 
     protected static string StartLabel(TelemetryHistoryRange range) => range switch
     {
-        TelemetryHistoryRange.Hour => "60 min ago",
-        TelemetryHistoryRange.Day => "24 h ago",
-        TelemetryHistoryRange.Week => "7 days ago",
-        TelemetryHistoryRange.Month => "30 days ago",
-        TelemetryHistoryRange.Year => "1 year ago",
+        TelemetryHistoryRange.Hour => UIText.Get("graph.start.hour", "60 min ago"),
+        TelemetryHistoryRange.Day => UIText.Get("graph.start.day", "24 h ago"),
+        TelemetryHistoryRange.Week => UIText.Get("graph.start.week", "7 days ago"),
+        TelemetryHistoryRange.Month => UIText.Get("graph.start.month", "30 days ago"),
+        TelemetryHistoryRange.Year => UIText.Get("graph.start.year", "1 year ago"),
         _ => string.Empty
     };
 }

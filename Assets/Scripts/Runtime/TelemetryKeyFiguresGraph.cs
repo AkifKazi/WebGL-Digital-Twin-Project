@@ -143,7 +143,9 @@ public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
         column.UnitText = unit;
         column.Unit.text = unit;
         column.Value.text = hasNumber ? Format(number, column.Decimals) : text;
-        column.Value.color = text == "OVERDUE" ? Style.warning : Style.ink;
+        // Time to service only reads as text once the part is overdue.
+        bool overdue = figure == TelemetryKeyFigure.TimeToService && !hasNumber && text != null;
+        column.Value.color = overdue ? Style.warning : Style.ink;
     }
 
     /// <summary>
@@ -199,13 +201,13 @@ public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
                 return true;
 
             case TelemetryKeyFigure.TimeToService:
-                unit = "H";
+                unit = UIText.Get("unit.hours", "H");
                 decimals = 0;
                 if (data.ServiceLife == null || !data.ServiceLife.TryGetHoursToService(data.Source, out double hours))
                     return false;
                 if (hours <= 0d)
                 {
-                    text = "OVERDUE";
+                    text = UIText.Get("figure.overdue", "OVERDUE");
                     unit = string.Empty;
                     return false;
                 }
@@ -277,11 +279,11 @@ public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
 
     private static string Caption(TelemetryKeyFigure figure) => figure switch
     {
-        TelemetryKeyFigure.Average => "AVERAGE",
-        TelemetryKeyFigure.Minimum => "MINIMUM",
-        TelemetryKeyFigure.Maximum => "MAXIMUM",
-        TelemetryKeyFigure.Latest => "LATEST",
-        TelemetryKeyFigure.TimeToService => "TIME TO SERVICE",
+        TelemetryKeyFigure.Average => UIText.Get("figure.average", "AVERAGE"),
+        TelemetryKeyFigure.Minimum => UIText.Get("figure.minimum", "MINIMUM"),
+        TelemetryKeyFigure.Maximum => UIText.Get("figure.maximum", "MAXIMUM"),
+        TelemetryKeyFigure.Latest => UIText.Get("figure.latest", "LATEST"),
+        TelemetryKeyFigure.TimeToService => UIText.Get("figure.time_to_service", "TIME TO SERVICE"),
         _ => string.Empty
     };
 }

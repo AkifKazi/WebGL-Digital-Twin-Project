@@ -60,6 +60,10 @@ public static class TelemetryHistoryRanges
         _ => "?"
     };
 
+    /// <summary>Language table key of <see cref="ShortLabel"/>: range.hour.short and so on.</summary>
+    public static string ShortLabelKey(TelemetryHistoryRange range) =>
+        "range." + range.ToString().ToLowerInvariant() + ".short";
+
     /// <summary>Start of the bucket containing <paramref name="unixMs"/>.</summary>
     public static long AlignDown(long unixMs, long bucketMs)
     {
@@ -86,6 +90,12 @@ public struct TelemetryHistoryBucket
     public float WarningSeconds;
     public float CriticalSeconds;
     public float UnavailableSeconds;
+
+    /// <summary>
+    /// True when the bucket was generated to fill a gap (prototype backfill)
+    /// rather than recorded. Data for automation and AI must leave these out.
+    /// </summary>
+    public bool Generated;
 
     public bool HasValue => SampleCount > 0;
     public float Mean => SampleCount > 0 ? (float)(Sum / SampleCount) : 0f;

@@ -59,6 +59,7 @@ public class PortraitStatRailManager : MonoBehaviour
     private readonly Dictionary<PerformanceStatSource, int> subscribedAlarmRanks = new();
 
     private readonly Dictionary<PerformanceStatSource, PerformanceStatCardView> activeCards = new();
+    private bool layoutStarted;
     private readonly List<PerformanceStatCardView> generatedCards = new();
     private readonly Stack<PerformanceStatCardView> cardPool = new();
     private readonly List<RailCardBinding> topBindings = new();
@@ -75,7 +76,32 @@ public class PortraitStatRailManager : MonoBehaviour
         yield return null;
         yield return new WaitForEndOfFrame();
         yield return null;
+        layoutStarted = true;
         RebuildLayout();
+    }
+
+    private void OnEnable()
+    {
+        UIText.Changed -= HandleLanguageChanged;
+        UIText.Changed += HandleLanguageChanged;
+    }
+
+    private void OnDisable()
+    {
+        UIText.Changed -= HandleLanguageChanged;
+    }
+
+    // A translated label can wrap onto more or fewer lines, so the cards are
+    // redrawn and the rails laid out again.
+    private void HandleLanguageChanged()
+    {
+        foreach (PerformanceStatCardView card in activeCards.Values)
+        {
+            if (card != null)
+                card.RefreshBoundSources();
+        }
+        if (layoutStarted && isActiveAndEnabled)
+            RebuildLayout();
     }
 
     private void LateUpdate()

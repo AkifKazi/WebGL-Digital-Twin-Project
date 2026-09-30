@@ -138,6 +138,8 @@ public sealed class TelemetryHistoryRecorder : MonoBehaviour, ITelemetryHistoryP
         float seconds = bucketMs / 1000f;
         float warningSeconds = 0f;
         float criticalSeconds = 0f;
+        float spread = Mathf.Abs(span) * 0.08f;
+        bool excursion = false;
 
         if (limits.Mode != TelemetryLimitMode.Disabled)
         {
@@ -152,6 +154,7 @@ public sealed class TelemetryHistoryRecorder : MonoBehaviour, ITelemetryHistoryP
                     ? limits.CriticalAbove + Mathf.Abs(span) * 0.05f * (1f + Hash01(key, index, 5u))
                     : limits.CriticalBelow - Mathf.Abs(span) * 0.05f * (1f + Hash01(key, index, 5u));
                 criticalSeconds = seconds * share;
+                excursion = true;
             }
             else if (roll < generatedCriticalShare + generatedWarningShare)
             {
@@ -159,10 +162,15 @@ public sealed class TelemetryHistoryRecorder : MonoBehaviour, ITelemetryHistoryP
                     ? Mathf.Lerp(limits.WarningAbove, limits.CriticalAbove, 0.35f + 0.3f * Hash01(key, index, 6u))
                     : Mathf.Lerp(limits.WarningBelow, limits.CriticalBelow, 0.35f + 0.3f * Hash01(key, index, 6u));
                 warningSeconds = seconds * share;
+                excursion = true;
             }
         }
 
-        float spread = Mathf.Abs(span) * 0.08f;
+        // A bucket generated as normal must read as normal: a value past a
+        // limit with no alarm time would contradict the status timeline.
+        if (!excursion)
+            KeepInsideNormalBand(limits, ref value, ref spread);
+
         return new TelemetryHistoryBucket
         {
             StartUnixMs = start,
@@ -173,8 +181,43 @@ public sealed class TelemetryHistoryRecorder : MonoBehaviour, ITelemetryHistoryP
             Last = value,
             NormalSeconds = seconds - warningSeconds - criticalSeconds,
             WarningSeconds = warningSeconds,
-            CriticalSeconds = criticalSeconds
+            CriticalSeconds = criticalSeconds,
+            Generated = true
         };
+    }
+
+    /// <summary>
+    /// Folds <paramref name="value"/> back inside the normal band, a little
+    /// clear of its limits, and narrows the spread to fit. Reflecting rather
+    /// than clamping keeps the drift's movement: a source running close to a
+    /// limit would otherwise draw a flat line along it.
+    /// </summary>
+    private static void KeepInsideNormalBand(TelemetryLimits limits, ref float value, ref float spread)
+    {
+        if (limits.Mode == TelemetryLimitMode.Disabled)
+            return;
+
+        float low = limits.HasLow ? limits.WarningBelow : float.NegativeInfinity;
+        float high = limits.HasHigh ? limits.WarningAbove : float.PositiveInfinity;
+        if (!(high > low))
+            return;
+
+        float width = float.IsInfinity(high - low) ? Mathf.Max(Mathf.Abs(value), 1f) : high - low;
+        float margin = width * 0.04f;
+        float top = high - margin;
+        float bottom = low + margin;
+        if (!(top > bottom))
+        {
+            top = bottom = (low + high) * 0.5f;
+        }
+
+        if (value > top)
+            value = top - (value - top);
+        if (value < bottom)
+            value = bottom + (bottom - value);
+        value = Mathf.Clamp(value, bottom, top);
+
+        spread = Mathf.Max(0f, Mathf.Min(spread, top - value, value - bottom));
     }
 
     /// <summary>A value inside the normal band, near where the source started.</summary>

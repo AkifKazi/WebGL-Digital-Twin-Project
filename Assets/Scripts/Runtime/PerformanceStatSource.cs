@@ -75,12 +75,38 @@ public sealed class PerformanceStatSource : MonoBehaviour
     [SerializeField] private bool visible = true;
 
     private StatVisualState lastHealthyVisualState = StatVisualState.Normal;
+    private string localizedName;
+    private string localizedNameSource;
+    private int localizedNameVersion = -1;
 
     public event Action<PerformanceStatSource> Changed;
     public event Action<PerformanceStatSource> LayoutPriorityChanged;
 
     public string StatId => statId;
-    public string MetricName => metricName;
+    /// <summary>
+    /// The sensor's label: the language table's copy for sensor.&lt;id&gt; when it
+    /// has one, otherwise the authored label. Cached per table version, since
+    /// the rails read it every frame.
+    /// </summary>
+    public string MetricName
+    {
+        get
+        {
+            if (localizedNameVersion != UIText.Version || localizedNameSource != metricName)
+            {
+                localizedNameSource = metricName;
+                localizedNameVersion = UIText.Version;
+                localizedName = UIText.Get(LabelKey, metricName);
+            }
+            return localizedName;
+        }
+    }
+
+    /// <summary>The authored label, whatever the language.</summary>
+    public string AuthoredMetricName => metricName;
+
+    /// <summary>Language table key of the label: sensor. and the sensor ID.</summary>
+    public string LabelKey => "sensor." + statId;
     public string Unit => unit;
     public string ValueFormat => valueFormat;
     public float CurrentValue => currentValue;

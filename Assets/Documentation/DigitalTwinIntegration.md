@@ -215,6 +215,120 @@ development. It is intentionally separate from the live ingestion path.
 - Hopper mass is derived from usable volume, bulk density, and fill percentage.
 - Belt speed follows the drive speed ratio.
 - Noise is smooth rather than independent random jumps.
+- Production demand swings over minutes to an hour (**Demand Variation**, 12% by
+  default), always at or below the rated point, so no load alarm is raised by it.
+  The discharge gate follows demand with a lag, which moves the hopper level.
+  Without this swing every signal settles on one value and the history charts
+  draw flat lines.
+- Motor temperature rise follows load more than linearly (winding losses) with a
+  90-second thermal time constant.
+- Power factor improves with load, as an induction motor's does.
+- The separator rotor sensors (`MIX-01.*`: speed, torque, imbalance, screen
+  blinding) follow throughput and a screen cleaning cycle.
+
+`FeedbackStressTest` runs the model for 24 simulated hours and fails if any sensor
+has a flat hour, if a sensor other than the belt slip and belt underspeed
+demonstrations raises an alarm, or if the hopper leaves its normal band.
+
+## Language table
+
+All on-screen copy — control labels, sensor names, part names, service texts, chart
+captions, month and day names — comes from a CSV table:
+
+```text
+Assets/StreamingAssets/Localization/ui_text.csv     (in the project)
+<build>/StreamingAssets/Localization/ui_text.csv    (beside a WebGL build)
+```
+
+```csv
+key,en,de,notes
+service.title,SERVICE SCHEDULE,WARTUNGSPLAN,Service panel: list
+sensor.VIB-01.MOTOR.TEMP,MOTOR TEMPERATURE,MOTORTEMPERATUR,Sensor label (°C)
+health.quality.issues,{0} GOOD · {1} ISSUE,{0} OK · {1} PROBLEM,Connection status bar
+```
+
+- The first column is the key. Every other column is a language code (`en`, `de`,
+  `pt-BR`...), except a `notes` column, which is ignored.
+- Edit it in any spreadsheet or text editor and save as CSV (comma or semicolon,
+  UTF-8). In a deployed build, edit the file on the server and reload the page; no
+  rebuild is needed.
+- An empty cell falls back to `en`, then to the English copy compiled into the code,
+  so a partly translated table never shows a blank label.
+- Keep `{0}`, `{1}` placeholders. A translation with a broken placeholder falls back
+  to English for that label instead of failing.
+- Copy may be longer or shorter than the English. Cards re-wrap and the rails lay out
+  again; fixed-width controls shrink the type (to 50–70%) and then end with "…".
+- Choose the language with `?lang=de` on the page address, or from the host page:
+
+```javascript
+unityInstance.SendMessage("Digital Twin Runtime", "SetLanguage", "de");
+unityInstance.SendMessage("Digital Twin Runtime", "LoadLanguageCsv", csvText); // a table from anywhere
+unityInstance.SendMessage("Digital Twin Runtime", "ReloadLanguageTable");      // re-read the file
+```
+
+A table that cannot be read (bad quoting, no `key` column) is refused with a console
+warning, and the table in use is kept.
+
+**Tools > Digital Twin > Update Language Table** adds a row for every key the code,
+the default machine configuration and the scene use (new sensors, parts or service
+plans included). Existing rows and translations are never changed.
+
+The Rajdhani font covers Latin scripts. Cyrillic, Greek or CJK columns need a
+fallback TextMesh Pro font asset with those glyphs added to the label fonts first.
+
+## AI data table
+
+`TelemetryAiDataTable` joins telemetry and maintenance into tables whose values
+change over time, ready to feed an AI or automation service. It is added to the
+`Digital Twin Runtime` object automatically.
+
+| Table | Rows | Contents |
+|---|---|---|
+| `sensors` | one per sensor | reading, quality, alarm state, age, limits, margin to warning (%), and for each time window: mean, min, max, standard deviation, trend per hour, seconds in warning and critical, coverage; projected minutes to a warning limit; the service position of the sensor's part |
+| `maintenance` | one per service plan | task, criticality, plan / estimate / run hours, hours left, state, due date, past intervals, sensors on the part and their worst state |
+| `series` | one per sensor and time bucket | mean, min, max, last, samples, seconds in each state |
+
+The parameters are dynamic: the time windows (default 15 min, 60 min, 24 h) and
+the figures per window are set on the component, and the page can change the
+windows at run time. Columns are named from them (`w60_mean`, `w1440_slope_per_h`),
+and every column carries a description in the JSON.
+
+Generated backfill history (the prototype's filler for time before the page
+opened) is left out of every figure and of the series; `coverage` says how much of a
+window is real data. Turn on **Include Generated History** only to test a pipeline.
+
+The page receives the `sensors` and `maintenance` tables every 10 seconds:
+
+```javascript
+window.addEventListener("digitaltwin:ai-table", event => {
+  const data = JSON.parse(event.detail);   // also kept in window.DigitalTwinAi.latestJson
+  // data.tables.sensors.rows -> [{ sensor_id, value, w60_mean, w60_slope_per_h, ... }]
+  sendToModel(data);
+});
+
+unityInstance.SendMessage("Digital Twin Runtime", "RequestAiTable");           // all three tables now
+unityInstance.SendMessage("Digital Twin Runtime", "DownloadAiTable", "series"); // sensors | maintenance | series (CSV) | all (JSON)
+unityInstance.SendMessage("Digital Twin Runtime", "SetAiWindows", "5,30,240");
+```
+
+A model's result can be shown back in the sensor's detail panel:
+
+```javascript
+unityInstance.SendMessage("Digital Twin Runtime", "PushAiInsight", JSON.stringify({
+  sensorId: "VIB-01.MOTOR.TEMP",
+  text: "Temperature rising 3 °C/h with load; warning in about 4 h.",
+  ttlSeconds: 900
+}));
+// several at once: { "insights": [ { sensorId, text }, ... ] }; empty text removes one
+unityInstance.SendMessage("Digital Twin Runtime", "ClearAiInsights");
+```
+
+Insight text is shown as plain text (markup is not interpreted) and is cut at 600
+characters. In the editor, `DownloadAiTable` writes to `Logs/AiTable`.
+
+The in-page history is kept in memory and restarts with the page. For training, the
+`series` table should be stored by the backend, or a backend history service can
+implement `ITelemetryHistoryProvider` and be passed to `UseHistoryProvider`.
 
 ## Card presentation rules
 
