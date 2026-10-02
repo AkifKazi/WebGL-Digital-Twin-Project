@@ -60,6 +60,7 @@ public class PortraitStatRailManager : MonoBehaviour
 
     private readonly Dictionary<PerformanceStatSource, PerformanceStatCardView> activeCards = new();
     private bool layoutStarted;
+    private bool rebuildPending;
     private readonly List<PerformanceStatCardView> generatedCards = new();
     private readonly Stack<PerformanceStatCardView> cardPool = new();
     private readonly List<RailCardBinding> topBindings = new();
@@ -106,6 +107,9 @@ public class PortraitStatRailManager : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (rebuildPending)
+            RebuildLayout();
+
         UpdateRail(topBindings, topCardContainer);
         UpdateRail(bottomBindings, bottomCardContainer);
         UpdateRail(innerTopBindings, innerTopCardContainer);
@@ -120,6 +124,7 @@ public class PortraitStatRailManager : MonoBehaviour
     [ContextMenu("Rebuild Layout")]
     public void RebuildLayout()
     {
+        rebuildPending = false;
         ClearGeneratedCards();
         UnsubscribeFromSources();
 
@@ -734,7 +739,9 @@ public class PortraitStatRailManager : MonoBehaviour
         // viewer on the page they are reading.
         if (IsNewOrWorseAlarm(source))
             CurrentPageIndex = 0;
-        RebuildLayout();
+        // Several sensors can change alarm state in one batch; rebuilding once
+        // per frame instead of once per sensor gives the same layout.
+        rebuildPending = true;
     }
 
     private bool IsNewOrWorseAlarm(PerformanceStatSource source)

@@ -1103,7 +1103,9 @@ public class WideStatRailManager : MonoBehaviour
         // viewer on the page they are reading.
         if (IsNewOrWorseAlarm(source))
             CurrentPageIndex = 0;
-        RebuildLayout();
+        // Several sensors can change alarm state in one batch; rebuilding once
+        // per frame instead of once per sensor gives the same layout.
+        rebuildPending = layoutBuilt;
     }
 
     private bool IsNewOrWorseAlarm(PerformanceStatSource source)

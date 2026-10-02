@@ -96,7 +96,20 @@ public sealed class ConnectionHealthMonitor : MonoBehaviour
     private ConnectionHealthSnapshot current;
     private bool hasSnapshot;
 
-    public ConnectionHealthSnapshot Current => current;
+    // Readings arrive in bursts (a gateway batch can hold one per sensor) and a
+    // refresh counts every sensor, so refreshes asked for by readings are
+    // coalesced into one per frame instead of one per reading.
+    private bool refreshPending;
+    private bool forceRefreshPending;
+
+    public ConnectionHealthSnapshot Current
+    {
+        get
+        {
+            FlushPendingRefresh();
+            return current;
+        }
+    }
 
     private void Awake()
     {
@@ -123,6 +136,8 @@ public sealed class ConnectionHealthMonitor : MonoBehaviour
 
     private void Update()
     {
+        FlushPendingRefresh();
+
         if (Time.unscaledTime < nextRefreshTime)
             return;
 
@@ -135,7 +150,7 @@ public sealed class ConnectionHealthMonitor : MonoBehaviour
         lastLiveMessageUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         liveProviderId = string.IsNullOrWhiteSpace(providerId) ? "edge-gateway" : providerId;
         explicitlyDisconnected = false;
-        Refresh(true);
+        RequestRefresh(true);
     }
 
     // Browser integrations may call SendMessage on Digital Twin Runtime with this method.
@@ -171,7 +186,24 @@ public sealed class ConnectionHealthMonitor : MonoBehaviour
 
     private void HandleSourceChanged(PerformanceStatSource source)
     {
-        Refresh(false);
+        RequestRefresh(false);
+    }
+
+    private void RequestRefresh(bool force)
+    {
+        refreshPending = true;
+        forceRefreshPending |= force;
+    }
+
+    private void FlushPendingRefresh()
+    {
+        if (!refreshPending)
+            return;
+
+        bool force = forceRefreshPending;
+        refreshPending = false;
+        forceRefreshPending = false;
+        Refresh(force);
     }
 
     private void Refresh(bool force)
