@@ -105,6 +105,15 @@ public sealed class PerformanceStatSource : MonoBehaviour
     /// <summary>The authored label, whatever the language.</summary>
     public string AuthoredMetricName => metricName;
 
+#if DIGITAL_TWIN_LOAD_TEST || UNITY_EDITOR
+    /// <summary>Gives a cloned sensor its own ID for SensorLoadTestHarness.</summary>
+    public void ConfigureLoadTestIdentity(string id, string label)
+    {
+        statId = id;
+        metricName = label;
+    }
+#endif
+
     /// <summary>Language table key of the label: sensor. and the sensor ID.</summary>
     public string LabelKey => "sensor." + statId;
     public string Unit => unit;
