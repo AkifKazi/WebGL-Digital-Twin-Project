@@ -91,13 +91,41 @@ phone's performance.
 | 1,000 | 20.2 | 950 ms | 29.8 | 83 ms |
 | 2,000 | | | 29.7 | 134 ms |
 
+### Endurance, data dropout and HD (after the fix)
+
+Run with `Tools/LoadTest/run_load_test.sh`, which repeats all of this with one
+command (see Tools/LoadTest/README.md).
+
+- **Endurance:** 1,000 sensors with the alarm storm, measured 25 times in a
+  row (20 seconds each, about 15 minutes). Every measurement was 59.7 to
+  59.8 fps with a 19 ms p99, and the managed heap stayed between 39.4 and
+  40.1 MB, so there is no slowdown or memory growth over time.
+- **Data dropout:** the feed stopped for 7 seconds. All 1,000 (and all
+  3,000) sensors went stale, and all recovered when data resumed (0 stale at
+  the end). The mass change cost one 83 ms frame at 1,000 sensors and one
+  195 ms frame at 3,000.
+- **HD quality** made no measurable difference to the sensor-handling costs
+  (intake, rebuild, worst frame) at 1,000 and 3,000 sensors.
+
+These three ran with the laptop on battery, where Chrome caps pages at
+30 fps; the frame-rate ceilings there are the browser's, and the other
+figures match the mains-power runs.
+
+### Audio
+
+The project uses no audio (no AudioSource or audio code; only the camera's
+default listener), but the Unity audio system still started in every build
+and Chrome logged 274 "AudioContext was not allowed to start" warnings per
+run. Unity audio is now disabled in ProjectSettings/AudioManager.asset; the
+warnings are gone and the build size is unchanged (about 2 KB smaller).
+
 ## Startup and size (release build, Builds/ReleaseCheck)
 
 - Download: 18,705,889 bytes (data 9.97 MB, wasm 8.60 MB, framework and
   loader 0.13 MB), gzip with decompression fallback.
-- Time from navigation to the loading screen closing, localhost: 3.06 s on
-  the first ever load, 1.8 to 2.9 s on later loads with the Unity cache
-  cleared, 0.8 to 1.0 s fully cached.
+- Time from navigation to the loading screen closing, localhost: 1.9 to
+  2.1 s on a first visit in a fresh Chrome profile (3.06 s once in the Claude
+  app's browser pane), 0.8 to 1.0 s on return visits.
 
 ## Not covered
 

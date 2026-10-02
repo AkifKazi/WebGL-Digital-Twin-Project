@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Startup timing</title>
+<style>html,body{margin:0;height:100%;background:#000;color:#9fe}iframe{position:fixed;inset:0;width:100%;height:100%;border:0}#log{position:fixed;left:8px;bottom:8px;z-index:9;font:12px monospace;white-space:pre;background:#000a;padding:6px}</style>
+</head><body><div id="log"></div><script>
+// Startup timing for a Unity WebGL build in the same folder tree.
+//   timing.html?build=<folder>&runs=<n>
+// Loads the build in a full-window frame and times navigation to the
+// loader's "loaded" class (Unity instance ready, first frame shown).
+// Run in a fresh browser profile, the first load is a true first visit;
+// later loads reuse the browser and Unity caches. Each result is logged as
+// "LOADTEST_TIMING {json}", then "LOADTEST_DONE".
+const params = new URLSearchParams(location.search);
+const build = params.get('build') || 'LoadTest';
+const runs = parseInt(params.get('runs') || '4', 10);
+const log = document.getElementById('log');
+function once(visit) {
+  return new Promise(resolve => {
+    const frame = document.createElement('iframe');
+    const t0 = performance.now();
+    frame.src = build + '/index.html?t=' + Date.now();
+    document.body.appendChild(frame);
+    const poll = setInterval(() => {
+      const doc = frame.contentDocument;
+      const loading = doc && doc.getElementById('unity-loading');
+      if (loading && loading.classList.contains('loaded')) {
+        clearInterval(poll);
+        const ms = Math.round(performance.now() - t0);
+        setTimeout(() => { frame.remove(); resolve({visit, readyMs: ms}); }, 1500);
+      }
+    }, 10);
+  });
+}
+(async () => {
+  for (let i = 1; i <= runs; i++) {
+    const r = await once(i);
+    console.log('LOADTEST_TIMING ' + JSON.stringify(r));
+    log.textContent += JSON.stringify(r) + '\n';
+  }
+  console.log('LOADTEST_DONE');
+})();
+</script></body></html>

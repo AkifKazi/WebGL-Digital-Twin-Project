@@ -25,7 +25,12 @@ using Debug = UnityEngine.Debug;
 /// sensor per second while a rotating 5% of sensors go into alarm and the
 /// camera orbits slowly. After a warm-up it records frame times.
 ///
-/// Results are logged as one "LOADTEST {json}" line per level.
+/// Optional: hd=1 switches HD quality on; repeat=N measures each level N
+/// times (endurance runs); dropout=S stops the feed for S seconds in the
+/// middle of each measurement, long enough for sensors to go stale, then
+/// resumes it, and reports how many went stale and whether all recovered.
+///
+/// Results are logged as one "LOADTEST {json}" line per measurement.
 /// Startup timing is logged as "LOADTEST_STARTUP" on every load, with or
 /// without the query string.
 /// </summary>
@@ -57,6 +62,11 @@ public sealed class SensorLoadTestHarness : MonoBehaviour
         public int gcCollections;
         public long managedHeapBytes;
         public bool orbiting;
+        public int repetition;
+        public bool hd;
+        public float dropoutSeconds;
+        public int peakStale;
+        public int staleAtEnd;
     }
 
     private static long sceneLoadedUnixMs;
@@ -74,6 +84,11 @@ public sealed class SensorLoadTestHarness : MonoBehaviour
     private float measureSeconds = 10f;
     private float alarmFraction = 0.05f;
     private float orbitDegreesPerSecond = 10f;
+    private int repeat = 1;
+    private float dropoutSeconds;
+    private bool hd;
+    private int peakStale;
+    private float nextStaleScan;
 
     private TelemetryRegistry registry;
     private TelemetryJsonIngestor ingestor;
@@ -108,6 +123,9 @@ public sealed class SensorLoadTestHarness : MonoBehaviour
         harness.measureSeconds = ReadFloat("measure", harness.measureSeconds);
         harness.alarmFraction = ReadFloat("alarms", harness.alarmFraction);
         harness.orbitDegreesPerSecond = ReadFloat("orbit", harness.orbitDegreesPerSecond);
+        harness.repeat = Mathf.Max(1, Mathf.RoundToInt(ReadFloat("repeat", 1f)));
+        harness.dropoutSeconds = Mathf.Max(0f, ReadFloat("dropout", 0f));
+        harness.hd = ReadFloat("hd", 0f) > 0f;
     }
 
     private IEnumerator Start()
@@ -136,19 +154,37 @@ public sealed class SensorLoadTestHarness : MonoBehaviour
             yield break;
         }
 
+        if (hd)
+        {
+            AdaptiveQualityController quality = FindAnyObjectByType<AdaptiveQualityController>();
+            if (quality != null)
+                quality.SetHighQuality(true);
+        }
+
+        // A dropout needs time to go stale (5 s by default) and to recover.
+        float window = dropoutSeconds > 0f
+            ? Mathf.Max(measureSeconds, dropoutSeconds + 8f)
+            : measureSeconds;
+
         foreach (int level in levels)
         {
             float rebuildMs = GrowTo(level);
             status = $"LOAD TEST: {sensors.Count} sensors, warming up";
             yield return Feed(warmupSeconds, false);
-            status = $"LOAD TEST: {sensors.Count} sensors, measuring";
-            int gcBefore = GC.CollectionCount(0);
-            ingestWatch.Reset();
-            jsonWatch.Reset();
-            frameTimes.Clear();
-            yield return Feed(measureSeconds, true);
-            LevelResult result = Summarise(rebuildMs, GC.CollectionCount(0) - gcBefore);
-            Debug.Log("LOADTEST " + JsonUtility.ToJson(result));
+            for (int run = 1; run <= repeat; run++)
+            {
+                status = $"LOAD TEST: {sensors.Count} sensors, measuring {run}/{repeat}";
+                int gcBefore = GC.CollectionCount(0);
+                ingestWatch.Reset();
+                jsonWatch.Reset();
+                frameTimes.Clear();
+                peakStale = 0;
+                yield return Feed(window, true);
+                LevelResult result = Summarise(rebuildMs, GC.CollectionCount(0) - gcBefore);
+                result.repetition = run;
+                Debug.Log("LOADTEST " + JsonUtility.ToJson(result));
+                rebuildMs = 0f;
+            }
         }
 
         status = "LOAD TEST: done";
@@ -232,10 +268,20 @@ public sealed class SensorLoadTestHarness : MonoBehaviour
 
     private IEnumerator Feed(float seconds, bool record)
     {
-        float end = Time.unscaledTime + seconds;
-        nextFeedTime = Time.unscaledTime;
+        float start = Time.unscaledTime;
+        float end = start + seconds;
+        nextFeedTime = start;
         while (Time.unscaledTime < end)
         {
+            float elapsed = Time.unscaledTime - start;
+            bool silent = record && dropoutSeconds > 0f &&
+                elapsed >= 3f && elapsed < 3f + dropoutSeconds;
+            if (record && Time.unscaledTime >= nextStaleScan)
+            {
+                nextStaleScan = Time.unscaledTime + 0.5f;
+                peakStale = Mathf.Max(peakStale, CountStale());
+            }
+
             if (Time.unscaledTime >= nextAlarmRotation)
             {
                 alarmEpoch++;
@@ -245,7 +291,8 @@ public sealed class SensorLoadTestHarness : MonoBehaviour
             if (Time.unscaledTime >= nextFeedTime)
             {
                 nextFeedTime += 1f / Mathf.Max(0.1f, readingsHz);
-                PushBatch();
+                if (!silent)
+                    PushBatch();
             }
 
             if (orbitActive)
@@ -258,6 +305,17 @@ public sealed class SensorLoadTestHarness : MonoBehaviour
             if (record)
                 frameTimes.Add(Time.unscaledDeltaTime * 1000f);
         }
+    }
+
+    private int CountStale()
+    {
+        int stale = 0;
+        foreach (PerformanceStatSource sensor in sensors)
+        {
+            if (sensor.DataQuality == TelemetryDataQuality.Stale)
+                stale++;
+        }
+        return stale;
     }
 
     private void PushBatch()
@@ -344,7 +402,11 @@ public sealed class SensorLoadTestHarness : MonoBehaviour
             acceptedSample = accepted,
             gcCollections = gcCollections,
             managedHeapBytes = GC.GetTotalMemory(false),
-            orbiting = orbitActive
+            orbiting = orbitActive,
+            hd = hd,
+            dropoutSeconds = dropoutSeconds,
+            peakStale = peakStale,
+            staleAtEnd = CountStale()
         };
     }
 
