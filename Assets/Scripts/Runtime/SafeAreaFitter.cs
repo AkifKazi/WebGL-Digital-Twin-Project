@@ -20,7 +20,7 @@ public class SafeAreaFitter : MonoBehaviour
     {
         if (Screen.width != previousWidth ||
             Screen.height != previousHeight ||
-            Screen.safeArea != previousSafeArea)
+            DeviceSafeArea.Current != previousSafeArea)
         {
             ApplySafeArea();
         }
@@ -33,7 +33,7 @@ public class SafeAreaFitter : MonoBehaviour
 
         previousWidth = Screen.width;
         previousHeight = Screen.height;
-        previousSafeArea = Screen.safeArea;
+        previousSafeArea = DeviceSafeArea.Current;
 
         // Some mobile browsers briefly report an empty or out-of-bounds safe
         // area while rotating. Falling back to the full viewport is safer than

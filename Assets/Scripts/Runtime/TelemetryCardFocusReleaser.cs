@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
 /// <summary>
@@ -90,8 +91,8 @@ public sealed class TelemetryCardFocusReleaser : MonoBehaviour
 
     /// <summary>
     /// Classifies one press and release. A press that travelled changes nothing;
-    /// a clean click outside every card and panel releases focus. Cards and
-    /// panels handle their own clicks.
+    /// a clean click on the scene releases focus. Cards, panels and the other
+    /// controls (zoom, pages, view modes) handle their own clicks and keep it.
     /// </summary>
     public void HandlePointerGesture(Vector2 pressScreen, Vector2 releaseScreen, bool pressedOnCardOrPanel = false)
     {
@@ -120,8 +121,22 @@ public sealed class TelemetryCardFocusReleaser : MonoBehaviour
         if (raycastResults.Count == 0)
             return false;
 
-        GameObject top = raycastResults[0].gameObject;
+        return KeepsFocus(raycastResults[0].gameObject);
+    }
+
+    /// <summary>
+    /// True when a click landing first on <paramref name="top"/> keeps the
+    /// focused card: a card, a detail panel, a control, or the frame of a
+    /// group of controls. Anything else is the scene.
+    /// </summary>
+    public static bool KeepsFocus(GameObject top)
+    {
+        if (top == null)
+            return false;
         return top.GetComponentInParent<PerformanceStatCardView>() != null ||
-               top.GetComponentInParent<TelemetryDetailPanel>() != null;
+               top.GetComponentInParent<TelemetryDetailPanel>() != null ||
+               // A control, or the frame of a group of them (between + and -).
+               top.GetComponentInParent<Selectable>() != null ||
+               top.GetComponentInChildren<Selectable>() != null;
     }
 }

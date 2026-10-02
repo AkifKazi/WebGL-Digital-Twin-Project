@@ -753,8 +753,8 @@ public class WideStatRailManager : MonoBehaviour
             height = content.rect.height;
         if (height <= 1f)
             height = canvas != null && canvas.scaleFactor > 0f
-                ? Screen.safeArea.height / canvas.scaleFactor
-                : Screen.safeArea.height;
+                ? DeviceSafeArea.Current.height / canvas.scaleFactor
+                : DeviceSafeArea.Current.height;
         return Mathf.Max(0f, height - topPadding - bottomPadding);
     }
 

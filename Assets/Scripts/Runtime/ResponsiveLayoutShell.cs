@@ -91,7 +91,7 @@ public class ResponsiveLayoutShell : MonoBehaviour
         bool screenChanged =
             Screen.width != previousWidth ||
             Screen.height != previousHeight ||
-            Screen.safeArea != previousSafeArea;
+            DeviceSafeArea.Current != previousSafeArea;
 
         if (screenChanged && resizeRefreshRoutine == null)
             resizeRefreshRoutine = StartCoroutine(RefreshAfterResizeSettles());
@@ -108,7 +108,7 @@ public class ResponsiveLayoutShell : MonoBehaviour
         bool wasInitialized = initialized;
         previousWidth = Screen.width;
         previousHeight = Screen.height;
-        previousSafeArea = Screen.safeArea;
+        previousSafeArea = DeviceSafeArea.Current;
 
         if (previousSafeArea.width <= 0f || previousSafeArea.height <= 0f)
             return;
@@ -173,12 +173,12 @@ public class ResponsiveLayoutShell : MonoBehaviour
         {
             observedWidth = Screen.width;
             observedHeight = Screen.height;
-            observedSafeArea = Screen.safeArea;
+            observedSafeArea = DeviceSafeArea.Current;
             yield return new WaitForSecondsRealtime(resizeSettleSeconds);
         }
         while (observedWidth != Screen.width ||
                observedHeight != Screen.height ||
-               !ApproximatelySameRect(observedSafeArea, Screen.safeArea));
+               !ApproximatelySameRect(observedSafeArea, DeviceSafeArea.Current));
 
         RefreshLayout(false);
         resizeRefreshRoutine = null;

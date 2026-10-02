@@ -9,6 +9,10 @@ using UnityEngine.UI;
 /// holding the graphs chosen on the controller, and a detail section that only
 /// shows when something fills it. The panel knows its card and points at it;
 /// the controller decides where the panel sits.
+///
+/// On a phone held upright the same panel is a bottom sheet (see
+/// <see cref="UseAsSheet"/>): no pin, no pointer or leader line to the card,
+/// and a close button sized for a thumb.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class TelemetryDetailPanel : MonoBehaviour
@@ -80,6 +84,7 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
     public PerformanceStatSource Source { get; private set; }
     public StatRailSide Side { get; private set; }
     public bool IsPinned { get; private set; }
+    public bool IsSheet { get; private set; }
     public TelemetryHistoryRange Range { get; private set; }
     public RectTransform RectTransform => (RectTransform)transform;
     public float Height => RectTransform.sizeDelta.y;
@@ -143,6 +148,30 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
         ApplyRangeVisuals();
     }
 
+    /// <summary>
+    /// Makes the panel a bottom sheet: the pin and the pointer go, the card
+    /// keeps its own leader line, and the close button grows to
+    /// <paramref name="closeSize"/> with its touch area reaching
+    /// <paramref name="closeHitPadding"/> further on every side.
+    /// </summary>
+    public void UseAsSheet(float closeSize, float closeHitPadding)
+    {
+        IsSheet = true;
+        if (pinButton != null)
+            pinButton.gameObject.SetActive(false);
+        if (pointer != null)
+            pointer.gameObject.SetActive(false);
+        if (Card != null)
+            Card.SetConnectionPointOverride(null);
+        if (closeButton == null)
+            return;
+        RectTransform close = (RectTransform)closeButton.transform;
+        close.sizeDelta = new Vector2(closeSize, closeSize);
+        // The button's own clear image takes the pointer.
+        if (closeButton.TryGetComponent(out Graphic hit))
+            hit.raycastPadding = -Vector4.one * closeHitPadding;
+    }
+
     public void Bind(PerformanceStatCardView card)
     {
         if (Card != null && Card != card)
@@ -160,7 +189,7 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
         }
         if (linkAnchor != null)
             AnchorToEdge(linkAnchor, left ? 1f : 0f, 0.5f);
-        if (card != null)
+        if (card != null && !IsSheet)
             card.SetConnectionPointOverride(linkAnchor);
 
         Refresh();

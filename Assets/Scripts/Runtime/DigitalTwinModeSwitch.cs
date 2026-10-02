@@ -6,11 +6,16 @@ using UnityEngine.UI;
 /// The Telemetry / Service segmented control in the top bar. Styled like the
 /// view-mode control: the selected segment takes the outlined sprite and cannot
 /// be pressed again, the other stays idle and shows the hover sprite.
+///
+/// Drives its layout's controller: the wide layout's
+/// <see cref="ServiceModeController"/> or the portrait layout's
+/// <see cref="PortraitServiceModeController"/>.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class DigitalTwinModeSwitch : MonoBehaviour
 {
-    [SerializeField] private ServiceModeController controller;
+    [Tooltip("A component implementing IDigitalTwinModeController.")]
+    [SerializeField] private MonoBehaviour controller;
     [SerializeField] private Button telemetryButton;
     [SerializeField] private Button serviceButton;
 
@@ -19,6 +24,8 @@ public sealed class DigitalTwinModeSwitch : MonoBehaviour
     [SerializeField] private Sprite idleSprite;
     [SerializeField] private Color selectedTextColor = new Color32(234, 253, 255, 255);
     [SerializeField] private Color idleTextColor = new Color32(104, 166, 175, 255);
+
+    private IDigitalTwinModeController Controller => controller as IDigitalTwinModeController;
 
     public Button TelemetryButton => telemetryButton;
     public Button ServiceButton => serviceButton;
@@ -46,10 +53,10 @@ public sealed class DigitalTwinModeSwitch : MonoBehaviour
             telemetryButton.onClick.AddListener(SelectTelemetry);
         if (serviceButton != null)
             serviceButton.onClick.AddListener(SelectService);
-        if (controller != null)
+        if (Controller != null)
         {
-            controller.ModeChanged += Apply;
-            Apply(controller.CurrentMode);
+            Controller.ModeChanged += Apply;
+            Apply(Controller.CurrentMode);
         }
     }
 
@@ -59,13 +66,13 @@ public sealed class DigitalTwinModeSwitch : MonoBehaviour
             telemetryButton.onClick.RemoveListener(SelectTelemetry);
         if (serviceButton != null)
             serviceButton.onClick.RemoveListener(SelectService);
-        if (controller != null)
-            controller.ModeChanged -= Apply;
+        if (Controller != null)
+            Controller.ModeChanged -= Apply;
     }
 
-    public void SelectTelemetry() => controller?.SetMode(DigitalTwinMode.Telemetry);
+    public void SelectTelemetry() => Controller?.SetMode(DigitalTwinMode.Telemetry);
 
-    public void SelectService() => controller?.SetMode(DigitalTwinMode.Service);
+    public void SelectService() => Controller?.SetMode(DigitalTwinMode.Service);
 
     private void Apply(DigitalTwinMode mode)
     {

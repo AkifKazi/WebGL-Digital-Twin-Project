@@ -1,0 +1,201 @@
+%==================================================================
+% Akif Faruk Kazi: Resume (industry, one page)
+% Compile with pdfLaTeX (Overleaf default).
+%
+% ATS notes
+%   - Single column, no tables, no icons, no graphics. Text is
+%     written in the same order it should be read.
+%   - Standard section names: Experience, Education, Skills.
+%   - Real text layer: T1 fonts + glyphtounicode, so every character
+%     copies out as itself.
+%   - Ligatures (fi, fl, ff) and hyphenation are off, so keywords
+%     such as "Figma", "workflow" or "prototyping" are never split
+%     or merged into a single glyph.
+%   - Links are written out in full, so a parser that drops link
+%     targets still gets the address.
+%==================================================================
+
+\documentclass[a4paper,10pt]{article}
+
+%----------PAGE----------
+\usepackage[
+    left=1.0cm,
+    right=1.0cm,
+    top=1.0cm,
+    bottom=0.9cm
+]{geometry}
+
+%----------TYPE----------
+% Source Sans Pro: Adobe's open UI typeface. Open, even letterforms
+% read cleanly at small sizes, and it extracts as plain text.
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[default,semibold,scale=1.0]{sourcesanspro}
+
+\usepackage{iftex}
+\ifPDFTeX
+    \input{glyphtounicode}
+    \pdfgentounicode=1
+\fi
+
+\usepackage{microtype}
+\ifPDFTeX
+    \DisableLigatures{encoding = *, family = *}
+\fi
+
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+%----------PDF METADATA----------
+\hypersetup{
+    pdftitle={Akif Faruk Kazi - Resume},
+    pdfauthor={Akif Faruk Kazi},
+    pdfsubject={Interaction Designer, XR Designer},
+    pdfkeywords={Interaction Design, UX Design, XR Design, Spatial
+        Interaction, Prototyping, Usability Testing, Design Systems,
+        Figma, Unity, Blender, WebGL}
+}
+
+%----------COLOUR----------
+\definecolor{ink}{HTML}{16181D}     % name, headings, company names
+\definecolor{body}{HTML}{33363D}    % body text
+\definecolor{muted}{HTML}{5E636E}   % dates, locations
+\definecolor{rule}{HTML}{C9CCD2}    % section rules
+
+%----------SPACING----------
+% The breathing room lives here. Tighten these first if a new
+% entry pushes the page over; don't squeeze the line spacing.
+\newlength{\entrygap}\setlength{\entrygap}{9pt}  % between entries
+\newlength{\bulletgap}\setlength{\bulletgap}{3pt} % between bullets
+\linespread{1.12}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\raggedright
+\hyphenpenalty=10000
+\exhyphenpenalty=10000
+\urlstyle{same}
+\color{body}
+
+%----------SECTIONS----------
+% Small letter-spaced capitals. ATS reads the title as plain text.
+\ifPDFTeX
+    \newcommand{\sectionstyle}[1]{\textls[90]{\MakeUppercase{#1}}}
+\else
+    \newcommand{\sectionstyle}[1]{\MakeUppercase{#1}}
+\fi
+\titleformat{\section}
+    {\color{ink}\bfseries\small}
+    {}{0pt}
+    {\sectionstyle}
+    [\vspace{2pt}{\color{rule}\titlerule[0.6pt]}]
+\titlespacing*{\section}{0pt}{13pt}{6pt}
+
+%----------LISTS----------
+\setlist[itemize]{
+    leftmargin=1.1em,
+    labelsep=0.5em,
+    itemsep=\bulletgap,
+    topsep=4pt,
+    parsep=0pt,
+    partopsep=0pt,
+    label={\color{muted}\textbullet}
+}
+
+%----------ENTRY----------
+% \entry{Organisation}{Dates}{Role}{Location}
+% Two lines, left text first, right text second, so extracted text
+% reads "Organisation Dates / Role Location".
+\newcommand{\entry}[4]{%
+    {\color{ink}\textbf{#1}}\hfill{\color{muted}#2}\par
+    \textit{#3}\hfill{\color{muted}\textit{#4}}\par
+}
+
+\newcommand{\sep}{\unskip\enspace\textbar\enspace\ignorespaces}
+
+%==================================================================
+\begin{document}
+
+%----------HEADER----------
+{\color{ink}\fontsize{22}{26}\selectfont\bfseries Akif Faruk Kazi}\par
+\vspace{3pt}
+{\color{ink}\large XR \& Interaction Designer \sep Digital Twins \& Industrial UX}\par
+\vspace{6pt}
+{\small Mumbai, India
+\sep +91 98677 35452
+\sep \href{mailto:akif.kazi@icloud.com}{akif.kazi@icloud.com}
+\sep \href{https://www.linkedin.com/in/akif-faruk-kazi/}{linkedin.com/in/akif-faruk-kazi}
+\sep \href{https://akifkazi.notion.site/portfolio}{akifkazi.notion.site/portfolio}}\par
+
+%----------EXPERIENCE----------
+\section{Experience}
+
+\entry{Rosatom}{May 2026 \textendash{} Present}{Design Intern}{Moscow, Russia (Remote)}
+\begin{itemize}
+    \item Led design and AI-assisted development of a browser-based digital twin of an industrial vibratory feeder with a remote Russia-based team, letting staff monitor 30 sensors across 15 machine parts beyond the control room.
+    \item Defined a JSON-ready, configuration-driven architecture with no fixed sensor limit, so new machines plug in without UI redesign.
+    \item Designed a responsive, orientation-aware HUD with three inspection views and multilingual text editable after deployment.
+    \item Optimised WebGL builds via texture compression and IL2CPP stripping, helping cut size from 48 to 18.6~MB with sub-3~s startup.
+\end{itemize}
+\vspace{\entrygap}
+
+\entry{Siemens}{January 2025 \textendash{} July 2025}{Design Intern, FT UX Advanced Experience Research}{Bengaluru, India}
+\begin{itemize}
+    \item Partnered with the COMOS Walkinside team in Germany on scalable digital-twin UI components, showcased at UX@Siemens.
+    \item Contributed reusable XR interaction patterns proposed for Siemens iX, the company's open-source design system.
+    \item Researched industrial XR heads-up displays and tested concepts with stakeholders to refine hierarchy, placement and visibility.
+    \item Helped build a controlled test environment for a patent-pending VR interaction technique.
+\end{itemize}
+\vspace{\entrygap}
+
+\entry{Indian Institute of Technology Jodhpur}{July 2025 \textendash{} Present}{Teaching Assistant, Engineering Design}{Jodhpur, India}
+\begin{itemize}
+    \item Mentor 48 students from 13 engineering disciplines through team-based product projects, giving design and usability feedback.
+\end{itemize}
+\vspace{\entrygap}
+
+\entry{Elevar}{May 2023 \textendash{} September 2023}{UI/UX Design Intern}{Mumbai, India}
+\begin{itemize}
+    \item Built a token-based Figma design system (colour, spacing, radius) with responsive variants, used it to redesign and code the Contact page in HTML/CSS, and analysed Google Analytics and Microsoft Clarity data to prioritise usability fixes.
+\end{itemize}
+
+%----------EDUCATION----------
+\section{Education}
+
+\entry{Indian Institute of Technology Jodhpur}{2025 \textendash{} Present}{Master of Design, XR Design \sep CGPA 7.88}{Jodhpur, India}
+\vspace{\entrygap}
+
+\entry{Somaiya Vidyavihar University}{2021 \textendash{} 2025}{Bachelor of Design, Interaction Design \sep CGPA 9.23}{Mumbai, India}
+
+%----------SKILLS----------
+\section{Skills}
+
+\textbf{\color{ink}Design:} Interaction Design, XR Design, UX Research, Usability Testing, Prototyping, Design Systems, Data Visualisation\par
+\vspace{4pt}
+\textbf{\color{ink}Domains:} Digital Twins, Industrial XR, IoT Sensor Dashboards, Accessibility\par
+\vspace{4pt}
+\textbf{\color{ink}Tools:} Figma, Unity, Blender, Adobe Creative Suite, Affinity, WebGL, HTML/CSS, Google Analytics, Microsoft Clarity\par
+\vspace{4pt}
+\textbf{\color{ink}Languages:} Hindi (Native), English (Fluent), Marathi (Beginner), Japanese (Beginner, self-study)\par
+
+%----------RESEARCH AND ACHIEVEMENTS----------
+\section{Research and Achievements}
+
+% \activity{Bold lead}{rest of line}{date}: one-line item.
+% The date stays inline (not right-aligned): stacked one-line items
+% with right-aligned dates get read as a separate column by parsers.
+\newcommand{\activity}[3]{{\color{ink}\textbf{#1}}\sep #2\if\relax\detokenize{#3}\relax\else\sep{\color{muted}#3}\fi\par\vspace{5pt}}
+
+\activity{Master's Thesis}{Gesture-based XR interaction for users with upper-limb impairment; review paper in progress}{2025 \textendash{} Present}
+\activity{All India Rank}{57, NID GD 2025 \sep 417, CEED 2025 \sep 64, UCEED 2021}{}
+%----------LEADERSHIP AND ACTIVITIES----------
+\section{Leadership and Activities}
+
+\activity{TEDxIIMLucknow}{Design Team Member \sep IIM Lucknow (Remote)}{September 2024}
+\activity{Nazariya '23 Design Fest}{Graphic Design Head \sep Somaiya Vidyavihar University}{October 2023 \textendash{} November 2023}
+\activity{Ycenter}{Social Innovation Fellow \sep Philadelphia, USA (Remote)}{September 2021 \textendash{} November 2021}
+
+\end{document}

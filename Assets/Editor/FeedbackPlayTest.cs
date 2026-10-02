@@ -463,7 +463,9 @@ public static class FeedbackPlayTest
         aiTable = Object.FindAnyObjectByType<TelemetryAiDataTable>();
         detailPanels = Object.FindAnyObjectByType<TelemetryDetailPanelController>();
         serviceMode = Object.FindAnyObjectByType<ServiceModeController>();
-        servicePanel = Object.FindAnyObjectByType<ServicePanelView>(FindObjectsInactive.Include);
+        // The wide layout's panel; the portrait layout has one of its own.
+        servicePanel = Object.FindObjectsByType<ServicePanelView>(FindObjectsInactive.Include)
+            .FirstOrDefault(panel => panel.transform.parent != null && panel.transform.parent.name == "Wide layout");
         SerializedObject data = new(detailPanels);
         data.FindProperty("secondaryRails").enumValueIndex = (int)SecondaryRailUse.DetailPanel;
         data.ApplyModifiedProperties();

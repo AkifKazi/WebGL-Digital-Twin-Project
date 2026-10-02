@@ -5,7 +5,9 @@ using UnityEngine.Serialization;
 /// <summary>
 /// Opens telemetry detail panels in the wide layout. The secondary rails beside
 /// the model are widened and kept for the panels. A clean click on a card opens
-/// a panel in the rail next to it. Clicking another card glides that panel to
+/// a panel in the rail next to it. On a touch screen a tap only focuses the card
+/// and a second tap on it opens the panel, so tapping round the cards does not
+/// keep covering the model; once a panel is open, a tap on another card moves it. Clicking another card glides that panel to
 /// it; a pinned panel stays put and the click opens a new one. A clean click
 /// anywhere else, Esc, or the close button closes the unpinned panel. Dragging
 /// to turn the camera never closes anything.
@@ -131,6 +133,7 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
     private void OnEnable()
     {
         PerformanceStatCardView.Clicked += HandleCardClicked;
+        PerformanceStatCardView.DetailRequested += HandleDetailRequested;
         TelemetryCardFocusReleaser.Dismissed += DismissUnpinned;
         if (railManager != null)
             railManager.LayoutRebuilt += HandleLayoutRebuilt;
@@ -140,6 +143,7 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
     private void OnDisable()
     {
         PerformanceStatCardView.Clicked -= HandleCardClicked;
+        PerformanceStatCardView.DetailRequested -= HandleDetailRequested;
         TelemetryCardFocusReleaser.Dismissed -= DismissUnpinned;
         if (railManager != null)
         {
@@ -184,6 +188,24 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
 
     private void HandleCardClicked(PerformanceStatCardView card)
     {
+        if (!AcceptsCard(card))
+            return;
+
+        // A tap only focuses: a second tap opens its panel.
+        if (card.LastPressWasTouch && floating == null)
+            return;
+
+        ShowPanel(card);
+    }
+
+    private void HandleDetailRequested(PerformanceStatCardView card)
+    {
+        if (AcceptsCard(card) && card.IsFocused)
+            ShowPanel(card);
+    }
+
+    private bool AcceptsCard(PerformanceStatCardView card)
+    {
         if (!IsReady)
         {
             if (secondaryRails == SecondaryRailUse.DetailPanel && !warnedNotReady)
@@ -193,21 +215,16 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
                     "The telemetry detail panel is enabled but not ready: it needs the rail " +
                     "manager, the panel prefab and a ready history provider.", this);
             }
-            return;
+            return false;
         }
 
-        if (!railManager.OwnsCard(card) ||
-            (card.RailSide != StatRailSide.Left && card.RailSide != StatRailSide.Right))
-            return;
+        return railManager.OwnsCard(card) &&
+               (card.RailSide == StatRailSide.Left || card.RailSide == StatRailSide.Right);
+    }
 
-        // A second click released the card: its unpinned panel goes with it.
-        if (!card.IsFocused)
-        {
-            if (floating != null && floating.Card == card)
-                Close(floating);
-            return;
-        }
-
+    /// <summary>Opens the floating panel on <paramref name="card"/>, or moves it there.</summary>
+    private void ShowPanel(PerformanceStatCardView card)
+    {
         card.HoldFocus();
 
         foreach (TelemetryDetailPanel panel in panels)

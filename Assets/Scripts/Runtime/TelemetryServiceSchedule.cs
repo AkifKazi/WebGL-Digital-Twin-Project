@@ -11,6 +11,9 @@ public interface ITelemetryServiceLifeProvider
 {
     /// <summary>False when no service plan covers the source. Zero or less means overdue.</summary>
     bool TryGetHoursToService(PerformanceStatSource source, out double hours);
+
+    /// <summary>The machine part whose service plan covers the source, so the telemetry sheet can open its service detail.</summary>
+    bool TryGetServicedPart(PerformanceStatSource source, out MachinePartGroup part);
 }
 
 /// <summary>What a service plan asks for when it comes due.</summary>
@@ -186,6 +189,22 @@ public sealed class TelemetryServiceSchedule : MonoBehaviour, ITelemetryServiceL
             return true;
         }
 
+        return false;
+    }
+
+    public bool TryGetServicedPart(PerformanceStatSource source, out MachinePartGroup part)
+    {
+        part = null;
+        if (source == null)
+            return false;
+        foreach (ServicePlan plan in plans)
+        {
+            if (plan.part != null && Covers(plan.part, source))
+            {
+                part = plan.part;
+                return true;
+            }
+        }
         return false;
     }
 

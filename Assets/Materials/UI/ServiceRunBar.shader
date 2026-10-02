@@ -1,11 +1,17 @@
-// The service view's run bars: the default UI shader, plus a soft bright pulse
-// that travels along each bar's fill from its start into its leading end. The
-// fill is already brightest at its lead, so the pulse only ever adds light:
-// the lead never darkens as it passes.
+// The service view's run bars: the default UI shader, plus the fill drawn per
+// pixel. The fill brightens from its start to its leading end, where a hot
+// core whitens it; a soft glow surrounds it, growing towards the lead, and
+// falls off smoothly all round, so its ends and corners stay round rather
+// than showing the edges of the quads it is drawn on. A bright pulse travels
+// along the fill into the lead, swelling the glow as it passes. The fill is
+// already brightest at its lead, so the pulse only ever adds light.
 //
-// Vertices mark what they are in their first UV set: x runs 0 to 1 along the
-// fill, y is 1 plus a phase offset for the fill and 2 plus the offset for its
-// glow. Anything else (track, ticks, hatching) has y 0 and is drawn as plain UI.
+// The fill is one quad, its glow's reach larger than the fill on every side.
+// Its vertices carry, in UV0, the position in units from the fill's start
+// and its centre line; in UV1 the fill's length and half height; in UV2 the
+// glow's reach and 1 plus the bar's pulse phase. Anything else (track, ticks,
+// hatching) has UV2 zero and is drawn as plain UI. The canvas must pass UV1
+// and UV2 (UIServiceBarGraphic turns them on).
 Shader "UI/Service Run Bar"
 {
     Properties
@@ -17,6 +23,12 @@ Shader "UI/Service Run Bar"
         _PulseTravel ("Share Of The Period Spent Travelling", Range(0.2, 1)) = 0.65
         _PulseWidth ("Pulse Width (share of the fill)", Range(0.02, 0.5)) = 0.14
         _PulseStrength ("Pulse Strength", Range(0, 2)) = 0.7
+
+        _StartBrightness ("Fill Start Brightness", Range(0, 1)) = 0.4
+        _CoreWhite ("Hot Core At The Lead", Range(0, 1)) = 0.2
+        _CornerRadius ("Fill Corner Radius", Range(0, 4)) = 1.5
+        _GlowStrength ("Glow Strength", Range(0, 1.5)) = 0.26
+        _GlowStart ("Glow At The Fill's Start (share of the lead's)", Range(0, 1)) = 0.12
 
         _StencilComp ("Stencil Comparison", Float) = 8
         _Stencil ("Stencil ID", Float) = 0
@@ -60,7 +72,8 @@ Shader "UI/Service Run Bar"
         CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #pragma target 2.0
+            // Derivatives, for the fill's anti-aliased edge.
+            #pragma target 2.5
 
             #include "UnityCG.cginc"
             #include "UnityUI.cginc"
@@ -73,6 +86,8 @@ Shader "UI/Service Run Bar"
                 float4 vertex   : POSITION;
                 float4 color    : COLOR;
                 float2 texcoord : TEXCOORD0;
+                float2 size     : TEXCOORD1;
+                float2 extra    : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -83,6 +98,8 @@ Shader "UI/Service Run Bar"
                 float2 texcoord      : TEXCOORD0;
                 float4 worldPosition : TEXCOORD1;
                 float4 mask          : TEXCOORD2;
+                float2 size          : TEXCOORD3;
+                float2 extra         : TEXCOORD4;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -98,6 +115,11 @@ Shader "UI/Service Run Bar"
             float _PulseTravel;
             float _PulseWidth;
             float _PulseStrength;
+            float _StartBrightness;
+            float _CoreWhite;
+            float _CornerRadius;
+            float _GlowStrength;
+            float _GlowStart;
 
             v2f vert(appdata_t v)
             {
@@ -113,6 +135,8 @@ Shader "UI/Service Run Bar"
 
                 float4 clampedRect = clamp(_ClipRect, -2e10, 2e10);
                 OUT.texcoord = v.texcoord;
+                OUT.size = v.size;
+                OUT.extra = v.extra;
                 OUT.mask = float4(v.vertex.xy * 2 - clampedRect.xy - clampedRect.zw,
                                   0.25 / (0.25 * half2(_UIMaskSoftnessX, _UIMaskSoftnessY) + abs(pixelSize.xy)));
 
@@ -132,30 +156,58 @@ Shader "UI/Service Run Bar"
                 // the pulse coordinates never pick up texture detail.
                 half4 color = IN.color * (tex2D(_MainTex, float2(0.5, 0.5)) + _TextureSampleAdd);
 
-                float kind = floor(IN.texcoord.y);
-                if (kind >= 1.0)
+                // Premultiplied below for plain UI; the fill is premultiplied as it is built.
+                bool premultiplied = false;
+                if (IN.extra.y >= 1.0)
                 {
-                    float phase = frac(_Time.y / max(_PulseSeconds, 0.1) + frac(IN.texcoord.y));
+                    float len = max(IN.size.x, 0.001);
+                    float halfHeight = max(IN.size.y, 0.5);
+                    float reach = max(IN.extra.x, 0.001);
+                    float2 p = IN.texcoord;
+                    float t = saturate(p.x / len);
+
+                    float phase = frac(_Time.y / max(_PulseSeconds, 0.1) + frac(IN.extra.y));
                     float centre = phase / max(_PulseTravel, 0.01);
-                    float distance = (IN.texcoord.x - centre) / max(_PulseWidth, 0.001);
-                    float pulse = exp(-distance * distance) * _PulseStrength;
-                    float boost = 1.0 + pulse;
-                    color.rgb = min(color.rgb * boost, 1.0);
-                    // The glow swells with the pulse too.
-                    if (kind >= 2.0)
-                        color.a = saturate(color.a * boost);
+                    float spread = (t - centre) / max(_PulseWidth, 0.001);
+                    float pulse = exp(-spread * spread) * _PulseStrength;
+
+                    // Signed distance to the fill, a box with slightly rounded corners.
+                    float corner = min(halfHeight, _CornerRadius);
+                    float2 q = abs(float2(p.x - len * 0.5, p.y)) - float2(len * 0.5, halfHeight) + corner;
+                    float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - corner;
+                    float body = saturate(0.5 - d / max(fwidth(d), 0.0001));
+
+                    half3 tint = IN.color.rgb;
+                    half3 fill = tint * lerp(_StartBrightness, 1.0, t * t) * (1.0 + pulse);
+                    float core = smoothstep(0.6, 1.0, t) * saturate(1.0 - abs(p.y) / halfHeight);
+                    fill = min(lerp(fill, 1.0, core * _CoreWhite), 1.0);
+
+                    // A Gaussian of the distance outside the fill: no edge anywhere.
+                    float outside = max(d, 0.0);
+                    float sigma = reach * 0.36;
+                    float falloff = exp(-outside * outside / (2.0 * sigma * sigma));
+                    float along = lerp(_GlowStart, 1.0, smoothstep(0.0, 1.0, t));
+                    float glow = saturate(falloff * along * _GlowStrength * (1.0 + pulse)) * (1.0 - body);
+
+                    half bodyAlpha = body * color.a;
+                    half glowAlpha = glow * color.a;
+                    color.rgb = fill * bodyAlpha + tint * glowAlpha;
+                    color.a = bodyAlpha + glowAlpha;
+                    premultiplied = true;
                 }
+
+                if (!premultiplied)
+                    color.rgb *= color.a;
 
                 #ifdef UNITY_UI_CLIP_RECT
                 half2 m = saturate((_ClipRect.zw - _ClipRect.xy - abs(IN.mask.xy)) * IN.mask.zw);
-                color.a *= m.x * m.y;
+                color *= m.x * m.y;
                 #endif
 
                 #ifdef UNITY_UI_ALPHACLIP
                 clip(color.a - 0.001);
                 #endif
 
-                color.rgb *= color.a;
                 return color;
             }
         ENDCG

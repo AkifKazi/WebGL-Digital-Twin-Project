@@ -15,6 +15,9 @@ using UnityEngine.UI;
 /// that switches between the two. Also fills
 /// the service schedule with the demonstration plans below.
 ///
+/// Then adds it to the portrait layout (see <see cref="ApplyPortrait"/>): the
+/// switch centred in the top bar, and the panel over the whole screen below it.
+///
 /// Safe to run again: everything it built before is replaced.
 /// </summary>
 public static class ServiceModeSetup
@@ -28,6 +31,9 @@ public static class ServiceModeSetup
 
     private const float PanelWidth = 560f;
     private const float SwitchSegmentWidth = 166f;
+    private const float PortraitSwitchSegmentWidth = 190f;
+    // Opaque: the portrait service view hides the model entirely.
+    private static readonly Color PortraitBackdrop = new(0.031f, 0.086f, 0.118f, 1f);
     private const float MachineRunHours = 14860f;
 
     public readonly struct PlanRow
@@ -196,7 +202,7 @@ public static class ServiceModeSetup
         };
 
         RectTransform pinLayer = CreatePinLayer(wide, leaderLayer, labelFont);
-        RectTransform panel = CreatePanel(wide, schedule, labelFont, valueFont);
+        RectTransform panel = CreatePanel(wide, schedule, labelFont, valueFont, false);
 
         GameObject modeObject = new("Service Mode", typeof(RectTransform));
         modeObject.layer = wide.gameObject.layer;
@@ -223,11 +229,128 @@ public static class ServiceModeSetup
         pinData.FindProperty("targetCamera").objectReferenceValue = camera;
         pinData.ApplyModifiedPropertiesWithoutUndo();
 
-        CreateSwitch(topBar, viewMode, controller);
+        CreateSwitch(topBar, viewMode, controller, false, SwitchSegmentWidth);
+        BuildPortrait(schedule, labelFont, valueFont);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         Debug.Log($"SERVICE_MODE_SETUP plans={schedule.Plans.Count} telemetryGroups={telemetryGroups.Count}");
+    }
+
+    [MenuItem("Tools/Digital Twin/Set Up Portrait Service Mode")]
+    private static void SetUpPortraitFromMenu()
+    {
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            return;
+        ApplyPortrait();
+        if (!Application.isBatchMode)
+            EditorUtility.DisplayDialog("Service Mode", "The service view was added to the portrait layout and the scene saved.", "OK");
+    }
+
+    /// <summary>
+    /// Adds the service view to the portrait layout only, leaving the wide
+    /// layout's as it is. Safe to run again.
+    /// </summary>
+    public static void ApplyPortrait()
+    {
+        Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        TelemetryServiceSchedule schedule = UnityEngine.Object.FindAnyObjectByType<TelemetryServiceSchedule>(FindObjectsInactive.Include)
+            ?? throw new InvalidOperationException("Run Set Up Service Mode first: no service schedule.");
+        BuildPortrait(schedule, Load<TMP_FontAsset>(LabelFontPath), Load<TMP_FontAsset>(ValueFontPath));
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+    }
+
+    /// <summary>
+    /// The portrait service view: the switch centred in the top bar, sized like
+    /// the bottom controls; an opaque fill out to the screen's edges behind it;
+    /// the panel over the rest of the screen; and the controller.
+    /// </summary>
+    private static void BuildPortrait(TelemetryServiceSchedule schedule, TMP_FontAsset labelFont, TMP_FontAsset valueFont)
+    {
+        Transform portrait = FindTransform("Portrait layout");
+        Transform baseLayout = Child(portrait, "Base layout");
+        Transform topBar = Child(baseLayout, "Top bar");
+        Transform content = Child(baseLayout, "Content area");
+        Transform bottom = Child(baseLayout, "Bottom controls");
+        ViewModeSegmentedControl viewMode = bottom.GetComponentInChildren<ViewModeSegmentedControl>(true)
+            ?? throw new InvalidOperationException("The portrait view-mode control was not found.");
+
+        RemoveChild(portrait, "Service Mode");
+        RemoveChild(portrait, "Service Panel");
+        RemoveChild(portrait, "Service Backdrop");
+        RemoveChild(topBar, "Mode Switch");
+
+        // First, so the switch in the top bar and the panel draw over it.
+        RectTransform backdrop = NewRect("Service Backdrop", portrait);
+        backdrop.SetAsFirstSibling();
+        Stretch(backdrop);
+        Image fill = backdrop.gameObject.AddComponent<Image>();
+        fill.color = PortraitBackdrop;
+        // Catches the pointer, so a touch on the service view never turns the model.
+        fill.raycastTarget = true;
+        CanvasGroup backdropGroup = backdrop.gameObject.AddComponent<CanvasGroup>();
+        backdropGroup.alpha = 0f;
+        backdropGroup.interactable = false;
+        backdropGroup.blocksRaycasts = false;
+
+        RectTransform panel = CreatePanel(portrait, schedule, labelFont, valueFont, true);
+
+        GameObject modeObject = new("Service Mode", typeof(RectTransform));
+        modeObject.layer = portrait.gameObject.layer;
+        modeObject.transform.SetParent(portrait, false);
+        PortraitServiceModeController controller = modeObject.AddComponent<PortraitServiceModeController>();
+        SerializedObject data = new(controller);
+        data.FindProperty("servicePanel").objectReferenceValue = panel;
+        data.FindProperty("topBar").objectReferenceValue = topBar;
+        data.FindProperty("backdrop").objectReferenceValue = backdrop;
+        SetArray(data.FindProperty("telemetryGroups"), new UnityEngine.Object[] { Group(content), Group(bottom) });
+        data.FindProperty("focusReleaser").objectReferenceValue =
+            UnityEngine.Object.FindAnyObjectByType<TelemetryCardFocusReleaser>(FindObjectsInactive.Include);
+        data.ApplyModifiedPropertiesWithoutUndo();
+
+        CreateSwitch(topBar, viewMode, controller, true, PortraitSwitchSegmentWidth);
+        BuildTelemetrySheet(portrait, baseLayout, topBar, Child(content, "Bottom primary rail"), controller, labelFont);
+        Debug.Log("SERVICE_MODE_SETUP portrait service view added");
+    }
+
+    /// <summary>
+    /// The portrait telemetry sheet: a layer over the cards and under the
+    /// service panel, set up like the wide layout's detail panels (the same
+    /// prefab, graphs, figures and providers). Both layouts' Time To Service
+    /// figures get the other controls' hover look.
+    /// </summary>
+    private static void BuildTelemetrySheet(Transform portrait, Transform baseLayout, Transform topBar, Transform bottomRail,
+        PortraitServiceModeController modeController, TMP_FontAsset font)
+    {
+        TelemetryDetailPanelController wide = UnityEngine.Object.FindAnyObjectByType<TelemetryDetailPanelController>(FindObjectsInactive.Include)
+            ?? throw new InvalidOperationException("The wide layout's Telemetry Detail Panel Controller was not found.");
+        Sprite hover = Load<Sprite>(HoverSpritePath);
+
+        SerializedObject wideData = new(wide);
+        wideData.FindProperty("graphStyle.hoverSprite").objectReferenceValue = hover;
+        wideData.ApplyModifiedPropertiesWithoutUndo();
+
+        RemoveChild(portrait, "Telemetry Sheet Layer");
+        RectTransform layer = NewRect("Telemetry Sheet Layer", portrait);
+        Stretch(layer);
+        layer.SetSiblingIndex(baseLayout.GetSiblingIndex() + 1);
+
+        PortraitTelemetrySheetController sheet = layer.gameObject.AddComponent<PortraitTelemetrySheetController>();
+        SerializedObject data = new(sheet);
+        foreach (string shared in new[]
+                 {
+                     "panelPrefab", "historyProvider", "insightProvider", "serviceLifeProvider",
+                     "graphs", "keyFigures", "keyFigureLayout", "defaultRange", "graphStyle"
+                 })
+            data.CopyFromSerializedProperty(wideData.FindProperty(shared));
+        data.FindProperty("modeController").objectReferenceValue = modeController;
+        data.FindProperty("cardRoot").objectReferenceValue = portrait;
+        data.FindProperty("hintAnchor").objectReferenceValue = bottomRail;
+        data.FindProperty("topBar").objectReferenceValue = topBar;
+        data.FindProperty("targetCamera").objectReferenceValue = Camera.main;
+        data.FindProperty("hintFont").objectReferenceValue = font;
+        data.ApplyModifiedPropertiesWithoutUndo();
     }
 
     // -----------------------------------------------------------------------
@@ -285,14 +408,22 @@ public static class ServiceModeSetup
         return (RectTransform)wrapper;
     }
 
-    private static void CreateSwitch(Transform topBar, ViewModeSegmentedControl viewMode, ServiceModeController controller)
+    /// <summary>
+    /// The Telemetry / Service switch, at the top bar's left, or
+    /// <paramref name="centred"/> and drawn at the view-mode control's scale.
+    /// </summary>
+    private static void CreateSwitch(Transform topBar, ViewModeSegmentedControl viewMode, MonoBehaviour controller,
+        bool centred, float segmentWidth)
     {
         Transform source = viewMode.transform;
         RectTransform root = NewRect("Mode Switch", topBar);
-        root.anchorMin = root.anchorMax = new Vector2(0f, 0.5f);
-        root.pivot = new Vector2(0f, 0.5f);
+        Vector2 anchor = centred ? new Vector2(0.5f, 0.5f) : new Vector2(0f, 0.5f);
+        root.anchorMin = root.anchorMax = anchor;
+        root.pivot = anchor;
         root.anchoredPosition = Vector2.zero;
-        root.sizeDelta = new Vector2(SwitchSegmentWidth * 2f + 12f, 68f);
+        root.sizeDelta = new Vector2(segmentWidth * 2f + 12f, 68f);
+        if (centred)
+            root.localScale = source.localScale;
 
         // The container is drawn exactly like the view-mode control's.
         Image sourceBackground = source.GetComponent<Image>();
@@ -309,8 +440,8 @@ public static class ServiceModeSetup
         stack.childForceExpandHeight = true;
 
         Transform template = Child(source, "Full Model Button");
-        Button telemetry = CloneSegment(template, root, "Telemetry Button", "TELEMETRY");
-        Button service = CloneSegment(template, root, "Service Button", "SERVICE");
+        Button telemetry = CloneSegment(template, root, "Telemetry Button", "TELEMETRY", segmentWidth);
+        Button service = CloneSegment(template, root, "Service Button", "SERVICE", segmentWidth);
 
         DigitalTwinModeSwitch modeSwitch = root.gameObject.AddComponent<DigitalTwinModeSwitch>();
         SerializedObject sourceData = new(viewMode);
@@ -326,7 +457,7 @@ public static class ServiceModeSetup
     }
 
     /// <summary>A segment cloned from the view-mode control: same sprites, hover and type.</summary>
-    private static Button CloneSegment(Transform template, Transform parent, string name, string text)
+    private static Button CloneSegment(Transform template, Transform parent, string name, string text, float width)
     {
         GameObject segment = UnityEngine.Object.Instantiate(template.gameObject, parent, false);
         segment.name = name;
@@ -339,7 +470,7 @@ public static class ServiceModeSetup
         label.text = text;
 
         LayoutElement size = segment.GetComponent<LayoutElement>();
-        size.preferredWidth = SwitchSegmentWidth;
+        size.preferredWidth = width;
 
         Button button = segment.GetComponent<Button>();
         // Drop anything wired to the view-mode control.
@@ -352,14 +483,15 @@ public static class ServiceModeSetup
     // -----------------------------------------------------------------------
 
     private static RectTransform CreatePanel(
-        Transform wide,
+        Transform layout,
         TelemetryServiceSchedule schedule,
         TMP_FontAsset labelFont,
-        TMP_FontAsset valueFont)
+        TMP_FontAsset valueFont,
+        bool fullScreen)
     {
-        // Over everything else in the wide layout. The controller places it
-        // and slides it in; it starts beyond the right edge.
-        RectTransform panel = NewRect("Service Panel", wide);
+        // Over everything else in the layout. The controller places it and
+        // brings it in; in the wide layout it starts beyond the right edge.
+        RectTransform panel = NewRect("Service Panel", layout);
         panel.SetAsLastSibling();
         panel.anchorMin = new Vector2(1f, 0f);
         panel.anchorMax = Vector2.one;
@@ -379,6 +511,7 @@ public static class ServiceModeSetup
         data.FindProperty("valueFont").objectReferenceValue = valueFont;
         data.FindProperty("hoverSprite").objectReferenceValue = Load<Sprite>(HoverSpritePath);
         data.FindProperty("runBarMaterial").objectReferenceValue = RunBarMaterial();
+        data.FindProperty("fullScreen").boolValue = fullScreen;
         data.ApplyModifiedPropertiesWithoutUndo();
         return panel;
     }

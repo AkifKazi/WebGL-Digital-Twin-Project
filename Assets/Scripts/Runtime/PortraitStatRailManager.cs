@@ -444,8 +444,8 @@ public class PortraitStatRailManager : MonoBehaviour
             width = content.rect.width;
         if (width <= 1f)
             width = canvas != null && canvas.scaleFactor > 0f
-                ? Screen.safeArea.width / canvas.scaleFactor
-                : Screen.safeArea.width;
+                ? DeviceSafeArea.Current.width / canvas.scaleFactor
+                : DeviceSafeArea.Current.width;
         return Mathf.Max(0f, width - leftPadding - rightPadding);
     }
 

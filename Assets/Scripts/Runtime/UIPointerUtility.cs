@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 
 /// <summary>Pointer checks shared by the cards, the detail panel and the control hover states.</summary>
@@ -22,8 +23,17 @@ public static class UIPointerUtility
                (eventData.position - eventData.pressPosition).sqrMagnitude <= threshold * threshold;
     }
 
-    public static bool IsTouch(PointerEventData eventData) =>
-        eventData is ExtendedPointerEventData extended
-            ? extended.pointerType == UIPointerType.Touch
-            : Input.touchCount > 0;
+    /// <summary>
+    /// True when a finger made this press. Some browsers deliver touches
+    /// through the pointer device, so a touchscreen pressed (or lifted) this
+    /// frame counts too.
+    /// </summary>
+    public static bool IsTouch(PointerEventData eventData)
+    {
+        if (eventData is ExtendedPointerEventData extended && extended.pointerType == UIPointerType.Touch)
+            return true;
+        Touchscreen screen = Touchscreen.current;
+        return screen != null &&
+               (screen.primaryTouch.press.isPressed || screen.primaryTouch.press.wasReleasedThisFrame);
+    }
 }

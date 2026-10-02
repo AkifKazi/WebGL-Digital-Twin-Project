@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Up to two headline figures side by side, each in half of the width and left
@@ -12,6 +13,10 @@ using UnityEngine;
 /// caption above a value and its unit: the unit shares the value's size and
 /// baseline in a lighter weight. A long value shrinks to fit its half, then
 /// drops decimals, and only as a last resort is cut short; its unit always shows.
+///
+/// Time To Service is a link when a service plan covers the sensor's part: a
+/// chevron follows it, it highlights while hovered or pressed, and pressing it
+/// opens that part's service detail (see <see cref="ServicePartLink"/>).
 /// </summary>
 public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
 {
@@ -25,6 +30,10 @@ public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
     private const float MinimumScale = 0.6f;
     private const float UnitSpacing = 0.2f;
     private const float UnitOpacity = 0.72f;
+    // The link's chevron after the unit, and how far its highlight reaches past the figure.
+    private const float ChevronGap = 8f;
+    private const float ChevronSize = 20f;
+    private static readonly Vector2 LinkPadding = new(10f, 6f);
 
     private readonly List<Column> columns = new();
 
@@ -34,6 +43,11 @@ public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
         public TextMeshProUGUI Caption;
         public TextMeshProUGUI Value;
         public TextMeshProUGUI Unit;
+
+        // The link to the part's service detail, on Time To Service only.
+        public RectTransform Link;
+        public UIIconGraphic Chevron;
+        public MachinePartGroup Part;
 
         // What the column shows: a number with its decimals, or text (a dash, OVERDUE).
         public double Number;
@@ -70,9 +84,65 @@ public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
                 rect.pivot = new Vector2(0f, 1f);
             }
 
+            BuildLink(column);
             columns.Add(column);
         }
     }
+
+    /// <summary>A hit area over the figure, its highlight, and the chevron; shown only while the figure links somewhere.</summary>
+    private void BuildLink(Column column)
+    {
+        column.Link = CreateRect("Service Link", column.Rect);
+        column.Link.SetAsFirstSibling();
+        column.Link.anchorMin = Vector2.zero;
+        column.Link.anchorMax = Vector2.one;
+        column.Link.offsetMin = -LinkPadding;
+        column.Link.offsetMax = LinkPadding;
+
+        // Clear, but takes the pointer over the whole figure.
+        Image hit = column.Link.gameObject.AddComponent<Image>();
+        hit.color = Color.clear;
+
+        RectTransform highlightRect = CreateRect("Highlight", column.Link);
+        Stretch(highlightRect);
+        Image highlight = highlightRect.gameObject.AddComponent<Image>();
+        highlight.raycastTarget = false;
+        if (Style.hoverSprite != null)
+        {
+            highlight.sprite = Style.hoverSprite;
+            highlight.type = Image.Type.Sliced;
+        }
+        else
+        {
+            highlight.color = new Color(Style.normal.r, Style.normal.g, Style.normal.b, 0.12f);
+        }
+        column.Link.gameObject.AddComponent<UIPressHighlight>().Configure(highlight);
+
+        Button button = column.Link.gameObject.AddComponent<Button>();
+        button.transition = Selectable.Transition.None;
+        button.targetGraphic = hit;
+        button.navigation = new Navigation { mode = Navigation.Mode.None };
+        button.onClick.AddListener(() => ServicePartLink.Request(column.Part));
+
+        RectTransform chevron = CreateRect("Chevron", column.Rect);
+        chevron.anchorMin = chevron.anchorMax = new Vector2(0f, 1f);
+        chevron.pivot = new Vector2(0f, 0.5f);
+        chevron.sizeDelta = new Vector2(ChevronSize, ChevronSize);
+        column.Chevron = chevron.gameObject.AddComponent<UIIconGraphic>();
+        column.Chevron.IconShape = UIIconGraphic.Shape.Chevron;
+        column.Chevron.color = Style.normal;
+        column.Chevron.raycastTarget = false;
+
+        column.Link.gameObject.SetActive(false);
+        chevron.gameObject.SetActive(false);
+    }
+
+    /// <summary>The part the figure opens, when it is Time To Service and a plan covers the sensor.</summary>
+    private static MachinePartGroup LinkedPart(TelemetryKeyFigure figure, in TelemetryGraphData data) =>
+        figure == TelemetryKeyFigure.TimeToService && data.ServiceLife != null &&
+        data.ServiceLife.TryGetServicedPart(data.Source, out MachinePartGroup part)
+            ? part
+            : null;
 
     private Color UnitColor
     {
@@ -107,7 +177,7 @@ public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
             float first = NaturalWidth(columns[0], 1f) + ColumnGap;
             // The second keeps room for its caption as well as its value.
             float second = Mathf.Max(
-                NaturalWidth(columns[1], 1f),
+                NaturalWidth(columns[1], 1f) + (columns[1].Part != null ? ChevronGap + ChevronSize : 0f),
                 columns[1].Caption.GetPreferredValues(columns[1].Caption.text).x + 2f);
             if (first > split)
                 split = Mathf.Max(split, Mathf.Min(first, width - second));
@@ -146,6 +216,11 @@ public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
         // Time to service only reads as text once the part is overdue.
         bool overdue = figure == TelemetryKeyFigure.TimeToService && !hasNumber && text != null;
         column.Value.color = overdue ? Style.warning : Style.ink;
+
+        column.Part = LinkedPart(figure, data);
+        bool linked = column.Part != null;
+        column.Link.gameObject.SetActive(linked);
+        column.Chevron.gameObject.SetActive(linked);
     }
 
     /// <summary>
@@ -220,7 +295,10 @@ public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
 
     private void Fit(Column column)
     {
-        float width = Mathf.Max(1f, column.Rect.rect.width);
+        // A link keeps room for its chevron after the unit.
+        bool linked = column.Part != null;
+        float chevronRoom = linked ? ChevronGap + ChevronSize : 0f;
+        float width = Mathf.Max(1f, column.Rect.rect.width - chevronRoom);
         double number = column.Number;
         int decimals = column.Decimals;
         string text = column.Text;
@@ -255,6 +333,14 @@ public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
         Place(column.Value.rectTransform, 0f, valueWidth);
         Place(column.Unit.rectTransform, valueWidth + gap, unitWidth);
         column.Unit.gameObject.SetActive(unitWidth > 0f);
+
+        // Centred on the value's line, which sits in the lower part of its box.
+        if (linked)
+        {
+            float end = valueWidth + gap + unitWidth;
+            column.Chevron.rectTransform.anchoredPosition =
+                new Vector2(end + ChevronGap, -(ValueTop + ValueHeight * 0.58f));
+        }
     }
 
     private float NaturalWidth(Column column, float scale)

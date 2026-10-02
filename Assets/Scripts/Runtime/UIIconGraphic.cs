@@ -9,7 +9,9 @@ public sealed class UIIconGraphic : MaskableGraphic
     public enum Shape
     {
         Close,
-        Pin
+        Pin,
+        // A right-pointing chevron: the row or figure opens more.
+        Chevron
     }
 
     [SerializeField] private Shape shape = Shape.Close;
@@ -37,6 +39,15 @@ public sealed class UIIconGraphic : MaskableGraphic
             float h = size * 0.34f;
             UIMesh.AddLine(vh, c + new Vector2(-h, -h), c + new Vector2(h, h), thickness, color);
             UIMesh.AddLine(vh, c + new Vector2(-h, h), c + new Vector2(h, -h), thickness, color);
+            return;
+        }
+
+        if (shape == Shape.Chevron)
+        {
+            float h = size * 0.26f;
+            Vector2 tip = c + new Vector2(h * 0.5f, 0f);
+            UIMesh.AddLine(vh, tip, tip + new Vector2(-h, h), thickness, color);
+            UIMesh.AddLine(vh, tip, tip + new Vector2(-h, -h), thickness, color);
             return;
         }
 

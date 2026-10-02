@@ -1,0 +1,247 @@
+%-------------------------
+% Resume in Latex
+% Akif Faruk Kazi
+%-------------------------
+
+\documentclass[a4paper,10.5pt]{article}
+
+%----------PACKAGES----------
+\usepackage[
+    left=1.4cm,
+    right=1.4cm,
+    top=0.9cm,
+    bottom=0.9cm
+]{geometry}
+
+\usepackage[T1]{fontenc}
+\usepackage{tgheros}
+\renewcommand{\familydefault}{\sfdefault}
+
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tabularx}
+\usepackage{microtype}
+\usepackage{setspace}
+
+% Improve PDF text extraction for ATS
+\input{glyphtounicode}
+\pdfgentounicode=1
+
+%----------PDF METADATA----------
+\hypersetup{
+    pdftitle={Akif Faruk Kazi Resume},
+    pdfauthor={Akif Faruk Kazi},
+    pdfsubject={Interaction Design and XR Design Resume},
+    pdfkeywords={
+        Interaction Design,
+        XR Design,
+        Extended Reality,
+        UX Design,
+        Spatial Interaction,
+        Unity,
+        Blender,
+        WebGL,
+        Figma
+    }
+}
+
+%----------GENERAL FORMATTING----------
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\tabcolsep}{0pt}
+\urlstyle{same}
+
+% Comfortable reading leading
+\setstretch{1.08}
+
+\definecolor{headingcolor}{RGB}{20,20,20}
+\definecolor{textgray}{RGB}{45,45,45}
+
+\color{textgray}
+
+%----------SECTION FORMATTING----------
+\titleformat{\section}
+  {\large\bfseries\color{headingcolor}}
+  {}
+  {0pt}
+  {}
+  [\vspace{2pt}\titlerule]
+
+\titlespacing*{\section}
+  {0pt}
+  {9pt}
+  {5pt}
+
+%----------LIST FORMATTING----------
+\setlist[itemize]{
+    leftmargin=1.2em,
+    itemsep=3pt,
+    topsep=3pt,
+    parsep=0pt,
+    partopsep=0pt
+}
+
+%----------CUSTOM COMMANDS----------
+\newcommand{\resumeEntry}[4]{
+    \begin{tabularx}{\textwidth}{@{}X r@{}}
+        \textbf{\color{headingcolor}#1} & \textbf{#4} \\
+        \textit{#3} & \textit{#2}
+    \end{tabularx}
+    \vspace{1pt}
+}
+
+\newcommand{\resumeListStart}{
+    \begin{itemize}
+}
+
+\newcommand{\resumeListEnd}{
+    \end{itemize}
+    \vspace{3pt}
+}
+
+%----------DOCUMENT----------
+\begin{document}
+
+%----------HEADER----------
+\begin{center}
+    {\LARGE\bfseries\color{headingcolor} Akif Faruk Kazi}
+
+    \vspace{3pt}
+
+    \textbf{Interaction Designer}
+
+    \vspace{5pt}
+
+    Mumbai
+    \enspace $\vert$ \enspace
+    9867735452
+    \enspace $\vert$ \enspace
+    \href{mailto:akif.kazi@icloud.com}{akif.kazi@icloud.com}
+    \enspace $\vert$ \enspace
+    \href{https://www.linkedin.com/in/akif-faruk-kazi/}{LinkedIn}
+    \enspace $\vert$ \enspace
+    \href{https://akifkazi.notion.site/portfolio}{Portfolio Website}
+\end{center}
+
+%----------EXPERIENCE----------
+\section{Professional Experience}
+
+\resumeEntry
+    {Rosatom}
+    {Moscow, Russia (Remote)}
+    {Design Intern}
+    {May 2026 -- Present}
+
+\resumeListStart
+    \item Reduced WebGL build size by optimizing 3D geometry, textures, and particle systems for browser-based deployment.
+    \item Designed and tested interactions across desktop and mobile devices balancing responsiveness, and performance.
+\resumeListEnd
+
+\resumeEntry
+    {Indian Institute of Technology Jodhpur}
+    {Jodhpur, India}
+    {Teaching Assistant}
+    {July 2025 -- Present}
+
+\resumeListStart
+\resumeListEnd
+
+\resumeEntry
+    {Siemens}
+    {Bengaluru, India}
+    {Design Intern, FT UX Advanced Experience Research IN}
+    {January 2025 -- July 2025}
+
+\resumeListStart
+    \item Designed scalable UI components for the COMOS WalkInside platform used in industrial digital-twin environments; work was showcased at UX@Siemens Germany.
+    \item Contributed reusable XR interaction patterns for consideration in Siemens' iX open-source design system.
+    \item Researched industrial XR heads-up displays and evaluated concepts with stakeholders, informing improvements to information hierarchy, positioning, interaction behaviour, and component visibility.
+    \item Assisted in developing a controlled testing environment for a patent-pending VR interaction technique.
+\resumeListEnd
+
+\resumeEntry
+    {Elevar}
+    {Mumbai, India}
+    {UI/UX Design Intern}
+    {May 2023 -- September 2023}
+
+\resumeListStart
+    \item Redesigned and developed responsive 'Contact Us' page for desktop and mobile using Figma and HTML/CSS.
+    \item Built a Figma design system with core components, shared styles, and variable-driven tokens for color, spacing, and radius, using component variants and auto layout to support consistent responsive patterns.
+    \item Analysed website behaviour using Google Analytics and Microsoft Clarity to identify usability improvements.
+\resumeListEnd
+
+\resumeEntry
+    {Ycenter}
+    {Philadelphia, USA (Remote)}
+    {Social Innovation Fellow}
+    {September 2021 -- November 2021}
+
+\resumeListStart
+\resumeListEnd
+
+%----------EDUCATION----------
+\section{Education}
+
+\resumeEntry
+    {Indian Institute of Technology Jodhpur}
+    {Jodhpur, India}
+    {Master of Design in XR Design \textbar{} CGPA: 7.88}
+    {2025 -- Present}
+
+\vspace{5pt}
+
+\resumeEntry
+    {Somaiya Vidyavihar University}
+    {Mumbai, India}
+    {Bachelor of Design in Interaction Design \textbar{} CGPA: 9.23}
+    {2021 -- 2025}
+
+\vspace{5pt}
+
+\resumeEntry
+    {Maharashtra State Board}
+    {Mumbai, India}
+    {Higher Secondary Certificate \textbar{} 84.33\%}
+    {2021}
+
+%----------SKILLS----------
+\section{Skills}
+
+\textbf{Design:}
+UX Design, Usability Engineering, Spatial Interaction, Prototyping, Design Thinking, Data Visualization
+
+\vspace{4pt}
+
+\textbf{Tools:}
+Figma, Adobe Creative Suite, Unity, Blender, Affinity
+
+%----------ACADEMIC ACHIEVEMENTS----------
+\section{Academic Achievements}
+
+AIR 57, NID GD, 2025
+\enspace $\vert$ \enspace
+AIR 417, CEED, 2025
+\enspace $\vert$ \enspace
+AIR 64, UCEED, 2021
+
+%----------LEADERSHIP AND ACTIVITIES----------
+\section{Leadership and Activities}
+
+\resumeEntry
+    {TEDxIIMLucknow}
+    {IIM Lucknow (Remote)}
+    {Design Team Member}
+    {September 2024}
+
+\vspace{5pt}
+
+\resumeEntry
+    {Nazariya '23 Design Fest}
+    {Somaiya Vidyavihar University}
+    {Graphic Design Head}
+    {October 2023 -- November 2023}
+
+\end{document}

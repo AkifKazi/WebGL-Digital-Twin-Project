@@ -16,10 +16,15 @@ using UnityEngine.UI;
 /// header and legend line up with the viewport's top and bottom bars when the
 /// panel runs the full height beside it (see <see cref="SetBands"/>).
 /// Clicking a card opens that part's detail in place of the list (see
-/// ServicePanelView.Detail.cs).
+/// ServicePanelView.Detail.cs); a chevron on every card says so. A name too
+/// long for its card slides back and forth rather than being cut short.
 ///
 /// Room for the scrollbar is only kept while the content scrolls; when every
 /// card fits, the cards take the full width.
+///
+/// The portrait layout shows a second panel over the whole screen (see
+/// PortraitServiceModeController): <see cref="fullScreen"/> drops its frame and
+/// stacks the detail's notes so they keep their width on a phone.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed partial class ServicePanelView : MonoBehaviour
@@ -36,6 +41,10 @@ public sealed partial class ServicePanelView : MonoBehaviour
 
     [Tooltip("Seconds between refreshes of the hours shown.")]
     [SerializeField, Min(0.1f)] private float refreshInterval = 1f;
+
+    [Tooltip("The whole screen on a phone held upright: no frame, and the detail's likely " +
+             "cause and suggested fix stacked rather than side by side.")]
+    [SerializeField] private bool fullScreen;
 
     [Tooltip("Space between the panel's edges and the header's text.")]
     [SerializeField, Min(0f)] private float inset = 28f;
@@ -62,6 +71,9 @@ public sealed partial class ServicePanelView : MonoBehaviour
     private const float ListLeft = 16f;
     private const float ListRight = 38f;
     private const float HoursWidth = 170f;
+    // The chevron's column at the card's right edge, and its size.
+    private const float ChevronSpace = 30f;
+    private const float ChevronSize = 22f;
     private const float CompactHeaderHeight = 72f;
     private const float CompactLegendHeight = 64f;
     private const float ScrollHitWidth = 24f;
@@ -290,11 +302,30 @@ public sealed partial class ServicePanelView : MonoBehaviour
         SetText(card.Task, TaskLabel(status.Task));
         card.Hours.color = alert ? state : ink;
         SetText(card.Hours, HoursText(status.HoursLeft));
+        FitNameToHours(card);
         card.Bar.SetValues(
             (float)status.RunHours,
             (float)status.PlanHours,
             (float)status.EstimateHours,
             state);
+    }
+
+    /// <summary>
+    /// Gives the name and task every unit the hours leave: short hours, a
+    /// longer name before it has to slide.
+    /// </summary>
+    private static void FitNameToHours(ComponentCard card)
+    {
+        float hours = Mathf.Min(HoursWidth, Mathf.Ceil(card.Hours.GetPreferredValues(card.Hours.text).x));
+        float right = hours + ChevronSpace + 16f;
+        SetRight(card.NameArea, right);
+        SetRight(card.Task.rectTransform, right);
+    }
+
+    private static void SetRight(RectTransform rect, float right)
+    {
+        if (!Mathf.Approximately(rect.offsetMax.x, -right))
+            rect.offsetMax = new Vector2(-right, rect.offsetMax.y);
     }
 
     // -----------------------------------------------------------------------
@@ -372,9 +403,11 @@ public sealed partial class ServicePanelView : MonoBehaviour
         public RectTransform Root;
         public ServiceHoverTarget Hover;
         public TextMeshProUGUI Number;
+        public RectTransform NameArea;
         public TextMeshProUGUI Name;
         public TextMeshProUGUI Task;
         public TextMeshProUGUI Hours;
+        public UIIconGraphic Chevron;
         public UIServiceBarGraphic Bar;
     }
 
@@ -408,6 +441,9 @@ public sealed partial class ServicePanelView : MonoBehaviour
         Stretch(border, 0f, 0f, 0f, 0f);
         UIFrameGraphic edge = AddFrame(border, Color.clear, 2f, false);
         edge.SetColors(new Color(normal.r, normal.g, normal.b, 0.5f), Color.clear);
+        // Full screen, every edge is the screen's.
+        if (fullScreen)
+            border.gameObject.SetActive(false);
 
         header = CreateRect("Header", root);
         header.anchorMin = new Vector2(0f, 1f);
@@ -554,18 +590,27 @@ public sealed partial class ServicePanelView : MonoBehaviour
         card.Number.overflowMode = TextOverflowModes.Overflow;
         Place(card.Number.rectTransform, 0f, -8f, 44f, 48f, left: true);
 
-        card.Name = CreateText("Name", inner, 24f, true, ink, TextAlignmentOptions.MidlineLeft);
+        // Names take the width left of the hours, and slide where a narrow
+        // panel or a long translation leaves too little.
+        card.NameArea = CreateRect("Name Area", inner);
+        PlaceBeside(card.NameArea, 46f, HoursWidth + ChevronSpace + 12f, -10f, 36f);
+        card.Name = CreateSlidingText("Name", card.NameArea, 24f, ink);
         card.Name.characterSpacing = 3f;
-        // Names take the width left of the hours, and cut short where a
-        // narrow panel leaves too little.
-        PlaceBeside(card.Name.rectTransform, 46f, HoursWidth + 12f, -10f, 36f);
 
         card.Task = CreateText("Task", inner, 19f, false, Muted, TextAlignmentOptions.MidlineLeft);
         card.Task.characterSpacing = 3f;
-        PlaceBeside(card.Task.rectTransform, 46f, HoursWidth + 12f, -42f, 30f);
+        PlaceBeside(card.Task.rectTransform, 46f, HoursWidth + ChevronSpace + 12f, -42f, 30f);
 
         card.Hours = CreateText("Hours", inner, 40f, true, ink, TextAlignmentOptions.MidlineRight);
-        Place(card.Hours.rectTransform, 0f, -4f, HoursWidth, 62f, left: false);
+        Place(card.Hours.rectTransform, ChevronSpace, -4f, HoursWidth, 62f, left: false);
+
+        // Centred on the hours' line: the card opens the part's detail.
+        RectTransform chevron = CreateRect("Chevron", inner);
+        Place(chevron, -4f, -24f, ChevronSize, ChevronSize, left: false);
+        card.Chevron = chevron.gameObject.AddComponent<UIIconGraphic>();
+        card.Chevron.IconShape = UIIconGraphic.Shape.Chevron;
+        card.Chevron.color = Muted;
+        card.Chevron.raycastTarget = false;
 
         RectTransform bar = CreateRect("Bar", inner);
         bar.anchorMin = Vector2.zero;
@@ -699,6 +744,22 @@ public sealed partial class ServicePanelView : MonoBehaviour
         text.overflowMode = TextOverflowModes.Ellipsis;
         text.characterSpacing = isValue ? 1f : 2f;
         text.raycastTarget = false;
+        return text;
+    }
+
+    /// <summary>
+    /// One line of text filling <paramref name="area"/>, which clips it. Text
+    /// wider than the area slides back and forth, pausing at each end, and
+    /// fades at the edge it runs under; text that fits stays still.
+    /// </summary>
+    private TextMeshProUGUI CreateSlidingText(string name, RectTransform area, float size, Color color)
+    {
+        TextMeshProUGUI text = CreateText(name, area, size, true, color, TextAlignmentOptions.MidlineLeft);
+        Stretch(text.rectTransform, 0f, 0f, 0f, 0f);
+        text.overflowMode = TextOverflowModes.Overflow;
+        TMPOverflowScroller scroller = text.gameObject.AddComponent<TMPOverflowScroller>();
+        scroller.SetMotion(TextOverflowMotion.PingPong);
+        scroller.CaptureRestingPosition();
         return text;
     }
 

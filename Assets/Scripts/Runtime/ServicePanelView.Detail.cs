@@ -25,6 +25,8 @@ using UnityEngine.UI;
 public sealed partial class ServicePanelView
 {
     private const float OverviewHeight = 414f;
+    private const float NoteHeight = 104f;
+    private const float NotesTop = -290f;
     private const float HistoryHeight = 248f;
     private const float ServiceDataHeight = 260f;
     // The values sit in a row of their own above the plot, so the plan line
@@ -33,12 +35,16 @@ public sealed partial class ServicePanelView
     private const float ChartTop = 88f;
     private const float ChartHeight = 110f;
     private const int MaximumHistoryColumns = 5;
+    // The back button's square: 64 units is about 46 points on a phone held
+    // upright, past the 44 the platform guidelines ask for.
+    private const float BackHitSize = 64f;
 
     private RectTransform listHeader;
     private RectTransform detailHeader;
     private ScrollView detailView;
     private Button backButton;
     private TextMeshProUGUI detailName;
+    private RectTransform detailNameArea;
     private UIFrameGraphic detailChip;
     private TextMeshProUGUI detailChipText;
 
@@ -173,7 +179,7 @@ public sealed partial class ServicePanelView
         detailChipText.overflowMode = chipWidth > chipLimit ? TextOverflowModes.Ellipsis : TextOverflowModes.Overflow;
         chipWidth = Mathf.Min(chipWidth, chipLimit);
         detailChip.rectTransform.sizeDelta = new Vector2(chipWidth, 36f);
-        detailName.rectTransform.offsetMax = new Vector2(-(chipWidth + 12f), detailName.rectTransform.offsetMax.y);
+        detailNameArea.offsetMax = new Vector2(-(chipWidth + 12f), detailNameArea.offsetMax.y);
     }
 
     private void RefreshOverview(in ServiceItemStatus status, in TelemetryServiceSchedule.ServicePlan plan, bool alert, Color state)
@@ -343,7 +349,8 @@ public sealed partial class ServicePanelView
         BuildDetailHeader(headerContent);
 
         detailView = BuildScrollView("Part Detail", root);
-        BuildOverview(DetailCard("Overview", OverviewHeight));
+        // Stacked notes take a second row.
+        BuildOverview(DetailCard("Overview", OverviewHeight + (fullScreen ? NoteHeight : 0f)));
         BuildHistory(DetailCard("Service History", HistoryHeight));
         BuildServiceData(DetailCard("Service Data", ServiceDataHeight));
     }
@@ -353,13 +360,13 @@ public sealed partial class ServicePanelView
         detailHeader = CreateRect("Detail", headerContent);
         Stretch(detailHeader, 0f, 0f, 0f, 0f);
 
-        // The arrow draws in line with the list's title; its square is large
-        // enough to hit easily.
+        // The arrow draws in line with the list's title; its square reaches
+        // past it on every side, so a thumb finds it easily on a phone.
         RectTransform back = CreateRect("Back Button", detailHeader);
         back.anchorMin = back.anchorMax = new Vector2(0f, 0.5f);
         back.pivot = new Vector2(0f, 0.5f);
-        back.anchoredPosition = new Vector2(-12f, 0f);
-        back.sizeDelta = new Vector2(48f, 48f);
+        back.anchoredPosition = new Vector2(12f - BackHitSize * 0.5f, 0f);
+        back.sizeDelta = new Vector2(BackHitSize, BackHitSize);
         UIFrameGraphic hit = AddFrame(back, Color.clear, 0f, true);
         AddHoverLook(back);
         RectTransform arrowRect = CreateRect("Arrow", back);
@@ -375,13 +382,14 @@ public sealed partial class ServicePanelView
         backButton.navigation = new Navigation { mode = Navigation.Mode.None };
         backButton.onClick.AddListener(ShowList);
 
-        detailName = CreateText("Name", detailHeader, 24f, true, ink, TextAlignmentOptions.MidlineLeft);
+        detailNameArea = CreateRect("Name Area", detailHeader);
+        detailNameArea.anchorMin = new Vector2(0f, 0.5f);
+        detailNameArea.anchorMax = new Vector2(1f, 0.5f);
+        detailNameArea.pivot = new Vector2(0f, 0.5f);
+        detailNameArea.offsetMin = new Vector2(44f, -18f);
+        detailNameArea.offsetMax = new Vector2(0f, 18f);
+        detailName = CreateSlidingText("Name", detailNameArea, 24f, ink);
         detailName.characterSpacing = 3f;
-        detailName.rectTransform.anchorMin = new Vector2(0f, 0.5f);
-        detailName.rectTransform.anchorMax = new Vector2(1f, 0.5f);
-        detailName.rectTransform.pivot = new Vector2(0f, 0.5f);
-        detailName.rectTransform.offsetMin = new Vector2(44f, -18f);
-        detailName.rectTransform.offsetMax = new Vector2(0f, 18f);
 
         RectTransform chip = CreateRect("State", detailHeader);
         chip.anchorMin = chip.anchorMax = new Vector2(1f, 0.5f);
@@ -430,8 +438,12 @@ public sealed partial class ServicePanelView
         PlaceBeside(line, 0f, 0f, -272f, 1.5f);
         AddFrame(line, new Color(normal.r, normal.g, normal.b, 0.14f), 0f, false);
 
-        detailCause = AddNote(inner, 0, "LIKELY CAUSE", "service.note.cause");
-        detailFix = AddNote(inner, 1, "SUGGESTED FIX", "service.note.fix");
+        // Side by side, or one above the other where the panel is narrow.
+        int columns = fullScreen ? 1 : 2;
+        detailCause = AddNote(inner, 0, columns, NotesTop, "LIKELY CAUSE", "service.note.cause");
+        detailFix = fullScreen
+            ? AddNote(inner, 0, columns, NotesTop - NoteHeight, "SUGGESTED FIX", "service.note.fix")
+            : AddNote(inner, 1, columns, NotesTop, "SUGGESTED FIX", "service.note.fix");
     }
 
     /// <summary>A labelled number in one of the columns under the bar.</summary>
@@ -449,10 +461,10 @@ public sealed partial class ServicePanelView
         return value;
     }
 
-    /// <summary>A labelled line of text, up to three lines long, in one of two columns.</summary>
-    private TextMeshProUGUI AddNote(RectTransform parent, int column, string caption, string key)
+    /// <summary>A labelled line of text, up to three lines long, in one of <paramref name="columns"/> columns.</summary>
+    private TextMeshProUGUI AddNote(RectTransform parent, int column, int columns, float y, string caption, string key)
     {
-        RectTransform cell = Column(parent, caption, column, 2, -290f, 104f);
+        RectTransform cell = Column(parent, caption, column, columns, y, NoteHeight);
 
         TextMeshProUGUI heading = CreateText("Label", cell, 16f, false, label, TextAlignmentOptions.MidlineLeft);
         heading.characterSpacing = 2f;

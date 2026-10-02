@@ -34,9 +34,10 @@ public static class MachineXRaySceneSetup
     private const float WideControlWidth = 940f;
     private const float PortraitButtonWidth = 150f;
 
-    // Portrait fills the safe area minus padding; the cap only prevents the
-    // control stretching absurdly wide on a tablet held upright.
-    private const float PortraitMaxWidth = 1100f;
+    // Portrait stops a little wider than the page and zoom row above it
+    // (787 units), so the three segments keep room; narrower phones shrink
+    // it to the safe area.
+    private const float PortraitMaxWidth = 875f;
 
     public static void Apply(DigitalTwinMachineConfiguration configuration)
     {

@@ -27,7 +27,10 @@ The first opening can take several minutes because Unity rebuilds the local `Lib
 - Pinch with two fingers to zoom in or out.
 - The interface changes automatically for portrait and landscape screens.
 - Use the left and right arrows beside the zoom controls to visit every portrait telemetry page. An unavailable direction fades out.
-- Keep important controls and cards away from the browser bars and screen notch.
+- Tap a card to highlight it, and tap it again to open its detail: on a phone held upright it rises from the bottom as a sheet and every other card hides, leaving the model; tap **×** or the model to close it. In landscape the detail panel opens beside the rails. Tap another card to highlight that one instead, or the model to clear the highlight; the zoom, page and view controls leave it alone.
+- In any detail panel, tap **TIME TO SERVICE ›** to jump to that part's service detail.
+- Held upright, the **TELEMETRY** / **SERVICE** switch sits centred at the top. **SERVICE** fills the screen with the service schedule and hides the model, which would be too small to read beside it. Tap a part for its detail and the arrow to return.
+- The scene runs under the notch and the browser's toolbars, while the controls stay clear of them. When Safari or Firefox shrinks or grows its bottom toolbar, nothing on screen moves.
 
 ## 3. Understanding telemetry cards
 
@@ -143,7 +146,7 @@ Do not connect a public browser directly to a PLC. See `DigitalTwinIntegration.m
 - A vertical desktop monitor remains a desktop interface instead of being mistaken for a phone.
 - Phones can switch between portrait and landscape layouts.
 - Portrait telemetry uses paged rails so readings are never permanently inaccessible because of screen capacity.
-- Safe-area information is used to reduce overlap with notches and rounded screen areas.
+- The browser page reports the notch, home indicator and bottom-toolbar insets to Unity (`DeviceSafeArea`), and keeps the canvas at its tallest height on phones so a changing toolbar never resizes it. This needs the **DigitalTwin** WebGL template.
 
 For layout testing, select the object containing **Responsive Layout Shell**. Its **Device Override** can temporarily force Desktop or Mobile behavior. Return it to `Auto` before building.
 

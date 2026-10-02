@@ -212,6 +212,7 @@ public static class LanguageTableTool
         "TelemetryAiDataTable" => "Telemetry detail panel: AI insight text",
         "ServicePanelView" => "Service panel: list",
         "ServicePanelView.Detail" => "Service panel: part detail",
+        "PortraitTelemetrySheetController" => "Telemetry sheet on a phone: second-tap hint",
         _ => script
     };
 

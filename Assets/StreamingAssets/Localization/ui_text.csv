@@ -196,3 +196,4 @@ view.exterior,EXTERIOR,View mode segment
 view.full_body,FULL BODY,View mode segment
 view.interior,INTERIOR,View mode segment
 view.x_ray,X-RAY,View mode segment
+hint.tap_again,TAP AGAIN FOR DETAILS,Telemetry sheet on a phone: second-tap hint

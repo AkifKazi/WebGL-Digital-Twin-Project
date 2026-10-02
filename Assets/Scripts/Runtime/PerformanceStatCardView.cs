@@ -30,7 +30,8 @@ public enum MetricLabelLayoutMode
 }
 
 [DisallowMultipleComponent]
-public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+public sealed class PerformanceStatCardView : MonoBehaviour,
+    IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler, IPointerDownHandler
 {
     public event Action<PerformanceStatCardView, bool> FocusChanged;
     public static event Action<PerformanceStatCardView> ActiveFocusChanged;
@@ -39,6 +40,12 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
 
     /// <summary>Raised after a clean click on a card has updated its focus.</summary>
     public static event Action<PerformanceStatCardView> Clicked;
+
+    /// <summary>
+    /// Raised when the focused card is clicked or tapped again: that opens its
+    /// telemetry detail. The card stays focused; a click on the scene releases it.
+    /// </summary>
+    public static event Action<PerformanceStatCardView> DetailRequested;
 
     [Header("Text")]
     [SerializeField] private TMP_Text metricName;
@@ -107,9 +114,6 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
     [SerializeField, Min(32f)] private float valueRowHeight = 48f;
     [SerializeField, Tooltip("Preserve case-sensitive engineering unit symbols such as mm/s, kN, kW and MPa. Disable for an all-uppercase visual style.")]
     private bool useAccurateUnitCasing;
-    [SerializeField, Min(0f), Tooltip("Seconds a tapped card stays focused on touch devices, which have no hover state. " +
-        "Long enough to read the isolated mechanism in the X-Ray view before focus releases.")]
-    private float mobileTapFocusSeconds = 4f;
     [SerializeField, Tooltip("Legacy behaviour: a card focuses while the pointer is over it. " +
         "Off, only a click (a press and release that moves less than the drag threshold) " +
         "focuses a card, so turning the camera across the rails never triggers it.")]
@@ -150,6 +154,9 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
         ? presentationAnchor
         : boundSource != null ? boundSource.WorldAnchor : null;
     public bool IsFocused => focused;
+
+    /// <summary>True when the last press on this card was a finger rather than a mouse or pen.</summary>
+    public bool LastPressWasTouch { get; private set; }
     public float UnfocusedPeerOpacity => unfocusedPeerOpacity;
     public float PeerFocusTransitionDuration => peerFocusTransitionDuration;
     public RectTransform ActiveConnectionPoint
@@ -498,6 +505,15 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
             SetFocused(false);
     }
 
+    public void OnPointerDown(PointerEventData eventData) =>
+        LastPressWasTouch = UIPointerUtility.IsTouch(eventData);
+
+    /// <summary>
+    /// A click on a card focuses it: the part is marked on the model and the
+    /// other cards dim. A click on the card already focused asks for its
+    /// telemetry detail (<see cref="DetailRequested"/>). Focus stays until a
+    /// click on the scene, another card, Esc or a closed panel releases it.
+    /// </summary>
     public void OnPointerClick(PointerEventData eventData)
     {
         // A press that travelled was a camera drag that happened to end here.
@@ -512,16 +528,13 @@ public sealed class PerformanceStatCardView : MonoBehaviour, IPointerEnterHandle
 
         if (focused && !focusOnHover)
         {
-            // A second click on the focused card releases it.
-            ReleaseFocus();
-            Clicked?.Invoke(this);
+            tapFocusUntil = 0f;
+            DetailRequested?.Invoke(this);
             return;
         }
 
         SetFocused(true);
-        // Touch has no hover to end focus, so a tap focuses for a while unless
-        // something (an open detail panel) holds it. A mouse click holds it.
-        tapFocusUntil = touch ? Time.unscaledTime + mobileTapFocusSeconds : 0f;
+        tapFocusUntil = 0f;
         Clicked?.Invoke(this);
     }
 

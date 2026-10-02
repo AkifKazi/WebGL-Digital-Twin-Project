@@ -27,55 +27,92 @@
       const progressLabel = document.querySelector("#unity-progress-label");
       const warning = document.querySelector("#unity-warning");
 
-      let viewportSyncFrame = 0;
+      // The canvas covers the whole screen, under the notch, the home
+      // indicator and the browser's toolbars, so the scene never shows a band
+      // of page colour. Unity keeps its controls inside the insets measured
+      // here (see DeviceSafeArea).
+      //
+      // Safari and Firefox on iOS shrink and grow their bottom toolbar while
+      // the page is used. On a phone the canvas therefore keeps the tallest
+      // height the browser shows, and the bottom inset is the toolbar's full
+      // height, so neither the canvas nor the controls above the toolbar move
+      // when it changes. Turning the phone measures afresh. On a desktop the
+      // canvas simply follows the window.
+      //
+      // The toolbar's height is the tallest view less the shortest one the
+      // browser has actually shown. Not 100svh: Safari's floating toolbar
+      // covers less than the space svh reserves, which left a band of
+      // nothing above it.
+      const container = document.querySelector("#unity-container");
+      const isMobile =
+        /android|iphone|ipad|ipod|mobile|silk|kindle/i.test(navigator.userAgent || "") ||
+        (window.matchMedia && window.matchMedia("(pointer: coarse)").matches && (navigator.maxTouchPoints || 0) > 0);
 
-      function syncVisualViewport() {
-        viewportSyncFrame = 0;
-        const viewport = window.visualViewport;
-        const left = viewport ? viewport.offsetLeft : 0;
-        const top = viewport ? viewport.offsetTop : 0;
-        const width = viewport ? viewport.width : window.innerWidth;
-        const height = viewport ? viewport.height : window.innerHeight;
-
-        document.documentElement.style.setProperty(
-          "--visual-viewport-left",
-          Math.max(0, left) + "px"
-        );
-        document.documentElement.style.setProperty(
-          "--visual-viewport-top",
-          Math.max(0, top) + "px"
-        );
-        document.documentElement.style.setProperty(
-          "--visual-viewport-width",
-          Math.max(1, width) + "px"
-        );
-        document.documentElement.style.setProperty(
-          "--visual-viewport-height",
-          Math.max(1, height) + "px"
-        );
+      function createProbe(className) {
+        const probe = document.createElement("div");
+        probe.className = "viewport-probe " + className;
+        probe.setAttribute("aria-hidden", "true");
+        document.body.appendChild(probe);
+        return probe;
       }
 
-      function requestViewportSync() {
-        if (viewportSyncFrame) cancelAnimationFrame(viewportSyncFrame);
-        viewportSyncFrame = requestAnimationFrame(syncVisualViewport);
+      const largeProbe = createProbe("viewport-probe-large");
+      const safeProbe = createProbe("viewport-probe-safe");
+
+      const viewportState = { width: -1, tallest: 0, shortest: Infinity };
+      window.DigitalTwinViewport = { insets: { top: 0, right: 0, bottom: 0, left: 0 }, height: 0 };
+
+      function measureViewport(fresh) {
+        const width = window.innerWidth;
+        const shown = window.innerHeight;
+        const large = largeProbe.getBoundingClientRect().height || shown;
+        if (fresh || !isMobile || width !== viewportState.width) {
+          viewportState.width = width;
+          viewportState.tallest = 0;
+          viewportState.shortest = Infinity;
+        }
+        viewportState.tallest = Math.max(viewportState.tallest, large, shown);
+        viewportState.shortest = Math.min(viewportState.shortest, shown);
+
+        const safe = getComputedStyle(safeProbe);
+        const edge = name => parseFloat(safe[name]) || 0;
+        const height = Math.max(1, Math.round(viewportState.tallest));
+        const toolbar = Math.max(0, viewportState.tallest - viewportState.shortest);
+
+        const viewport = window.DigitalTwinViewport;
+        viewport.height = height;
+        viewport.insets.top = edge("paddingTop");
+        viewport.insets.right = edge("paddingRight");
+        viewport.insets.bottom = Math.max(edge("paddingBottom"), toolbar);
+        viewport.insets.left = edge("paddingLeft");
+        document.documentElement.style.setProperty("--digital-twin-height", height + "px");
+        container.scrollTop = 0;
+      }
+
+      let viewportFrame = 0;
+      function requestViewportMeasure() {
+        if (viewportFrame) cancelAnimationFrame(viewportFrame);
+        viewportFrame = requestAnimationFrame(() => {
+          viewportFrame = 0;
+          measureViewport(false);
+        });
       }
 
       function handleOrientationChange() {
-        requestViewportSync();
-        // Mobile Safari can report the previous visual viewport for a short
-        // time after rotation. These follow-up reads settle the canvas without
-        // requiring a page refresh.
-        setTimeout(requestViewportSync, 100);
-        setTimeout(requestViewportSync, 350);
+        requestViewportMeasure();
+        // Mobile Safari can report the previous viewport for a short time
+        // after rotation: measure again once it has settled, from scratch.
+        setTimeout(requestViewportMeasure, 100);
+        setTimeout(() => measureViewport(true), 400);
       }
 
-      syncVisualViewport();
-      window.addEventListener("resize", requestViewportSync, { passive: true });
+      measureViewport(true);
+      window.addEventListener("resize", requestViewportMeasure, { passive: true });
       window.addEventListener("orientationchange", handleOrientationChange, { passive: true });
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener("resize", requestViewportSync, { passive: true });
-        window.visualViewport.addEventListener("scroll", requestViewportSync, { passive: true });
-      }
+      if (window.visualViewport)
+        window.visualViewport.addEventListener("resize", requestViewportMeasure, { passive: true });
+      // A page that scrolled would move the canvas with it.
+      window.addEventListener("scroll", () => window.scrollTo(0, 0), { passive: true });
 
       function showBanner(message, type) {
         const item = document.createElement("div");

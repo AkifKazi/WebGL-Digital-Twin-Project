@@ -7,6 +7,24 @@ mergeInto(LibraryManager.library, {
     return mobileUa || (coarsePointer && touchPoints > 0) ? 1 : 0;
   },
 
+  // One edge of the area the UI must keep clear, in the canvas's own pixels:
+  // 0 top, 1 right, 2 bottom, 3 left. The template measures them in CSS
+  // pixels (window.DigitalTwinViewport.insets); another template gives 0.
+  DigitalTwin_GetViewportInset: function (side) {
+    var viewport = window.DigitalTwinViewport;
+    var insets = viewport && viewport.insets;
+    if (!insets)
+      return 0;
+    var css = [insets.top, insets.right, insets.bottom, insets.left][side] || 0;
+    var canvas = (typeof Module !== "undefined" && Module.canvas) || document.querySelector("#unity-canvas");
+    if (!canvas)
+      return css * (window.devicePixelRatio || 1);
+    var horizontal = side === 1 || side === 3;
+    var client = horizontal ? canvas.clientWidth : canvas.clientHeight;
+    var pixels = horizontal ? canvas.width : canvas.height;
+    return css * (client > 0 ? pixels / client : (window.devicePixelRatio || 1));
+  },
+
   // Minutes to add to local time to get UTC at that moment (JavaScript's sign),
   // so daylight saving is right for every point on a year-long chart.
   DigitalTwin_GetTimezoneOffsetMinutes: function (unixMilliseconds) {

@@ -27,10 +27,13 @@ public enum DigitalTwinMode
 ///
 /// Opening a part's detail from its card pulls the camera back when the part
 /// is not all in view in the space left of the panel.
+///
+/// The chosen view is shared with the portrait layout's controller (see
+/// <see cref="DigitalTwinModeState"/>), so turning a phone keeps it.
 /// </summary>
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(40)]
-public sealed class ServiceModeController : MonoBehaviour
+public sealed class ServiceModeController : MonoBehaviour, IDigitalTwinModeController
 {
     [SerializeField] private Camera targetCamera;
 
@@ -87,7 +90,7 @@ public sealed class ServiceModeController : MonoBehaviour
     private Canvas rootCanvas;
     private static readonly Vector3[] Corners = new Vector3[4];
 
-    public DigitalTwinMode CurrentMode { get; private set; }
+    public DigitalTwinMode CurrentMode => DigitalTwinModeState.Get(startMode);
 
     /// <summary>0 in Telemetry, 1 in Service, between the two while switching.</summary>
     public float ServiceBlend => blend;
@@ -99,7 +102,6 @@ public sealed class ServiceModeController : MonoBehaviour
 
     private void Awake()
     {
-        CurrentMode = startMode;
         blend = Target;
         if (targetCamera == null)
             targetCamera = Camera.main;
@@ -114,14 +116,16 @@ public sealed class ServiceModeController : MonoBehaviour
         ApplyGroups();
         if (panelView != null)
             panelView.PartOpened += HandlePartOpened;
+        ServicePartLink.Requested += HandlePartRequested;
     }
 
     private void OnDisable()
     {
-        // The portrait layout has no service view: leave the camera, the
+        // The portrait layout has its own service view: leave the camera, the
         // viewport and the telemetry UI as the rest of the app expects them.
         if (panelView != null)
             panelView.PartOpened -= HandlePartOpened;
+        ServicePartLink.Requested -= HandlePartRequested;
         ResetProjection();
         SetInset(0f);
         SetGroups(telemetryGroups, 1f, true);
@@ -134,7 +138,7 @@ public sealed class ServiceModeController : MonoBehaviour
         if (mode == CurrentMode)
             return;
 
-        CurrentMode = mode;
+        DigitalTwinModeState.Set(mode);
         if (mode == DigitalTwinMode.Service)
         {
             focusReleaser?.Dismiss();
@@ -316,6 +320,17 @@ public sealed class ServiceModeController : MonoBehaviour
     /// turns the camera; the orbit controller eases the move.
     /// </summary>
     private void HandlePartOpened(MachinePartGroup part) => FramePart(part);
+
+    /// <summary>The telemetry sheet asked for a part's service detail: switch and open it.</summary>
+    private void HandlePartRequested(MachinePartGroup part)
+    {
+        SetMode(DigitalTwinMode.Service);
+        if (panelView == null)
+            return;
+        panelView.ShowDetail(part);
+        if (panelView.SelectedPart == part)
+            FramePart(part);
+    }
 
     public bool FramePart(MachinePartGroup part) =>
         TryGetFraming(part, out Bounds bounds, out Rect window) &&
