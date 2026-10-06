@@ -56,6 +56,7 @@ public static class DigitalTwinProjectValidator
         ValidatePortraitPagination(result);
         ValidateSharedMachineViewController(result);
         ValidateNoTelemetryGrouping(result);
+        ValidateTelemetryVisibility(result);
         ValidateParticleController(result);
         ValidateCamera(result);
         ValidateAdaptiveQuality(result);
@@ -458,7 +459,7 @@ public static class DigitalTwinProjectValidator
         foreach (PortraitTelemetryPager pager in pagers)
         {
             string path = GetPath(pager.transform);
-            if (pager.RailManager == null || pager.HopperController == null ||
+            if (pager.RailManager == null || pager.Visibility == null ||
                 pager.PreviousButton == null || pager.NextButton == null ||
                 pager.PreviousIcon == null || pager.NextIcon == null)
             {
@@ -557,6 +558,60 @@ public static class DigitalTwinProjectValidator
             SerializedProperty property = data.FindProperty(propertyName);
             if (property == null || property.objectReferenceValue == null)
                 result.Errors.Add($"'{manager.name}' is missing overflow rail '{propertyName}'.");
+        }
+    }
+
+    /// <summary>
+    /// Each layout has one Telemetry Visibility with its regions, and
+    /// everything that switches, hides or reveals telemetry in the layout
+    /// points at it rather than at another layout's or at the machine.
+    /// </summary>
+    private static void ValidateTelemetryVisibility(ValidationResult result)
+    {
+        foreach (string layoutName in new[] { "Wide layout", "Portrait layout" })
+        {
+            Transform layout = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)
+                .FirstOrDefault(candidate => candidate.name == layoutName);
+            if (layout == null)
+                continue;
+
+            TelemetryVisibility[] found = layout.GetComponentsInChildren<TelemetryVisibility>(true);
+            if (found.Length != 1)
+            {
+                result.Errors.Add($"'{layoutName}' needs exactly one Telemetry Visibility; found {found.Length}.");
+                continue;
+            }
+
+            TelemetryVisibility visibility = found[0];
+            SerializedObject data = new(visibility);
+            SerializedProperty regions = data.FindProperty("telemetryRegions");
+            SerializedProperty serviceGroups = data.FindProperty("serviceGroups");
+            if (regions.arraySize == 0 || Enumerable.Range(0, regions.arraySize)
+                    .Any(i => regions.GetArrayElementAtIndex(i).objectReferenceValue == null))
+                result.Errors.Add($"'{layoutName}' Telemetry Visibility has missing telemetry regions.");
+            if (serviceGroups.arraySize == 0 || Enumerable.Range(0, serviceGroups.arraySize)
+                    .Any(i => serviceGroups.GetArrayElementAtIndex(i).objectReferenceValue == null))
+                result.Errors.Add($"'{layoutName}' Telemetry Visibility has missing service groups.");
+            if (!(data.FindProperty("inspectionView").objectReferenceValue is IInspectionView))
+                result.Errors.Add($"'{layoutName}' Telemetry Visibility has no inspection view.");
+
+            CheckPointsAt<WideServiceView>(layout, "visibility", visibility, result);
+            CheckPointsAt<PortraitServiceView>(layout, "visibility", visibility, result);
+            CheckPointsAt<DigitalTwinModeSwitch>(layout, "controller", visibility, result);
+            CheckPointsAt<ServicePinLayer>(layout, "visibility", visibility, result);
+            CheckPointsAt<PortraitTelemetrySheetController>(layout, "visibility", visibility, result);
+            CheckPointsAt<PortraitTelemetryPager>(layout, "visibility", visibility, result);
+            CheckPointsAt<TelemetrySequenceController>(layout, "visibility", visibility, result);
+        }
+    }
+
+    private static void CheckPointsAt<T>(Transform layout, string field, TelemetryVisibility visibility, ValidationResult result)
+        where T : Component
+    {
+        foreach (T component in layout.GetComponentsInChildren<T>(true))
+        {
+            if (new SerializedObject(component).FindProperty(field)?.objectReferenceValue != visibility)
+                result.Errors.Add($"'{GetPath(component.transform)}' does not use its layout's Telemetry Visibility.");
         }
     }
 

@@ -607,8 +607,6 @@ public class StatRailManager : MonoBehaviour
         RectTransform root = (RectTransform)railObject.transform;
         root.SetParent(template.Root.parent, false);
         root.SetSiblingIndex(edge == First ? inner.Root.GetSiblingIndex() + 1 : inner.Root.GetSiblingIndex());
-        if (template.Root.TryGetComponent(out CanvasGroup fade))
-            railObject.AddComponent<UICanvasGroupFollower>().Follow(fade);
 
         GameObject containerObject = new($"{side} card container {depth + 1}", typeof(RectTransform));
         containerObject.layer = railObject.layer;

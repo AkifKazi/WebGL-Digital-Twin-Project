@@ -17,9 +17,13 @@ public enum MachineViewMode
 /// cross-section geometry, then hands presentation to
 /// <see cref="MachineXRayPresenter"/> and the environment to
 /// <see cref="XRayEnvironmentController"/>.
+///
+/// Telemetry shows in Cross Section and X-Ray, not in Full Model (see
+/// <see cref="IInspectionView"/>); each layout's <see cref="TelemetryVisibility"/>
+/// passes that on the moment the view is chosen.
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class MachineViewModeController : MonoBehaviour
+public sealed class MachineViewModeController : MonoBehaviour, IInspectionView
 {
     [Header("Views")]
     [Tooltip("Existing cross-section controller. Full Model and Cross Section delegate to it unchanged.")]
@@ -41,6 +45,12 @@ public sealed class MachineViewModeController : MonoBehaviour
 
     public MachineViewMode CurrentMode { get; private set; } = MachineViewMode.FullModel;
 
+    /// <summary>Whether the chosen view shows telemetry: Cross Section and X-Ray do, Full Model does not.</summary>
+    public bool ShowsTelemetry => CurrentMode != MachineViewMode.FullModel;
+
+    /// <summary>Raised when <see cref="ShowsTelemetry"/> changes, as the view is chosen.</summary>
+    public event Action<bool> ShowsTelemetryChanged;
+
     public bool IsTransitioning =>
         transitionRoutine != null ||
         (clipController != null && clipController.IsTransitioning);
@@ -48,6 +58,7 @@ public sealed class MachineViewModeController : MonoBehaviour
     private Coroutine transitionRoutine;
     private MachineViewMode interruptedFrom;
     private bool transitionInterrupted;
+    private bool? reportedShowsTelemetry;
 
     private void OnEnable()
     {
@@ -80,9 +91,14 @@ public sealed class MachineViewModeController : MonoBehaviour
             : MachineViewMode.FullModel;
 
         if (startMode != CurrentMode)
+        {
             SetMode(startMode);
+        }
         else
+        {
             ModeChanged?.Invoke(CurrentMode);
+            ReportShowsTelemetry();
+        }
     }
 
     // Unity events on the segmented buttons bind to these.
@@ -105,9 +121,19 @@ public sealed class MachineViewModeController : MonoBehaviour
         interruptedFrom = previous;
 
         ModeChanged?.Invoke(CurrentMode);
+        ReportShowsTelemetry();
         TransitionStateChanged?.Invoke(true);
 
         transitionRoutine = StartCoroutine(TransitionRoutine(previous, mode));
+    }
+
+    private void ReportShowsTelemetry()
+    {
+        bool shows = ShowsTelemetry;
+        if (reportedShowsTelemetry == shows)
+            return;
+        reportedShowsTelemetry = shows;
+        ShowsTelemetryChanged?.Invoke(shows);
     }
 
     private IEnumerator TransitionRoutine(MachineViewMode previous, MachineViewMode next)

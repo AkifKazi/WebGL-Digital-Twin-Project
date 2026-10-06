@@ -43,7 +43,7 @@ public static class FeedbackPlayTest
     private static UITextTableLoader loader;
     private static TelemetryAiDataTable aiTable;
     private static TelemetryDetailPanelController detailPanels;
-    private static ServiceModeController serviceMode;
+    private static TelemetryVisibility serviceMode;
     private static ServicePanelView servicePanel;
     private static PerformanceStatCardView clickedCard;
     private static readonly List<string> overflowReport = new();
@@ -462,7 +462,7 @@ public static class FeedbackPlayTest
         loader = Object.FindAnyObjectByType<UITextTableLoader>();
         aiTable = Object.FindAnyObjectByType<TelemetryAiDataTable>();
         detailPanels = Object.FindAnyObjectByType<TelemetryDetailPanelController>();
-        serviceMode = Object.FindAnyObjectByType<ServiceModeController>();
+        serviceMode = Object.FindAnyObjectByType<WideServiceView>().Visibility;
         // The wide layout's panel; the portrait layout has one of its own.
         servicePanel = Object.FindObjectsByType<ServicePanelView>(FindObjectsInactive.Include)
             .FirstOrDefault(panel => panel.transform.parent != null && panel.transform.parent.name == "Wide layout");

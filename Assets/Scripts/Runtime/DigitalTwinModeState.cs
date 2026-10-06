@@ -1,10 +1,16 @@
 using System;
 using UnityEngine;
 
+/// <summary>The two top-level views of the digital twin.</summary>
+public enum DigitalTwinMode
+{
+    Telemetry = 0,
+    Service = 1
+}
+
 /// <summary>
-/// A layout's switch between Telemetry and Service: the wide layout's
-/// <see cref="ServiceModeController"/> or the portrait layout's
-/// <see cref="PortraitServiceModeController"/>.
+/// A layout's switch between the Telemetry and Service views: each layout's
+/// <see cref="TelemetryVisibility"/>.
 /// </summary>
 public interface IDigitalTwinModeController
 {
@@ -16,7 +22,7 @@ public interface IDigitalTwinModeController
 }
 
 /// <summary>
-/// The view chosen last, shared by both layouts' controllers, so turning a
+/// The view chosen last, shared by both layouts' telemetry visibility, so turning a
 /// phone between portrait and landscape keeps the view on show.
 /// </summary>
 public static class DigitalTwinModeState
@@ -40,7 +46,7 @@ public static class DigitalTwinModeState
 
 /// <summary>
 /// Asks for a machine part's service detail from anywhere (the telemetry
-/// sheet's Time To Service figure). The active layout's controller switches to
+/// sheet's Time To Service figure). The active layout's service view switches to
 /// Service and opens the part.
 /// </summary>
 public static class ServicePartLink

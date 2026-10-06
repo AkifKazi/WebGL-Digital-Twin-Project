@@ -9,7 +9,7 @@ Tools/LoadTest/run_load_test.sh
 
 It runs, in order:
 
-1. The project's existing editor and play-mode tests (about 4 minutes).
+1. The project's edit-mode unit tests, then its editor and play-mode tests (about 5 minutes).
 2. A load-test WebGL build in `Builds/LoadTest` (about 2.5 minutes).
 3. Each scenario below in a throwaway Chrome window (about 25 minutes in total).
 

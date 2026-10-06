@@ -68,6 +68,14 @@ if [ $RUN_TESTS = 1 ]; then
   log "Running existing project tests"
   echo "## Existing tests" >> "$SUMMARY"; echo >> "$SUMMARY"
   echo "| Test | Exit | Seconds | Result line |" >> "$SUMMARY"; echo "|---|---:|---:|---|" >> "$SUMMARY"
+  # Edit-mode unit tests (NUnit, Assets/Editor/Tests), through Unity's own runner.
+  start=$(date +%s)
+  "$UNITY" -batchmode -projectPath "$ROOT" -runTests -testPlatform EditMode \
+    -testResults "$OUT/editmode.xml" -logFile "$OUT/unity_EditMode.log" >/dev/null 2>&1
+  code=$?
+  line="$(head -3 "$OUT/editmode.xml" 2>/dev/null | grep -o -m1 'result="[A-Za-z]*" total="[0-9]*" passed="[0-9]*" failed="[0-9]*"')"
+  log "  EditModeTests exit=$code ($(( $(date +%s) - start )) s) $line"
+  echo "| EditModeTests | $code | $(( $(date +%s) - start )) | ${line:-none} |" >> "$SUMMARY"
   # name | method | needs -quit | timeout. Add new tests here.
   for t in \
     "ProjectValidator|DigitalTwinProjectValidator.Validate|1|900" \
@@ -79,7 +87,8 @@ if [ $RUN_TESTS = 1 ]; then
     "FeedbackPlay|FeedbackPlayTest.Run|0|600" \
     "TelemetryDetailPanelPlay|TelemetryDetailPanelPlayTest.Run|0|600" \
     "ServiceModePlay|ServiceModePlayTest.Run|0|600" \
-    "PortraitServiceModePlay|PortraitServiceModePlayTest.Run|0|600"
+    "PortraitServiceModePlay|PortraitServiceModePlayTest.Run|0|600" \
+    "LeaderLineStability|LeaderLineStabilityPlayTest.Run|0|600"
   do
     IFS='|' read -r name method quit limit <<< "$t"
     read -r code secs <<< "$(run_unity "$name" "$method" "$quit" "$limit")"

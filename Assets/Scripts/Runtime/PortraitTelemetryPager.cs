@@ -9,8 +9,8 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
     [SerializeField] private StatRailManager railManager;
 
     [Header("Telemetry visibility")]
-    [Tooltip("Pagination is available only while telemetry is visible in Cross Section view.")]
-    [SerializeField] private HybridHopperClipController hopperController;
+    [Tooltip("This layout's telemetry visibility. Pagination is available only while the inspection view shows telemetry.")]
+    [SerializeField] private TelemetryVisibility visibility;
     [Tooltip("Optional shared group used when pagination has its own standalone panel.")]
     [SerializeField] private CanvasGroup paginationCanvasGroup;
 
@@ -31,7 +31,7 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
     private bool listenersAdded;
 
     public StatRailManager RailManager => railManager;
-    public HybridHopperClipController HopperController => hopperController;
+    public TelemetryVisibility Visibility => visibility;
     public CanvasGroup PaginationCanvasGroup => paginationCanvasGroup;
     public Button PreviousButton => previousButton;
     public Button NextButton => nextButton;
@@ -89,10 +89,10 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
             railManager.PaginationChanged += HandlePaginationChanged;
         }
 
-        if (hopperController != null)
+        if (visibility != null)
         {
-            hopperController.ViewStateChanged -= HandleViewStateChanged;
-            hopperController.ViewStateChanged += HandleViewStateChanged;
+            visibility.InspectionShowsTelemetryChanged -= HandleInspectionChanged;
+            visibility.InspectionShowsTelemetryChanged += HandleInspectionChanged;
         }
     }
 
@@ -100,8 +100,8 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
     {
         if (railManager != null)
             railManager.PaginationChanged -= HandlePaginationChanged;
-        if (hopperController != null)
-            hopperController.ViewStateChanged -= HandleViewStateChanged;
+        if (visibility != null)
+            visibility.InspectionShowsTelemetryChanged -= HandleInspectionChanged;
     }
 
     private void ShowPreviousPage()
@@ -121,14 +121,14 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
         Refresh();
     }
 
-    private void HandleViewStateChanged(bool isCrossSection)
+    private void HandleInspectionChanged(bool showsTelemetry)
     {
         Refresh();
     }
 
     private void Refresh()
     {
-        bool telemetryVisible = hopperController != null && hopperController.IsCrossSection;
+        bool telemetryVisible = visibility != null && visibility.InspectionShowsTelemetry;
         bool paginationVisible = telemetryVisible && PageCount > 1;
         bool canGoBack = paginationVisible && CanShowPreviousPage;
         bool canGoForward = paginationVisible && CanShowNextPage;

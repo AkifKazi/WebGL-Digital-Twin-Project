@@ -12,7 +12,7 @@ using UnityEngine;
 [DefaultExecutionOrder(60)]
 public sealed class ServicePinLayer : MonoBehaviour
 {
-    [SerializeField] private ServiceModeController controller;
+    [SerializeField] private TelemetryVisibility visibility;
     [SerializeField] private ServicePanelView panel;
     [SerializeField] private Camera targetCamera;
     [SerializeField] private TMP_FontAsset font;
@@ -57,7 +57,7 @@ public sealed class ServicePinLayer : MonoBehaviour
 
     private void LateUpdate()
     {
-        bool service = controller != null && controller.CurrentMode == DigitalTwinMode.Service;
+        bool service = visibility != null && visibility.CurrentMode == DigitalTwinMode.Service;
         MachinePartGroup hovered = service && panel != null ? panel.HighlightedPart : null;
 
         CollectShown(service, hovered);

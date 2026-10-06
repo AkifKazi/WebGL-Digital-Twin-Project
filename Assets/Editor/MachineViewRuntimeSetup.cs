@@ -45,15 +45,6 @@ public static class MachineViewRuntimeSetup
             data.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        foreach (TelemetrySequenceController sequence in UnityEngine.Object
-                     .FindObjectsByType<TelemetrySequenceController>(
-                         FindObjectsInactive.Include))
-        {
-            SerializedObject data = new(sequence);
-            data.FindProperty("hopperController").objectReferenceValue = shared;
-            data.ApplyModifiedPropertiesWithoutUndo();
-        }
-
         foreach (HybridHopperClipController duplicate in controllers)
         {
             if (duplicate != null && duplicate != shared)

@@ -18,6 +18,8 @@ The following classes are machine-independent and should not contain hopper tag 
 - `TelemetryCardPresentation` — a strict one-sensor/one-card presentation boundary.
 - `ConnectionHealthMonitor` — provider and aggregate data-health state.
 - `StatRailManager` and `StatLeaderLineManager` — responsive presentation: one of each per layout, the portrait one set to always run rows.
+- `TelemetryVisibility` — one per layout: owns the Telemetry / Service view and is the only thing that fades the layout's telemetry regions. It combines the view, the inspection view and the portrait sheet's cover; its rules live in the plain `TelemetryVisibilityState`, covered by edit-mode tests. `WideServiceView` and `PortraitServiceView` only place the service panel from its blend.
+- `IInspectionView` — what generic telemetry needs from the machine's inspection view: whether the view on show displays telemetry.
 - Card, leader-line, responsive-shell, camera, and text-fitting components.
 
 ## Machine-specific responsibilities
@@ -25,7 +27,7 @@ The following classes are machine-independent and should not contain hopper tag 
 The current hopper reference implementation includes:
 
 - `HopperProcessSimulator`;
-- hopper clipping/cross-section behavior;
+- hopper clipping/cross-section behavior, and `MachineViewModeController`, which implements `IInspectionView` (Cross Section and X-Ray show telemetry, Full Model does not);
 - conveyor and rotor motion;
 - separator vibration;
 - rock and filtered material-flow behavior;
@@ -108,6 +110,7 @@ The browser receives only authorized, normalized state through HTTPS or secure W
 - Do not add machine sensor IDs, categories, or simulator types to `DigitalTwinSceneSetup`.
 - Do not let cards or layouts parse API payloads.
 - Do not let providers manipulate UI elements directly.
+- Do not fade or hide telemetry outside a layout's `TelemetryVisibility`, and do not read machine view controllers from generic telemetry; go through `IInspectionView`.
 - Keep simulation visibly separate from live data.
 - Preserve source timestamp and quality whenever the upstream system supplies them.
 - Reject unknown, non-finite, duplicate, and out-of-order readings before changing operating state.

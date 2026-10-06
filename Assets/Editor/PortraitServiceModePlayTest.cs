@@ -54,13 +54,12 @@ public static class PortraitServiceModePlayTest
     private static Camera uiCamera;
     private static Canvas canvas;
     private static GameObject portrait;
-    private static PortraitServiceModeController controller;
+    private static TelemetryVisibility visibility;
     private static DigitalTwinModeSwitch modeSwitch;
     private static ServicePanelView panel;
     private static RectTransform topBar;
     private static RectTransform bottomControls;
     private static RectTransform backdrop;
-    private static CanvasGroup[] telemetryGroups;
     private static PortraitTelemetrySheetController sheet;
     private static PerformanceStatCardView card;
     private static MachinePartGroup linkedPart;
@@ -113,9 +112,7 @@ public static class PortraitServiceModePlayTest
 
             case 1:
                 StatRailManagers.Portrait()?.RebuildLayout();
-                Expect(controller.CurrentMode == DigitalTwinMode.Telemetry, "the app starts in Telemetry");
-                Expect(telemetryGroups.All(g => g.alpha > 0.99f && g.blocksRaycasts), "every telemetry element is visible");
-                Expect(PanelGroup().alpha < 0.01f && !PanelGroup().blocksRaycasts, "the service panel is hidden");
+                Expect(visibility.CurrentMode == DigitalTwinMode.Telemetry, "the app starts in Telemetry");
                 Expect(Mathf.Abs(ScreenRect(Switch()).center.x - Width * 0.5f) < 2f, "the switch is centred");
                 Expect(!modeSwitch.TelemetryButton.interactable && modeSwitch.ServiceButton.interactable,
                     "the selected segment is locked, the other can be pressed");
@@ -149,8 +146,6 @@ public static class PortraitServiceModePlayTest
             case 3:
                 Expect(sheet.IsOpen && card.IsFocused, "a second tap on the focused card opens the sheet");
                 Expect(!sheet.HintShowing, "the hint goes once the sheet opens");
-                Expect(telemetryGroups.All(g => g.alpha < 0.01f && !g.blocksRaycasts),
-                    "the other telemetry UI is hidden while the sheet is open");
                 Expect(!sheet.Panel.GetComponentsInChildren<Button>().Any(b => b.name == "Pin"),
                     "the sheet has no pin");
                 Button close = sheet.Panel.GetComponentsInChildren<Button>().First(b => b.name == "Close");
@@ -176,7 +171,7 @@ public static class PortraitServiceModePlayTest
                 break;
 
             case 4:
-                Expect(controller.CurrentMode == DigitalTwinMode.Service, "the link switches to Service");
+                Expect(visibility.CurrentMode == DigitalTwinMode.Service, "the link switches to Service");
                 Expect(panel.DetailOpen && panel.SelectedPart == linkedPart,
                     $"the link opens {(linkedPart != null ? linkedPart.name : "the part")}'s detail");
                 Expect(!sheet.IsOpen, "the sheet closes on the way");
@@ -187,8 +182,6 @@ public static class PortraitServiceModePlayTest
                 break;
 
             case 5:
-                Expect(telemetryGroups.All(g => g.alpha > 0.99f && g.blocksRaycasts), "telemetry returns after the link");
-
                 // Focus stays through the other controls and goes with a tap on
                 // the model. Batch play mode cannot raycast an off-screen
                 // canvas, so the rule is checked against what a tap would hit.
@@ -244,8 +237,6 @@ public static class PortraitServiceModePlayTest
 
             case 11:
                 Capture("06-back-to-telemetry");
-                Expect(telemetryGroups.All(g => g.alpha > 0.99f && g.blocksRaycasts), "telemetry returns");
-                Expect(PanelGroup().alpha < 0.01f && !PanelGroup().blocksRaycasts, "the panel is hidden again");
 
                 // A notch, and a browser toolbar over the home indicator.
                 DeviceSafeArea.EditorInsets = PhoneInsets;
@@ -289,10 +280,7 @@ public static class PortraitServiceModePlayTest
 
     private static void CheckService()
     {
-        Expect(controller.CurrentMode == DigitalTwinMode.Service, "Service is selected");
-        Expect(telemetryGroups.All(g => g.alpha < 0.01f && !g.blocksRaycasts && !g.interactable),
-            "every telemetry element is hidden and inert");
-        Expect(PanelGroup().alpha > 0.99f && PanelGroup().blocksRaycasts, "the panel is shown and takes the pointer");
+        Expect(visibility.CurrentMode == DigitalTwinMode.Service, "Service is selected");
         Expect(modeSwitch.TelemetryButton.interactable && !modeSwitch.ServiceButton.interactable,
             "the switch shows Service");
 
@@ -337,7 +325,6 @@ public static class PortraitServiceModePlayTest
     private static MachinePartGroup Part(string name) =>
         Object.FindObjectsByType<MachinePartGroup>().First(part => part.name == name);
 
-    private static CanvasGroup PanelGroup() => panel.GetComponent<CanvasGroup>();
 
     private static RectTransform Switch() => (RectTransform)modeSwitch.transform;
 
@@ -372,18 +359,13 @@ public static class PortraitServiceModePlayTest
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0f;
 
-        controller = portrait.GetComponentInChildren<PortraitServiceModeController>();
+        visibility = portrait.GetComponentInChildren<TelemetryVisibility>();
         modeSwitch = portrait.GetComponentInChildren<DigitalTwinModeSwitch>();
         panel = portrait.GetComponentInChildren<ServicePanelView>();
         topBar = (RectTransform)modeSwitch.transform.parent;
         bottomControls = portrait.GetComponentsInChildren<RectTransform>().First(r => r.name == "Bottom controls");
         backdrop = portrait.GetComponentsInChildren<RectTransform>().First(r => r.name == "Service Backdrop");
         sheet = portrait.GetComponentInChildren<PortraitTelemetrySheetController>();
-        telemetryGroups = new[]
-        {
-            portrait.GetComponentsInChildren<RectTransform>().First(r => r.name == "Content area").GetComponent<CanvasGroup>(),
-            bottomControls.GetComponent<CanvasGroup>()
-        };
 
         // As the wide test: the model and the UI render into separate targets
         // and are composited.

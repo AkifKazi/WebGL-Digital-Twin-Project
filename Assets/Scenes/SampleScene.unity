@@ -132,7 +132,6 @@ GameObject:
   - component: {fileID: 39663240}
   - component: {fileID: 39663242}
   - component: {fileID: 39663243}
-  - component: {fileID: 39663244}
   m_Layer: 5
   m_Name: Right primary rail
   m_TagString: Untagged
@@ -246,18 +245,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
---- !u!225 &39663244
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 39663238}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!1 &40032728
 GameObject:
   m_ObjectHideFlags: 0
@@ -6374,7 +6361,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9f2b2de1bc6a648768be0197e12c0355, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PortraitTelemetrySheetController
-  modeController: {fileID: 1701980739}
+  visibility: {fileID: 1718394152}
   cardRoot: {fileID: 1252627818}
   hintAnchor: {fileID: 1227975957}
   topBar: {fileID: 488348007}
@@ -6628,7 +6615,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f0bad2b98daf241b1b265cfa04f4b442, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DigitalTwinModeSwitch
-  controller: {fileID: 1701980739}
+  controller: {fileID: 1718394152}
   telemetryButton: {fileID: 1851354316}
   serviceButton: {fileID: 1642326245}
   selectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
@@ -12988,6 +12975,66 @@ ParticleSystem:
         m_PostInfinity: 2
         m_RotationOrder: 4
     vectorLabel1_3: W
+--- !u!1 &230403787
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 230403788}
+  - component: {fileID: 230403789}
+  m_Layer: 5
+  m_Name: Telemetry Visibility
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &230403788
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 230403787}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1265339276}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &230403789
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 230403787}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b5e549f496194d9b80fb517d46ce5eb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TelemetryVisibility
+  telemetryRegions:
+  - {fileID: 956236835}
+  - {fileID: 414781367}
+  - {fileID: 95335103}
+  - {fileID: 1862835008}
+  serviceGroups:
+  - {fileID: 857802812}
+  - {fileID: 279131962}
+  inspectionView: {fileID: 1721390490}
+  focusReleaser: {fileID: 2135264324}
+  transitionSeconds: 0.35
+  startMode: 0
 --- !u!1 &240311175
 GameObject:
   m_ObjectHideFlags: 0
@@ -13628,7 +13675,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3ddd3268f4b004f1ab15aea5df232f54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ServicePinLayer
-  controller: {fileID: 560476858}
+  visibility: {fileID: 230403789}
   panel: {fileID: 857802811}
   targetCamera: {fileID: 330585545}
   font: {fileID: 11400000, guid: a957a584c7c194375ba4ce263540e876, type: 2}
@@ -15022,7 +15069,6 @@ GameObject:
   m_Component:
   - component: {fileID: 423111685}
   - component: {fileID: 423111686}
-  - component: {fileID: 423111687}
   m_Layer: 5
   m_Name: Right secondary rail
   m_TagString: Untagged
@@ -15072,18 +15118,6 @@ MonoBehaviour:
   m_LayoutPriority: 1
   m_MaxWidth: -1
   m_MaxHeight: -1
---- !u!225 &423111687
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 423111684}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!1 &434951042
 GameObject:
   m_ObjectHideFlags: 0
@@ -15947,7 +15981,6 @@ GameObject:
   - component: {fileID: 500436513}
   - component: {fileID: 500436512}
   - component: {fileID: 500436514}
-  - component: {fileID: 500436515}
   m_Layer: 5
   m_Name: Left primary rail
   m_TagString: Untagged
@@ -16035,18 +16068,6 @@ MonoBehaviour:
   m_LayoutPriority: 1
   m_MaxWidth: -1
   m_MaxHeight: -1
---- !u!225 &500436515
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 500436510}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!1 &508125765
 GameObject:
   m_ObjectHideFlags: 0
@@ -16394,25 +16415,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b87cd8ce70e5e4ced9d4af7b10734a79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ServiceModeController
+  visibility: {fileID: 230403789}
   targetCamera: {fileID: 330585545}
   servicePanel: {fileID: 857802813}
   viewport: {fileID: 733525953}
   contentArea: {fileID: 956236832}
-  serviceGroups:
-  - {fileID: 857802812}
-  - {fileID: 279131962}
-  telemetryGroups:
-  - {fileID: 1862835008}
-  - {fileID: 95335103}
-  - {fileID: 500436515}
-  - {fileID: 39663244}
-  - {fileID: 1381650567}
-  - {fileID: 423111687}
-  - {fileID: 414781367}
-  detailPanels: {fileID: 414781363}
-  focusReleaser: {fileID: 2135264324}
-  transitionSeconds: 0.35
-  startMode: 0
   panelWidth: 560
   minimumPanelWidth: 440
   minimumViewportWidth: 1000
@@ -16996,11 +17003,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a37554f725b714873b2c4a7fe34f7252, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StatLeaderLineManager
+  railManager: {fileID: 1823147736}
   linePrefab: {fileID: -4825363643382721423, guid: 33212a77f42f64c0ea647ce3d4a39485, type: 3}
   lineLayer: {fileID: 95335102}
   worldCamera: {fileID: 330585545}
   canvas: {fileID: 327905814}
-  railManager: {fileID: 1823147736}
 --- !u!1 &733188370
 GameObject:
   m_ObjectHideFlags: 0
@@ -17343,11 +17350,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a87b80c45ddf74e809e3b631e47eab57, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  hopperController: {fileID: 544981757}
+  visibility: {fileID: 230403789}
   railManager: {fileID: 1823147736}
   telemetryRoot: {fileID: 1265339276}
   canvas: {fileID: 327905814}
-  followCrossSectionState: 1
+  followInspectionView: 1
   initiallyVisible: 0
   anchorDuration: 0.12
   pauseAfterAnchor: 0.04
@@ -27279,6 +27286,7 @@ GameObject:
   - component: {fileID: 956236832}
   - component: {fileID: 956236833}
   - component: {fileID: 956236834}
+  - component: {fileID: 956236835}
   m_Layer: 5
   m_Name: Content area
   m_TagString: Untagged
@@ -27359,6 +27367,18 @@ MonoBehaviour:
   m_LayoutPriority: 1
   m_MaxWidth: -1
   m_MaxHeight: -1
+--- !u!225 &956236835
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 956236831}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &976480188
 GameObject:
   m_ObjectHideFlags: 0
@@ -29677,6 +29697,7 @@ RectTransform:
   - {fileID: 1623558974}
   - {fileID: 1987923648}
   - {fileID: 1701980738}
+  - {fileID: 1718394151}
   m_Father: {fileID: 1987233799}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -29755,6 +29776,7 @@ RectTransform:
   - {fileID: 762920226}
   - {fileID: 857802813}
   - {fileID: 560476857}
+  - {fileID: 230403788}
   m_Father: {fileID: 1987233799}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -30513,7 +30535,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1381650565}
   - component: {fileID: 1381650566}
-  - component: {fileID: 1381650567}
   m_Layer: 5
   m_Name: Left secondary rail
   m_TagString: Untagged
@@ -30563,18 +30584,6 @@ MonoBehaviour:
   m_LayoutPriority: 1
   m_MaxWidth: -1
   m_MaxHeight: -1
---- !u!225 &1381650567
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1381650564}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!1 &1395380402
 GameObject:
   m_ObjectHideFlags: 0
@@ -34654,11 +34663,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a87b80c45ddf74e809e3b631e47eab57, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TelemetrySequenceController
-  hopperController: {fileID: 544981757}
+  visibility: {fileID: 1718394152}
   railManager: {fileID: 1758534717}
   telemetryRoot: {fileID: 1252627818}
   canvas: {fileID: 327905814}
-  followCrossSectionState: 1
+  followInspectionView: 1
   initiallyVisible: 0
   anchorDuration: 0.12
   pauseAfterAnchor: 0.04
@@ -35257,15 +35266,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6be199ef64b764344bc9efada62878f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PortraitServiceModeController
+  visibility: {fileID: 1718394152}
   servicePanel: {fileID: 1987923648}
   topBar: {fileID: 488348007}
   backdrop: {fileID: 586419375}
-  telemetryGroups:
-  - {fileID: 91917179}
-  - {fileID: 486147068}
-  focusReleaser: {fileID: 2135264324}
-  transitionSeconds: 0.35
-  startMode: 0
   panelScale: 2
   topGap: 8
   slideDistance: 48
@@ -37605,6 +37609,64 @@ ParticleSystem:
         m_PostInfinity: 2
         m_RotationOrder: 4
     vectorLabel1_3: W
+--- !u!1 &1718394150
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1718394151}
+  - component: {fileID: 1718394152}
+  m_Layer: 5
+  m_Name: Telemetry Visibility
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1718394151
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1718394150}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1252627818}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1718394152
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1718394150}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b5e549f496194d9b80fb517d46ce5eb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TelemetryVisibility
+  telemetryRegions:
+  - {fileID: 91917179}
+  - {fileID: 486147068}
+  serviceGroups:
+  - {fileID: 1987923650}
+  - {fileID: 586419376}
+  inspectionView: {fileID: 1721390490}
+  focusReleaser: {fileID: 2135264324}
+  transitionSeconds: 0.35
+  startMode: 0
 --- !u!1 &1721390488
 GameObject:
   m_ObjectHideFlags: 0
@@ -38036,23 +38098,29 @@ MonoBehaviour:
   - {fileID: 351989266}
   - {fileID: 510354000}
   - {fileID: 1653046166}
-  cardHeight: 119
-  smoothTime: 0.18
-  maximumSpeed: 1500
-  maximumCardsPerRail: 32
-  preserveCardOrder: 1
-  showDebugLogs: 0
   alwaysRows: 1
   hasDetailRail: 0
   firstCardContainer: {fileID: 1613840976}
   secondCardContainer: {fileID: 1407226138}
   innerFirstCardContainer: {fileID: 2029146084}
   innerSecondCardContainer: {fileID: 1310797120}
+  columnGap: 8
+  columnStartPadding: 0
+  columnEndPadding: 0
+  minimumColumnWidth: 180
+  maximumColumnWidth: 280
+  columnWidthFraction: 0.18
   rowCardWidth: 300
-  minimumRowHeight: 150
   rowGap: 16
   rowStartPadding: 16
   rowEndPadding: 16
+  minimumRowHeight: 150
+  cardHeight: 119
+  smoothTime: 0.18
+  maximumSpeed: 1500
+  maximumCardsPerRail: 32
+  preserveCardOrder: 1
+  showDebugLogs: 0
 --- !u!224 &1758534718
 RectTransform:
   m_ObjectHideFlags: 0
@@ -38637,12 +38705,6 @@ MonoBehaviour:
   - {fileID: 351989266}
   - {fileID: 510354000}
   - {fileID: 1653046166}
-  cardHeight: 119
-  smoothTime: 0.1
-  maximumSpeed: 1500
-  maximumCardsPerRail: 32
-  preserveCardOrder: 1
-  showDebugLogs: 0
   alwaysRows: 0
   hasDetailRail: 1
   firstCardContainer: {fileID: 2003342891}
@@ -38660,6 +38722,12 @@ MonoBehaviour:
   rowStartPadding: 16
   rowEndPadding: 16
   minimumRowHeight: 150
+  cardHeight: 119
+  smoothTime: 0.1
+  maximumSpeed: 1500
+  maximumCardsPerRail: 32
+  preserveCardOrder: 1
+  showDebugLogs: 0
 --- !u!1 &1847012895
 GameObject:
   m_ObjectHideFlags: 0
@@ -38708,11 +38776,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a37554f725b714873b2c4a7fe34f7252, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StatLeaderLineManager
+  railManager: {fileID: 1758534717}
   linePrefab: {fileID: -4825363643382721423, guid: 33212a77f42f64c0ea647ce3d4a39485, type: 3}
   lineLayer: {fileID: 1254762845}
   worldCamera: {fileID: 330585545}
   canvas: {fileID: 327905814}
-  railManager: {fileID: 1758534717}
 --- !u!1 &1847023728
 GameObject:
   m_ObjectHideFlags: 0
@@ -40347,7 +40415,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f0bad2b98daf241b1b265cfa04f4b442, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DigitalTwinModeSwitch
-  controller: {fileID: 560476858}
+  controller: {fileID: 230403789}
   telemetryButton: {fileID: 1763203830}
   serviceButton: {fileID: 185435282}
   selectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
@@ -41364,7 +41432,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PortraitTelemetryPager
   railManager: {fileID: 1758534717}
-  hopperController: {fileID: 544981757}
+  visibility: {fileID: 1718394152}
   paginationCanvasGroup: {fileID: 0}
   previousButton: {fileID: 2109000015}
   previousCanvasGroup: {fileID: 2109000017}
@@ -42096,7 +42164,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PortraitTelemetryPager
   railManager: {fileID: 1823147736}
-  hopperController: {fileID: 544981757}
+  visibility: {fileID: 230403789}
   paginationCanvasGroup: {fileID: 2110000006}
   previousButton: {fileID: 2110000015}
   previousCanvasGroup: {fileID: 2110000017}

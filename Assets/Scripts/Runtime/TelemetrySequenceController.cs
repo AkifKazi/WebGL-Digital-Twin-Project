@@ -1,12 +1,19 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
+/// <summary>
+/// Reveals a layout's cards and leader lines one by one when the inspection
+/// view shows telemetry, and hides them when it does not, as its
+/// <see cref="TelemetryVisibility"/> reports.
+/// </summary>
 public class TelemetrySequenceController : MonoBehaviour
 {
     [Header("References")]
+    [Tooltip("This layout's telemetry visibility: the cards follow its inspection view.")]
     [SerializeField]
-    private HybridHopperClipController hopperController;
+    private TelemetryVisibility visibility;
 
     [Tooltip("The rails of the layout this sequence reveals.")]
     [SerializeField]
@@ -22,8 +29,8 @@ public class TelemetrySequenceController : MonoBehaviour
     private Canvas canvas;
 
     [Header("Automatic Behaviour")]
-    [SerializeField]
-    private bool followCrossSectionState = true;
+    [SerializeField, FormerlySerializedAs("followCrossSectionState")]
+    private bool followInspectionView = true;
 
     [SerializeField]
     private bool initiallyVisible;
@@ -87,11 +94,7 @@ public class TelemetrySequenceController : MonoBehaviour
         if (!initialised)
             return;
 
-        bool shouldBeVisible =
-            followCrossSectionState &&
-            hopperController != null
-                ? hopperController.IsCrossSection
-                : initiallyVisible;
+        bool shouldBeVisible = FollowedVisibility();
 
         telemetryVisible = shouldBeVisible;
         RefreshGeneratedItems();
@@ -105,11 +108,7 @@ public class TelemetrySequenceController : MonoBehaviour
 
         CollectItems();
 
-        bool shouldBeVisible =
-            followCrossSectionState &&
-            hopperController != null
-                ? hopperController.IsCrossSection
-                : initiallyVisible;
+        bool shouldBeVisible = FollowedVisibility();
 
         telemetryVisible = shouldBeVisible;
 
@@ -137,13 +136,13 @@ public class TelemetrySequenceController : MonoBehaviour
 
     private void Subscribe()
     {
-        if (hopperController != null)
+        if (visibility != null)
         {
-            hopperController.ViewStateChanged -=
-                HandleViewStateChanged;
+            visibility.InspectionShowsTelemetryChanged -=
+                HandleInspectionChanged;
 
-            hopperController.ViewStateChanged +=
-                HandleViewStateChanged;
+            visibility.InspectionShowsTelemetryChanged +=
+                HandleInspectionChanged;
         }
 
         if (railManager != null)
@@ -158,10 +157,10 @@ public class TelemetrySequenceController : MonoBehaviour
 
     private void Unsubscribe()
     {
-        if (hopperController != null)
+        if (visibility != null)
         {
-            hopperController.ViewStateChanged -=
-                HandleViewStateChanged;
+            visibility.InspectionShowsTelemetryChanged -=
+                HandleInspectionChanged;
         }
 
         if (railManager != null)
@@ -171,14 +170,19 @@ public class TelemetrySequenceController : MonoBehaviour
         }
     }
 
-    private void HandleViewStateChanged(
-        bool isCrossSection)
+    private bool FollowedVisibility() =>
+        followInspectionView && visibility != null
+            ? visibility.InspectionShowsTelemetry
+            : initiallyVisible;
+
+    private void HandleInspectionChanged(
+        bool showsTelemetry)
     {
-        if (!followCrossSectionState)
+        if (!followInspectionView)
             return;
 
         SetTelemetryVisible(
-            isCrossSection,
+            showsTelemetry,
             true
         );
     }

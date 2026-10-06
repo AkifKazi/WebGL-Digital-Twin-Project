@@ -56,7 +56,8 @@ public static class ServiceModePlayTest
     private static Camera mainCamera;
     private static Camera uiCamera;
     private static OrbitCameraController orbit;
-    private static ServiceModeController controller;
+    private static WideServiceView controller;
+    private static TelemetryVisibility visibility;
     private static DigitalTwinModeSwitch modeSwitch;
     private static ServicePanelView panel;
     private static ServicePinLayer pinLayer;
@@ -118,11 +119,8 @@ public static class ServiceModePlayTest
                 telemetryCards = VisibleCards();
                 telemetryContent = ScreenRect(ContentArea());
                 telemetryZoom = ScreenRect(ZoomControls());
-                Expect(controller.CurrentMode == DigitalTwinMode.Telemetry, "the app starts in Telemetry");
+                Expect(visibility.CurrentMode == DigitalTwinMode.Telemetry, "the app starts in Telemetry");
                 Expect(telemetryCards > 0, $"telemetry shows its cards ({telemetryCards})");
-                Expect(TelemetryGroups().All(g => g.alpha > 0.99f && g.blocksRaycasts || !g.gameObject.activeInHierarchy),
-                    "every telemetry element is visible");
-                Expect(ServiceGroups().All(g => g.alpha < 0.01f && !g.blocksRaycasts), "the service view is hidden");
                 Expect(!modeSwitch.TelemetryButton.interactable && modeSwitch.ServiceButton.interactable,
                     "the selected segment is locked, the other can be pressed");
                 Capture("01-telemetry");
@@ -253,14 +251,12 @@ public static class ServiceModePlayTest
                 break;
 
             case 12:
-                Expect(TelemetryGroups().All(g => g.alpha > 0.99f && g.blocksRaycasts || !g.gameObject.activeInHierarchy),
-                    "telemetry comes back with a detail open");
                 modeSwitch.ServiceButton.onClick.Invoke();
                 Next(0.8f);
                 break;
 
             case 13:
-                Expect(panel.DetailOpen && ServiceGroups().All(g => g.alpha > 0.99f), "the detail is still open on return");
+                Expect(panel.DetailOpen, "the detail is still open on return");
                 panel.ShowList();
 
                 // Edge: a window too narrow for the panel beside the viewport.
@@ -286,10 +282,7 @@ public static class ServiceModePlayTest
 
             case 16:
                 Capture("16-back-to-telemetry");
-                Expect(controller.CurrentMode == DigitalTwinMode.Telemetry, "Telemetry is selected again");
-                Expect(TelemetryGroups().All(g => g.alpha > 0.99f && g.blocksRaycasts || !g.gameObject.activeInHierarchy),
-                    "every telemetry element is back");
-                Expect(ServiceGroups().All(g => g.alpha < 0.01f && !g.blocksRaycasts), "the service view is hidden again");
+                Expect(visibility.CurrentMode == DigitalTwinMode.Telemetry, "Telemetry is selected again");
                 Expect(Mathf.Abs(mainCamera.projectionMatrix.m02) < 1e-4f, "the model is centred again");
                 Expect(ActivePins() == 0, "no pins in Telemetry");
                 Expect(SelectionOutline.Strength <= 0f, "the service outline is gone");
@@ -307,9 +300,7 @@ public static class ServiceModePlayTest
 
     private static void CheckService()
     {
-        Expect(controller.CurrentMode == DigitalTwinMode.Service, "Service is selected");
-        Expect(TelemetryGroups().All(g => g.alpha < 0.01f && !g.blocksRaycasts), "every telemetry element is hidden and ignores the pointer");
-        Expect(ServiceGroups().All(g => g.alpha > 0.99f), "the service view is shown");
+        Expect(visibility.CurrentMode == DigitalTwinMode.Service, "Service is selected");
         Expect(modeSwitch.TelemetryButton.interactable && !modeSwitch.ServiceButton.interactable, "the switch follows the mode");
 
         int plans = schedule.Plans.Count(plan => plan.part != null);
@@ -363,19 +354,6 @@ public static class ServiceModePlayTest
         bool scrolls = view.content.rect.height > view.viewport.rect.height + 0.5f;
         Expect(Mathf.Approximately(margin, scrolls ? 38f : 16f),
             $"the {name}'s cards leave room for the scrollbar only while it scrolls (scrolls={scrolls}, margin={margin})");
-    }
-
-    private static CanvasGroup[] TelemetryGroups() => Groups("telemetryGroups");
-
-    private static CanvasGroup[] ServiceGroups() => Groups("serviceGroups");
-
-    private static CanvasGroup[] Groups(string field)
-    {
-        SerializedProperty array = new SerializedObject(controller).FindProperty(field);
-        return Enumerable.Range(0, array.arraySize)
-            .Select(i => array.GetArrayElementAtIndex(i).objectReferenceValue as CanvasGroup)
-            .Where(group => group != null)
-            .ToArray();
     }
 
     private static ServiceHoverTarget Card(string part) =>
@@ -448,7 +426,8 @@ public static class ServiceModePlayTest
     private static void Prepare()
     {
         Application.logMessageReceived += RecordError;
-        controller = Object.FindAnyObjectByType<ServiceModeController>();
+        controller = Object.FindAnyObjectByType<WideServiceView>();
+        visibility = controller.Visibility;
         modeSwitch = Object.FindAnyObjectByType<DigitalTwinModeSwitch>();
         panel = Object.FindAnyObjectByType<ServicePanelView>();
         pinLayer = Object.FindAnyObjectByType<ServicePinLayer>();

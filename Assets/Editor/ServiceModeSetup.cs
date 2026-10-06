@@ -188,18 +188,9 @@ public static class ServiceModeSetup
         TMP_FontAsset valueFont = Load<TMP_FontAsset>(ValueFontPath);
         Camera camera = Camera.main ?? throw new InvalidOperationException("Main Camera not found.");
 
-        // Telemetry parts that fade out in Service. Pagination is wrapped so
-        // its own CanvasGroup stays free for the pager's availability fade.
-        List<CanvasGroup> telemetryGroups = new()
-        {
-            Group(WrapPagination(topBar)),
-            Group(leaderLayer),
-            Group(Child(content, "Left primary rail")),
-            Group(Child(content, "Right primary rail")),
-            Group(Child(content, "Left secondary rail")),
-            Group(Child(content, "Right secondary rail")),
-            Group(Child(content, "Telemetry Detail Layer"))
-        };
+        // Pagination is wrapped so its own CanvasGroup stays free for the
+        // pager's availability fade; the wrapper is a telemetry region.
+        WrapPagination(topBar);
 
         RectTransform pinLayer = CreatePinLayer(wide, leaderLayer, labelFont);
         RectTransform panel = CreatePanel(wide, schedule, labelFont, valueFont, false);
@@ -207,34 +198,32 @@ public static class ServiceModeSetup
         GameObject modeObject = new("Service Mode", typeof(RectTransform));
         modeObject.layer = wide.gameObject.layer;
         modeObject.transform.SetParent(wide, false);
-        ServiceModeController controller = modeObject.AddComponent<ServiceModeController>();
+        WideServiceView controller = modeObject.AddComponent<WideServiceView>();
+        TelemetryVisibility visibility = TelemetryVisibilitySetup.Ensure(wide);
         SerializedObject data = new(controller);
         data.FindProperty("targetCamera").objectReferenceValue = camera;
         data.FindProperty("servicePanel").objectReferenceValue = panel;
         data.FindProperty("viewport").objectReferenceValue = baseLayout;
         data.FindProperty("contentArea").objectReferenceValue = content;
         data.FindProperty("panelWidth").floatValue = PanelWidth;
-        SetArray(data.FindProperty("serviceGroups"), new UnityEngine.Object[] { panel.GetComponent<CanvasGroup>(), pinLayer.GetComponent<CanvasGroup>() });
-        SetArray(data.FindProperty("telemetryGroups"), telemetryGroups.Cast<UnityEngine.Object>().ToArray());
-        data.FindProperty("detailPanels").objectReferenceValue =
-            content.GetComponentInChildren<TelemetryDetailPanelController>(true);
-        data.FindProperty("focusReleaser").objectReferenceValue =
-            UnityEngine.Object.FindAnyObjectByType<TelemetryCardFocusReleaser>(FindObjectsInactive.Include);
         data.ApplyModifiedPropertiesWithoutUndo();
 
         ServicePinLayer pins = pinLayer.GetComponent<ServicePinLayer>();
         SerializedObject pinData = new(pins);
-        pinData.FindProperty("controller").objectReferenceValue = controller;
         pinData.FindProperty("panel").objectReferenceValue = panel.GetComponent<ServicePanelView>();
         pinData.FindProperty("targetCamera").objectReferenceValue = camera;
         pinData.ApplyModifiedPropertiesWithoutUndo();
 
-        CreateSwitch(topBar, viewMode, controller, false, SwitchSegmentWidth);
+        CreateSwitch(topBar, viewMode, visibility, false, SwitchSegmentWidth);
         BuildPortrait(schedule, labelFont, valueFont);
+
+        // Points the switches, pins, sheet, pagers and sequences at each
+        // layout's telemetry visibility, and gives it its regions.
+        TelemetryVisibilitySetup.WireAll();
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
-        Debug.Log($"SERVICE_MODE_SETUP plans={schedule.Plans.Count} telemetryGroups={telemetryGroups.Count}");
+        Debug.Log($"SERVICE_MODE_SETUP plans={schedule.Plans.Count}");
     }
 
     [MenuItem("Tools/Digital Twin/Set Up Portrait Service Mode")]
@@ -257,6 +246,7 @@ public static class ServiceModeSetup
         TelemetryServiceSchedule schedule = UnityEngine.Object.FindAnyObjectByType<TelemetryServiceSchedule>(FindObjectsInactive.Include)
             ?? throw new InvalidOperationException("Run Set Up Service Mode first: no service schedule.");
         BuildPortrait(schedule, Load<TMP_FontAsset>(LabelFontPath), Load<TMP_FontAsset>(ValueFontPath));
+        TelemetryVisibilitySetup.Wire(FindTransform("Portrait layout"), false);
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
     }
@@ -264,7 +254,8 @@ public static class ServiceModeSetup
     /// <summary>
     /// The portrait service view: the switch centred in the top bar, sized like
     /// the bottom controls; an opaque fill out to the screen's edges behind it;
-    /// the panel over the rest of the screen; and the controller.
+    /// the panel over the rest of the screen; and the service view, which
+    /// <see cref="TelemetryVisibilitySetup"/> then points at the layout's visibility.
     /// </summary>
     private static void BuildPortrait(TelemetryServiceSchedule schedule, TMP_FontAsset labelFont, TMP_FontAsset valueFont)
     {
@@ -299,18 +290,16 @@ public static class ServiceModeSetup
         GameObject modeObject = new("Service Mode", typeof(RectTransform));
         modeObject.layer = portrait.gameObject.layer;
         modeObject.transform.SetParent(portrait, false);
-        PortraitServiceModeController controller = modeObject.AddComponent<PortraitServiceModeController>();
+        PortraitServiceView controller = modeObject.AddComponent<PortraitServiceView>();
+        TelemetryVisibility visibility = TelemetryVisibilitySetup.Ensure(portrait);
         SerializedObject data = new(controller);
         data.FindProperty("servicePanel").objectReferenceValue = panel;
         data.FindProperty("topBar").objectReferenceValue = topBar;
         data.FindProperty("backdrop").objectReferenceValue = backdrop;
-        SetArray(data.FindProperty("telemetryGroups"), new UnityEngine.Object[] { Group(content), Group(bottom) });
-        data.FindProperty("focusReleaser").objectReferenceValue =
-            UnityEngine.Object.FindAnyObjectByType<TelemetryCardFocusReleaser>(FindObjectsInactive.Include);
         data.ApplyModifiedPropertiesWithoutUndo();
 
-        CreateSwitch(topBar, viewMode, controller, true, PortraitSwitchSegmentWidth);
-        BuildTelemetrySheet(portrait, baseLayout, topBar, Child(content, "Bottom primary rail"), controller, labelFont);
+        CreateSwitch(topBar, viewMode, visibility, true, PortraitSwitchSegmentWidth);
+        BuildTelemetrySheet(portrait, baseLayout, topBar, Child(content, "Bottom primary rail"), visibility, labelFont);
         Debug.Log("SERVICE_MODE_SETUP portrait service view added");
     }
 
@@ -321,7 +310,7 @@ public static class ServiceModeSetup
     /// figures get the other controls' hover look.
     /// </summary>
     private static void BuildTelemetrySheet(Transform portrait, Transform baseLayout, Transform topBar, Transform bottomRail,
-        PortraitServiceModeController modeController, TMP_FontAsset font)
+        TelemetryVisibility visibility, TMP_FontAsset font)
     {
         TelemetryDetailPanelController wide = UnityEngine.Object.FindAnyObjectByType<TelemetryDetailPanelController>(FindObjectsInactive.Include)
             ?? throw new InvalidOperationException("The wide layout's Telemetry Detail Panel Controller was not found.");
@@ -344,7 +333,7 @@ public static class ServiceModeSetup
                      "graphs", "keyFigures", "keyFigureLayout", "defaultRange", "graphStyle"
                  })
             data.CopyFromSerializedProperty(wideData.FindProperty(shared));
-        data.FindProperty("modeController").objectReferenceValue = modeController;
+        data.FindProperty("visibility").objectReferenceValue = visibility;
         data.FindProperty("cardRoot").objectReferenceValue = portrait;
         data.FindProperty("hintAnchor").objectReferenceValue = bottomRail;
         data.FindProperty("topBar").objectReferenceValue = topBar;

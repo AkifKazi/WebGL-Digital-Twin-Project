@@ -234,7 +234,7 @@ public static class TelemetryLayoutStressValidator
 
         foreach (PortraitTelemetryPager pager in pagers)
         {
-            if (pager.RailManager == null || pager.HopperController == null ||
+            if (pager.RailManager == null || pager.Visibility == null ||
                 pager.PreviousButton == null || pager.NextButton == null ||
                 pager.PreviousIcon == null || pager.NextIcon == null)
             {

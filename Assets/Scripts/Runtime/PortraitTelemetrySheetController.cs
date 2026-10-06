@@ -29,8 +29,8 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour
     private const string HintLearnedKey = "DigitalTwin.TelemetrySheetTapLearned";
 
     [Header("References")]
-    [Tooltip("The portrait layout's view controller: it hides the telemetry UI while the sheet is open.")]
-    [SerializeField] private PortraitServiceModeController modeController;
+    [Tooltip("The portrait layout's telemetry visibility: it hides the telemetry regions while the sheet is open.")]
+    [SerializeField] private TelemetryVisibility visibility;
 
     [Tooltip("Only cards under this root open the sheet: the portrait layout.")]
     [SerializeField] private RectTransform cardRoot;
@@ -173,7 +173,7 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour
         if (hintGroup != null)
             hintGroup.alpha = 0f;
         hintUntil = 0f;
-        modeController?.SetTelemetryCover(0f);
+        visibility?.SetCover(0f);
         ResetProjection();
     }
 
@@ -183,7 +183,7 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour
 
     private bool IsOwnCard(PerformanceStatCardView card) =>
         card != null && cardRoot != null && card.transform.IsChildOf(cardRoot) &&
-        (modeController == null || modeController.CurrentMode == DigitalTwinMode.Telemetry);
+        (visibility == null || visibility.CurrentMode == DigitalTwinMode.Telemetry);
 
     private void HandleDetailRequested(PerformanceStatCardView card)
     {
@@ -270,7 +270,7 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour
         blend = Mathf.MoveTowards(blend, target, Time.unscaledDeltaTime / transitionSeconds);
         float eased = blend * blend * (3f - 2f * blend);
 
-        modeController?.SetTelemetryCover(eased);
+        visibility?.SetCover(eased);
 
         if (panel != null)
         {

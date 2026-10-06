@@ -23,7 +23,7 @@ using UnityEngine.UI;
 /// card fits, the cards take the full width.
 ///
 /// The portrait layout shows a second panel over the whole screen (see
-/// PortraitServiceModeController): <see cref="fullScreen"/> drops its frame and
+/// PortraitServiceView): <see cref="fullScreen"/> drops its frame and
 /// stacks the detail's notes so they keep their width on a phone.
 /// </summary>
 [DisallowMultipleComponent]

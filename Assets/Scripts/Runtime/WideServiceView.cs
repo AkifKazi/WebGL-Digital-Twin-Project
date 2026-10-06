@@ -1,40 +1,32 @@
-using System;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>The two top-level views of the digital twin.</summary>
-public enum DigitalTwinMode
-{
-    Telemetry = 0,
-    Service = 1
-}
-
 /// <summary>
-/// Switches the wide layout between Telemetry and Service. Service hides every
-/// telemetry element (cards, leader lines, detail panels, pagination) and
-/// slides the service panel in from the right, full height, as a column of its
-/// own: the viewport narrows beside it as if the window had, so the bars and
-/// their controls sit left of the panel and the model centres in that space.
+/// The wide layout's Service view: slides the service panel in from the
+/// right, full height, as a column of its own while the layout's
+/// <see cref="TelemetryVisibility"/> blends to Service. The viewport narrows
+/// beside it as if the window had, so the bars and their controls sit left of
+/// the panel and the model centres in that space.
 ///
-/// Nothing is deactivated or rebuilt. The telemetry UI fades through
-/// CanvasGroups, and its content area is held at its full width while the
-/// viewport narrows, so the cards keep their layout and come back exactly as
-/// they were. The model moves by an off-centre projection rather than a
-/// smaller viewport, so orbiting and zoom behave as before.
+/// The telemetry content area is held at its full width while the viewport
+/// narrows, so the cards keep their layout and come back exactly as they
+/// were. The model moves by an off-centre projection rather than a smaller
+/// viewport, so orbiting and zoom behave as before. Fading is not done here:
+/// <see cref="TelemetryVisibility"/> fades the telemetry regions and the panel.
 ///
 /// Where the window is too narrow for the controls beside a panel, the panel
 /// sits over the right of the content area instead, between the bars.
 ///
 /// Opening a part's detail from its card pulls the camera back when the part
 /// is not all in view in the space left of the panel.
-///
-/// The chosen view is shared with the portrait layout's controller (see
-/// <see cref="DigitalTwinModeState"/>), so turning a phone keeps it.
 /// </summary>
 [DisallowMultipleComponent]
-[DefaultExecutionOrder(40)]
-public sealed class ServiceModeController : MonoBehaviour, IDigitalTwinModeController
+[DefaultExecutionOrder(41)]
+public sealed class WideServiceView : MonoBehaviour
 {
+    [Tooltip("This layout's telemetry visibility: it owns the view, and its blend places the panel.")]
+    [SerializeField] private TelemetryVisibility visibility;
+
     [SerializeField] private Camera targetCamera;
 
     [Tooltip("The service panel, a child of the layout that holds the viewport.")]
@@ -45,23 +37,6 @@ public sealed class ServiceModeController : MonoBehaviour, IDigitalTwinModeContr
 
     [Tooltip("The telemetry content area inside the viewport. Held at its full width while the viewport narrows.")]
     [SerializeField] private RectTransform contentArea;
-
-    [Tooltip("Shown in Service: the panel and the pins on the model.")]
-    [SerializeField] private CanvasGroup[] serviceGroups = Array.Empty<CanvasGroup>();
-
-    [Tooltip("Shown in Telemetry: rails, leader lines, detail panels, pagination.")]
-    [SerializeField] private CanvasGroup[] telemetryGroups = Array.Empty<CanvasGroup>();
-
-    [Tooltip("Optional. Its unpinned panel closes on entering Service.")]
-    [SerializeField] private TelemetryDetailPanelController detailPanels;
-
-    [Tooltip("Optional. Releases any focused telemetry card on entering Service.")]
-    [SerializeField] private TelemetryCardFocusReleaser focusReleaser;
-
-    [Tooltip("Seconds the switch between views takes.")]
-    [SerializeField, Min(0.01f)] private float transitionSeconds = 0.35f;
-
-    [SerializeField] private DigitalTwinMode startMode = DigitalTwinMode.Telemetry;
 
     [Header("Panel Width")]
     [SerializeField, Min(200f)] private float panelWidth = 560f;
@@ -76,8 +51,6 @@ public sealed class ServiceModeController : MonoBehaviour, IDigitalTwinModeContr
              "as a share of the screen's half-width and half-height.")]
     [SerializeField, Range(0f, 0.4f)] private float framingMargin = 0.06f;
 
-    private float blend;
-    private float appliedBlend = -1f;
     private bool projectionShifted;
     private bool layoutCaptured;
     private Vector2 viewportOffsetMax;
@@ -90,19 +63,16 @@ public sealed class ServiceModeController : MonoBehaviour, IDigitalTwinModeContr
     private Canvas rootCanvas;
     private static readonly Vector3[] Corners = new Vector3[4];
 
-    public DigitalTwinMode CurrentMode => DigitalTwinModeState.Get(startMode);
-
-    /// <summary>0 in Telemetry, 1 in Service, between the two while switching.</summary>
-    public float ServiceBlend => blend;
+    public TelemetryVisibility Visibility => visibility;
 
     /// <summary>True while the panel is a column beside the viewport rather than over it.</summary>
     public bool PanelBesideViewport { get; private set; }
 
-    public event Action<DigitalTwinMode> ModeChanged;
+    private float Blend => visibility != null ? visibility.ServiceBlend : 0f;
+    private float EasedBlend => visibility != null ? visibility.EasedServiceBlend : 0f;
 
     private void Awake()
     {
-        blend = Target;
         if (targetCamera == null)
             targetCamera = Camera.main;
         CaptureLayout();
@@ -110,10 +80,6 @@ public sealed class ServiceModeController : MonoBehaviour, IDigitalTwinModeContr
 
     private void OnEnable()
     {
-        // Returning to the wide layout lands on the chosen view straight away.
-        blend = Target;
-        appliedBlend = -1f;
-        ApplyGroups();
         if (panelView != null)
             panelView.PartOpened += HandlePartOpened;
         ServicePartLink.Requested += HandlePartRequested;
@@ -121,68 +87,19 @@ public sealed class ServiceModeController : MonoBehaviour, IDigitalTwinModeContr
 
     private void OnDisable()
     {
-        // The portrait layout has its own service view: leave the camera, the
-        // viewport and the telemetry UI as the rest of the app expects them.
+        // The portrait layout has its own service view: leave the camera and
+        // the viewport as the rest of the app expects them.
         if (panelView != null)
             panelView.PartOpened -= HandlePartOpened;
         ServicePartLink.Requested -= HandlePartRequested;
         ResetProjection();
         SetInset(0f);
-        SetGroups(telemetryGroups, 1f, true);
-        SetGroups(serviceGroups, 0f, false);
-        appliedBlend = -1f;
     }
-
-    public void SetMode(DigitalTwinMode mode)
-    {
-        if (mode == CurrentMode)
-            return;
-
-        DigitalTwinModeState.Set(mode);
-        if (mode == DigitalTwinMode.Service)
-        {
-            focusReleaser?.Dismiss();
-            detailPanels?.DismissUnpinned();
-        }
-
-        ModeChanged?.Invoke(mode);
-    }
-
-    private float Target => CurrentMode == DigitalTwinMode.Service ? 1f : 0f;
 
     private void LateUpdate()
     {
-        blend = Mathf.MoveTowards(blend, Target, Time.unscaledDeltaTime / transitionSeconds);
-        ApplyGroups();
         ApplyLayout();
         ApplyProjection();
-    }
-
-    private static float Ease(float t) => t * t * (3f - 2f * t);
-
-    private void ApplyGroups()
-    {
-        if (Mathf.Approximately(appliedBlend, blend))
-            return;
-        appliedBlend = blend;
-
-        // Eased so the two views cross over rather than both sitting at half.
-        float eased = Ease(blend);
-        bool service = CurrentMode == DigitalTwinMode.Service;
-        SetGroups(telemetryGroups, 1f - eased, !service);
-        SetGroups(serviceGroups, eased, service);
-    }
-
-    private static void SetGroups(CanvasGroup[] groups, float alpha, bool interactive)
-    {
-        foreach (CanvasGroup group in groups)
-        {
-            if (group == null)
-                continue;
-            group.alpha = alpha;
-            group.interactable = interactive;
-            group.blocksRaycasts = interactive && alpha > 0.5f;
-        }
     }
 
     // -----------------------------------------------------------------------
@@ -218,7 +135,7 @@ public sealed class ServiceModeController : MonoBehaviour, IDigitalTwinModeContr
         if (servicePanel == null || !(servicePanel.parent is RectTransform space))
             return;
 
-        float eased = Ease(blend);
+        float eased = EasedBlend;
         float available = space.rect.width;
         float width = Mathf.Min(panelWidth, available - minimumViewportWidth);
         bool beside = width >= minimumPanelWidth || viewport == null;
@@ -324,7 +241,7 @@ public sealed class ServiceModeController : MonoBehaviour, IDigitalTwinModeContr
     /// <summary>The telemetry sheet asked for a part's service detail: switch and open it.</summary>
     private void HandlePartRequested(MachinePartGroup part)
     {
-        SetMode(DigitalTwinMode.Service);
+        visibility?.SetMode(DigitalTwinMode.Service);
         if (panelView == null)
             return;
         panelView.ShowDetail(part);
@@ -377,7 +294,7 @@ public sealed class ServiceModeController : MonoBehaviour, IDigitalTwinModeContr
             return;
 
         // The panel slides in, so its left edge carries the transition.
-        float shift = blend > 0f ? PanelScreenShare() : 0f;
+        float shift = Blend > 0f ? PanelScreenShare() : 0f;
         if (shift <= 0.0001f)
         {
             ResetProjection();

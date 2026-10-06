@@ -26,12 +26,10 @@ public static class PortraitPaginationUISetup
     public static void Apply()
     {
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-        HybridHopperClipController hopper = UnityEngine.Object
-            .FindAnyObjectByType<HybridHopperClipController>(FindObjectsInactive.Include);
         StatRailManager portraitManager = StatRailManagers.Portrait(FindObjectsInactive.Include);
         StatRailManager wideManager = StatRailManagers.Wide(FindObjectsInactive.Include);
-        if (hopper == null || portraitManager == null || wideManager == null)
-            throw new InvalidOperationException("Telemetry managers or machine view controller are missing.");
+        if (portraitManager == null || wideManager == null)
+            throw new InvalidOperationException("Telemetry managers are missing.");
 
         RectTransform portraitBottom = FindInLayout("Portrait layout", "Bottom controls");
         RectTransform wideBottom = FindInLayout("Wide layout", "Bottom controls");
@@ -39,8 +37,9 @@ public static class PortraitPaginationUISetup
         if (portraitBottom == null || wideBottom == null || wideTop == null)
             throw new InvalidOperationException("Responsive control containers are missing.");
 
-        ConfigurePortrait(portraitBottom, portraitManager, hopper);
-        ConfigureWide(wideBottom, wideTop, wideManager, hopper);
+        // Missing before Set Up Service Mode has run; that wires the pagers to it.
+        ConfigurePortrait(portraitBottom, portraitManager, LayoutVisibility("Portrait layout"));
+        ConfigureWide(wideBottom, wideTop, wideManager, LayoutVisibility("Wide layout"));
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -48,10 +47,14 @@ public static class PortraitPaginationUISetup
         Debug.Log("Portrait and wide telemetry controls configured successfully.");
     }
 
+    private static TelemetryVisibility LayoutVisibility(string layout) =>
+        UnityEngine.Object.FindObjectsByType<TelemetryVisibility>(FindObjectsInactive.Include)
+            .FirstOrDefault(visibility => visibility.transform.parent != null && visibility.transform.parent.name == layout);
+
     private static void ConfigurePortrait(
         RectTransform bottom,
         StatRailManager manager,
-        HybridHopperClipController hopper)
+        TelemetryVisibility visibility)
     {
         RectTransform zoom = FindDescendant(bottom, "Camera Zoom Controls");
         RectTransform view = bottom.GetComponentsInChildren<ViewModeSegmentedControl>(true)
@@ -96,7 +99,7 @@ public static class PortraitPaginationUISetup
             "Next Telemetry Page", row, LoadSprite(NextIconPath), height, out Graphic nextIcon);
 
         ConfigurePager(
-            rowObject.AddComponent<PortraitTelemetryPager>(), manager, hopper, null,
+            rowObject.AddComponent<PortraitTelemetryPager>(), manager, visibility, null,
             previous, previous.GetComponent<CanvasGroup>(), previousIcon,
             next, next.GetComponent<CanvasGroup>(), nextIcon);
     }
@@ -105,7 +108,7 @@ public static class PortraitPaginationUISetup
         RectTransform bottom,
         RectTransform top,
         StatRailManager manager,
-        HybridHopperClipController hopper)
+        TelemetryVisibility visibility)
     {
         RectTransform zoom = FindDescendant(bottom, "Camera Zoom Controls");
         RectTransform view = bottom.GetComponentsInChildren<ViewModeSegmentedControl>(true)
@@ -172,7 +175,7 @@ public static class PortraitPaginationUISetup
         CanvasGroup paginationGroup = GetOrAddCanvasGroup(paginationObject);
 
         ConfigurePager(
-            paginationObject.AddComponent<PortraitTelemetryPager>(), manager, hopper,
+            paginationObject.AddComponent<PortraitTelemetryPager>(), manager, visibility,
             paginationGroup, previous, previousGroup, previousIcon,
             next, nextGroup, nextIcon);
     }
@@ -261,7 +264,7 @@ public static class PortraitPaginationUISetup
     private static void ConfigurePager(
         PortraitTelemetryPager pager,
         StatRailManager railManager,
-        HybridHopperClipController hopper,
+        TelemetryVisibility visibility,
         CanvasGroup paginationGroup,
         Button previous,
         CanvasGroup previousGroup,
@@ -272,7 +275,7 @@ public static class PortraitPaginationUISetup
     {
         SerializedObject data = new(pager);
         data.FindProperty("railManager").objectReferenceValue = railManager;
-        data.FindProperty("hopperController").objectReferenceValue = hopper;
+        data.FindProperty("visibility").objectReferenceValue = visibility;
         data.FindProperty("paginationCanvasGroup").objectReferenceValue = paginationGroup;
         data.FindProperty("previousButton").objectReferenceValue = previous;
         data.FindProperty("previousCanvasGroup").objectReferenceValue = previousGroup;

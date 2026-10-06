@@ -54,7 +54,9 @@ Select `Shared Machine View Controller` and assign:
 - compatible full-model renderers when the clip animation is used.
 
 The wide and portrait controls share this one controller, so Full Body and Cross Section
-cannot drift into different states. Cross-section geometry and clip values are necessarily
+cannot drift into different states. Telemetry follows the machine's inspection view through
+`IInspectionView`, which `MachineViewModeController` implements; a machine with different
+views implements it once, and each layout's `TelemetryVisibility` picks it up. Cross-section geometry and clip values are necessarily
 machine-specific. Orbit and zoom remain reusable as long as the camera target and distance
 limits are adjusted for the new model's bounds.
 

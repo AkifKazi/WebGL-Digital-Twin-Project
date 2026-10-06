@@ -7,14 +7,12 @@ using UnityEngine.UI;
 /// view-mode control: the selected segment takes the outlined sprite and cannot
 /// be pressed again, the other stays idle and shows the hover sprite.
 ///
-/// Drives its layout's controller: the wide layout's
-/// <see cref="ServiceModeController"/> or the portrait layout's
-/// <see cref="PortraitServiceModeController"/>.
+/// Drives its layout's <see cref="TelemetryVisibility"/>.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class DigitalTwinModeSwitch : MonoBehaviour
 {
-    [Tooltip("A component implementing IDigitalTwinModeController.")]
+    [Tooltip("A component implementing IDigitalTwinModeController: the layout's Telemetry Visibility.")]
     [SerializeField] private MonoBehaviour controller;
     [SerializeField] private Button telemetryButton;
     [SerializeField] private Button serviceButton;
