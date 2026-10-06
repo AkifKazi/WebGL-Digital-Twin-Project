@@ -356,28 +356,60 @@ opacity rather than replacing it. Warning and critical lines fade to **Reversed 
 Line Opacity** (8%); their anchor keeps full strength so the sensor stays findable.
 **Keep Alarm Lines Opaque When Reversed** keeps them at full opacity.
 
-The **Secondary Rails** setting on the telemetry detail panel controller defaults to
-**Off**: there are no inner rails and cards use the primary rails and further pages. Choose
-**Detail Panel** to turn on the extra-info panel, or **Telemetry Cards** to fill the inner
-rails with cards.
+## Telemetry layout settings
+
+**Telemetry Layout Settings**, on the *Layout controller* object beside the responsive
+shell, sets the rails for every screen in one place (add it with **Tools > Digital Twin >
+Set Up Telemetry Layout Settings** if the scene does not have it yet):
+
+| Setting | Screen |
+| --- | --- |
+| Desktop Columns | desktop browser, window wider than tall: card columns each side of the model |
+| Desktop Rows | desktop browser, window taller than wide (portrait monitor): card rows above and below |
+| Mobile Columns | phone or tablet held sideways |
+| Mobile Rows | phone or tablet held upright |
+| Desktop Detail Panel / Mobile Detail Panel | whether a card opens its history panel |
+
+Each count is **Auto** or 1 to 4 rails per side. Rails are generated beside the two
+authored ones as needed and removed again; a rail other than the outermost shows only
+while it holds a card on the current page, so the model keeps the room. **Auto** adds rails
+while the model keeps **Auto Model Share** of the screen across them (40% by default). A set
+number is kept below that share as long as the rails and the history panel still fit; asking
+for more than fit shows as many as do and logs a warning. Changes made while playing apply
+at once.
+
+The history panel has a **detail rail** of its own, between the card rails and the model,
+and never takes a card rail. Beside card columns it is **Detail Rail Width** times a column's
+width; between card rows it keeps **Detail Rail Height**, and rows that would leave less are
+not added. On a desktop a click on a card opens its panel; on a phone the first tap marks the
+card and a second tap opens it. Held upright, a phone shows the panel as a sheet from the
+bottom instead, because a panel beside the rows would not fit. Panels open from rows hang
+below the top rows or stand above the bottom rows, pointing at their card.
 
 ## Responsive rail allocation
 
-The outer rails are always evaluated first. A presentation that does not fit
-its preferred outer rail is offered to the opposite outer rail before either
-inner overflow rail is enabled. Allocation order is preferred outer, opposite outer,
-preferred inner, opposite inner, then the next portrait page when none has physical
-capacity. Alarm severity and display priority determine page order, with alarms on page
-one. A new or worsening alarm returns the rails to page one; an alarm clearing
-leaves the viewer on the page they are reading. A sensor behind the camera keeps
-its card (its leader line hides until the sensor is in view again). The arrow beside the zoom controls fades out over 0.3 seconds when its direction has
-no page. Inner rails remain inactive when the outer rails hold all content, preserving
-the maximum stage area.
+Rails fill one depth at a time: a card goes to the outermost rail on its sensor's side, then
+the outermost on the other side, then the next rail in on its own side, and so on, then the
+next page when none has room. Alarm severity and display priority determine page order, with
+alarms on page one. A new or worsening alarm returns the rails to page one; an alarm
+clearing leaves the viewer on the page they are reading.
+
+A rebuild (an alarm, a page, a resize, a language) keeps every card that stays on screen:
+the same card object, on the same side unless its sensor has clearly crossed the middle of
+the screen, gliding on from where it was; its leader line carries on unchanged. A sensor off
+screen, or behind the camera, is held just past the screen edge in the direction it lies,
+so its card stays on that side and its line runs off that edge towards it; the held point
+runs on smoothly from the true projection, so nothing jumps as the camera turns. Leader
+lines are drawn after the rails, the detail panels and any shifted camera projection each
+frame, so both ends always meet this frame's card and sensor. The arrow beside the zoom
+controls fades out over 0.3 seconds when its direction has no page.
 
 Layout selection uses device class as well as orientation. Desktop/laptop WebGL
-keeps the wide interface on a portrait monitor, including 1080x1920 displays.
-Mobile browsers may switch between mobile portrait and landscape layouts. The
-device mode can be overridden in `ResponsiveLayoutShell` for testing.
+keeps the wide interface on a portrait monitor, including 1080x1920 displays;
+there the telemetry cards run in rows above and below the model, as on a phone
+held upright, instead of columns beside it. Mobile browsers may switch between mobile
+portrait and landscape layouts. The device mode can be overridden in
+`ResponsiveLayoutShell` for testing.
 
 The initial equipment values are plausible placeholders for a 22 kW, 400 V,
 approximately 1480 rpm drive and an 80 m³ hopper. Replace nameplate values,

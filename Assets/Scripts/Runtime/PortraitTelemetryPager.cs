@@ -5,8 +5,8 @@ using UnityEngine.UI;
 public sealed class PortraitTelemetryPager : MonoBehaviour
 {
     [Header("Pagination")]
-    [SerializeField] private PortraitStatRailManager railManager;
-    [SerializeField] private WideStatRailManager wideRailManager;
+    [Tooltip("The rails of the layout whose pages these buttons turn.")]
+    [SerializeField] private StatRailManager railManager;
 
     [Header("Telemetry visibility")]
     [Tooltip("Pagination is available only while telemetry is visible in Cross Section view.")]
@@ -30,15 +30,13 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
 
     private bool listenersAdded;
 
-    public PortraitStatRailManager RailManager => railManager;
-    public WideStatRailManager WideRailManager => wideRailManager;
+    public StatRailManager RailManager => railManager;
     public HybridHopperClipController HopperController => hopperController;
     public CanvasGroup PaginationCanvasGroup => paginationCanvasGroup;
     public Button PreviousButton => previousButton;
     public Button NextButton => nextButton;
     public Graphic PreviousIcon => previousIcon;
     public Graphic NextIcon => nextIcon;
-    public bool HasExactlyOneRailManager => (railManager != null) != (wideRailManager != null);
 
     private void Awake()
     {
@@ -91,12 +89,6 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
             railManager.PaginationChanged += HandlePaginationChanged;
         }
 
-        if (wideRailManager != null)
-        {
-            wideRailManager.PaginationChanged -= HandlePaginationChanged;
-            wideRailManager.PaginationChanged += HandlePaginationChanged;
-        }
-
         if (hopperController != null)
         {
             hopperController.ViewStateChanged -= HandleViewStateChanged;
@@ -108,8 +100,6 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
     {
         if (railManager != null)
             railManager.PaginationChanged -= HandlePaginationChanged;
-        if (wideRailManager != null)
-            wideRailManager.PaginationChanged -= HandlePaginationChanged;
         if (hopperController != null)
             hopperController.ViewStateChanged -= HandleViewStateChanged;
     }
@@ -118,16 +108,12 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
     {
         if (railManager != null)
             railManager.ShowPreviousPage();
-        else
-            wideRailManager?.ShowPreviousPage();
     }
 
     private void ShowNextPage()
     {
         if (railManager != null)
             railManager.ShowNextPage();
-        else
-            wideRailManager?.ShowNextPage();
     }
 
     private void HandlePaginationChanged(int currentPageIndex, int pageCount)
@@ -168,17 +154,9 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
             canGoForward);
     }
 
-    private int PageCount => railManager != null
-        ? railManager.PageCount
-        : wideRailManager != null ? wideRailManager.PageCount : 1;
-
-    private bool CanShowPreviousPage => railManager != null
-        ? railManager.CanShowPreviousPage
-        : wideRailManager != null && wideRailManager.CanShowPreviousPage;
-
-    private bool CanShowNextPage => railManager != null
-        ? railManager.CanShowNextPage
-        : wideRailManager != null && wideRailManager.CanShowNextPage;
+    private int PageCount => railManager != null ? railManager.PageCount : 1;
+    private bool CanShowPreviousPage => railManager != null && railManager.CanShowPreviousPage;
+    private bool CanShowNextPage => railManager != null && railManager.CanShowNextPage;
 
     private void ApplyAvailability(
         Button button,

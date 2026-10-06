@@ -65,7 +65,7 @@ the setup tool must reproduce it later.
 
 ## 5. Select sensor discovery
 
-Keep `TelemetryRegistry`, `WideStatRailManager`, and `PortraitStatRailManager` on **Scene Discovery** for the normal modular workflow. Sources inside the loaded machine prefab are then selected by one shared rule.
+Keep `TelemetryRegistry` and both layouts' `StatRailManager` components on **Scene Discovery** for the normal modular workflow. Sources inside the loaded machine prefab are then selected by one shared rule.
 
 Use **Explicit List** only when the scene deliberately contains sensors that must not appear in a particular twin view.
 

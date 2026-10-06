@@ -112,7 +112,7 @@ public static class PortraitServiceModePlayTest
                 break;
 
             case 1:
-                Object.FindAnyObjectByType<PortraitStatRailManager>()?.RebuildLayout();
+                StatRailManagers.Portrait()?.RebuildLayout();
                 Expect(controller.CurrentMode == DigitalTwinMode.Telemetry, "the app starts in Telemetry");
                 Expect(telemetryGroups.All(g => g.alpha > 0.99f && g.blocksRaycasts), "every telemetry element is visible");
                 Expect(PanelGroup().alpha < 0.01f && !PanelGroup().blocksRaycasts, "the service panel is hidden");
@@ -254,7 +254,7 @@ public static class PortraitServiceModePlayTest
 
             case 12:
                 Canvas.ForceUpdateCanvases();
-                Object.FindAnyObjectByType<PortraitStatRailManager>()?.RebuildLayout();
+                StatRailManagers.Portrait()?.RebuildLayout();
                 Next(0.3f);
                 break;
 

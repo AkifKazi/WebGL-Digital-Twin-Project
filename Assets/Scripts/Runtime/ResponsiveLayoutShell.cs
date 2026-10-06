@@ -55,6 +55,11 @@ public class ResponsiveLayoutShell : MonoBehaviour
     [Tooltip("Scales the mobile-landscape bottom control groups. Their layout spacing and occupied width follow this value automatically; desktop and portrait remain unchanged.")]
     [SerializeField, Range(1f, 1.5f)] private float mobileLandscapeBottomControlScale = 1.1f;
 
+    [Header("Telemetry")]
+    [Tooltip("Rail counts and the history panel for every screen. Empty uses the one on this " +
+             "object, then the scene's.")]
+    [SerializeField] private TelemetryLayoutSettings telemetrySettings;
+
     [Header("Resize resilience")]
     [SerializeField, Range(0.05f, 0.5f), Tooltip("Wait for browser and orientation resizing to settle before rebuilding telemetry cards.")]
     private float resizeSettleSeconds = 0.15f;
@@ -69,6 +74,13 @@ public class ResponsiveLayoutShell : MonoBehaviour
     private Rect previousSafeArea;
     private Coroutine telemetryRebuildRoutine;
     private Coroutine resizeRefreshRoutine;
+    private StatRailManager wideRailManager;
+    private StatRailManager portraitRailManager;
+    private TelemetryDetailPanelController detailPanels;
+    private PortraitTelemetrySheetController telemetrySheet;
+    private bool telemetryLookupDone;
+    private bool lastMobile;
+    private bool lastVerticalDesktop;
     private readonly Dictionary<Transform, Vector3> bottomControlBaseScales = new();
     private float bottomControlsBaseHeight = -1f;
     private float bottomControlsBaseSpacing = -1f;
@@ -84,6 +96,16 @@ public class ResponsiveLayoutShell : MonoBehaviour
     private void Start()
     {
         RefreshLayout(true);
+    }
+
+    private void OnEnable()
+    {
+        if (telemetrySettings == null)
+            telemetrySettings = GetComponent<TelemetryLayoutSettings>();
+        if (telemetrySettings == null)
+            telemetrySettings = FindAnyObjectByType<TelemetryLayoutSettings>(FindObjectsInactive.Include);
+        if (telemetrySettings != null)
+            telemetrySettings.Changed += HandleTelemetrySettingsChanged;
     }
 
     private void Update()
@@ -133,6 +155,7 @@ public class ResponsiveLayoutShell : MonoBehaviour
 
         ApplyCanvasSettings();
         ApplyVerticalDesktopControlSafety(!mobile && aspect < 1f);
+        ApplyTelemetryProfiles(mobile, !mobile && aspect < 1f);
         ApplyMobileLandscapeControlScale(
             mobile && currentMode == LayoutMode.Landscape);
         Canvas.ForceUpdateCanvases();
@@ -192,6 +215,8 @@ public class ResponsiveLayoutShell : MonoBehaviour
 
     private void OnDisable()
     {
+        if (telemetrySettings != null)
+            telemetrySettings.Changed -= HandleTelemetrySettingsChanged;
         if (telemetryRebuildRoutine != null)
         {
             StopCoroutine(telemetryRebuildRoutine);
@@ -206,20 +231,12 @@ public class ResponsiveLayoutShell : MonoBehaviour
 
     private void RebuildActiveTelemetryLayout()
     {
-        if (currentMode == LayoutMode.Landscape && landscapeLayout != null)
-        {
-            WideStatRailManager manager =
-                landscapeLayout.GetComponentInChildren<WideStatRailManager>(true);
-            if (manager != null && manager.isActiveAndEnabled)
-                manager.RebuildLayout();
-        }
-        else if (portraitLayout != null)
-        {
-            PortraitStatRailManager manager =
-                portraitLayout.GetComponentInChildren<PortraitStatRailManager>(true);
-            if (manager != null && manager.isActiveAndEnabled)
-                manager.RebuildLayout();
-        }
+        FindTelemetry();
+        StatRailManager manager = currentMode == LayoutMode.Landscape
+            ? wideRailManager
+            : portraitRailManager;
+        if (manager != null && manager.isActiveAndEnabled)
+            manager.RebuildLayout();
     }
 
     private LayoutMode DetermineMode(float aspect, bool mobile)
@@ -322,6 +339,65 @@ public class ResponsiveLayoutShell : MonoBehaviour
         }
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(baseLayout);
+    }
+
+    /// <summary>
+    /// Hands each telemetry layout what the <see cref="TelemetryLayoutSettings"/>
+    /// ask of this screen: how many rails, rows or columns, and whether the
+    /// history panel opens. A desktop window taller than it is wide keeps the
+    /// desktop controls but runs the cards in rows above and below the model,
+    /// as on a phone held upright, instead of squeezing them into columns.
+    /// The rails take it up at the rebuild that follows every layout change.
+    /// </summary>
+    private void ApplyTelemetryProfiles(bool mobile, bool verticalDesktop)
+    {
+        lastMobile = mobile;
+        lastVerticalDesktop = verticalDesktop;
+        FindTelemetry();
+
+        TelemetryLayoutProfile wide = Resolve(mobile, verticalDesktop);
+        TelemetryLayoutProfile upright = Resolve(true, true);
+        if (wideRailManager != null)
+            wideRailManager.SetLayoutProfile(wide);
+        if (portraitRailManager != null)
+            portraitRailManager.SetLayoutProfile(upright);
+        if (detailPanels != null)
+            detailPanels.SetFeatureEnabled(wide.DetailPanel);
+        if (telemetrySheet != null)
+            telemetrySheet.SetFeatureEnabled(upright.DetailPanel);
+    }
+
+    private TelemetryLayoutProfile Resolve(bool mobile, bool rows) => telemetrySettings != null
+        ? telemetrySettings.Resolve(mobile, rows)
+        : new TelemetryLayoutProfile(rows, TelemetryRailCount.Auto, true);
+
+    // Changed in the inspector while playing: the rails follow at once.
+    private void HandleTelemetrySettingsChanged()
+    {
+        if (!initialized)
+            return;
+        ApplyTelemetryProfiles(lastMobile, lastVerticalDesktop);
+        if (wideRailManager != null && wideRailManager.isActiveAndEnabled)
+            wideRailManager.RequestRebuild();
+        if (portraitRailManager != null && portraitRailManager.isActiveAndEnabled)
+            portraitRailManager.RequestRebuild();
+    }
+
+    private void FindTelemetry()
+    {
+        if (telemetryLookupDone)
+            return;
+        telemetryLookupDone = true;
+        if (landscapeLayout != null)
+        {
+            wideRailManager = landscapeLayout.GetComponentInChildren<StatRailManager>(true);
+            detailPanels = landscapeLayout.GetComponentInChildren<TelemetryDetailPanelController>(true);
+        }
+        if (portraitLayout != null)
+        {
+            portraitRailManager = portraitLayout.GetComponentInChildren<StatRailManager>(true);
+            telemetrySheet = portraitLayout.GetComponentInChildren<PortraitTelemetrySheetController>(true);
+        }
     }
 
     private void ApplyMobileLandscapeControlScale(bool enlarge)

@@ -481,7 +481,7 @@ public static class ServiceModePlayTest
         // The rails lay out from a start-up coroutine that waits for the end of
         // a frame, which batch play mode never presents; build them directly,
         // as the detail panel test does.
-        Object.FindAnyObjectByType<WideStatRailManager>()?.RebuildLayout();
+        StatRailManagers.Wide()?.RebuildLayout();
     }
 
     private static void RecordError(string message, string stackTrace, LogType type)

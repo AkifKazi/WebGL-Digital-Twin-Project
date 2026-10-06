@@ -1103,8 +1103,11 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
                             baseHeaderHeight + Mathf.Max(0, lines - 1) * lineHeight);
                     }
                     label.maxVisibleLines = maximumWrappedLines;
-                    scroller.enabled = false;
-                    scroller.ResetMotion();
+                    if (scroller.enabled)
+                    {
+                        scroller.enabled = false;
+                        scroller.ResetMotion();
+                    }
                     return;
                 }
             }
@@ -1117,10 +1120,18 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
             label.textWrappingMode = TextWrappingModes.NoWrap;
             label.overflowMode = TextOverflowModes.Overflow;
             label.maxVisibleLines = 1;
-            scroller.enabled = true;
+
+            // Every reading refreshes the card, several times a second. Starting
+            // the slide over on each one held the label at its first pause, and
+            // capturing the resting position mid-slide left it stuck part way.
+            // The resting position is the one captured when the slot was set up;
+            // the scroller starts over by itself when the text or motion changes.
+            if (!scroller.enabled)
+            {
+                scroller.enabled = true;
+                scroller.ResetMotion();
+            }
             scroller.SetMotion(motion);
-            scroller.CaptureRestingPosition();
-            scroller.ResetMotion();
         }
 
         private void PrepareHeaderViewport()

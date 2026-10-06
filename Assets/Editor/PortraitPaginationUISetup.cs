@@ -28,10 +28,8 @@ public static class PortraitPaginationUISetup
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
         HybridHopperClipController hopper = UnityEngine.Object
             .FindAnyObjectByType<HybridHopperClipController>(FindObjectsInactive.Include);
-        PortraitStatRailManager portraitManager = UnityEngine.Object
-            .FindAnyObjectByType<PortraitStatRailManager>(FindObjectsInactive.Include);
-        WideStatRailManager wideManager = UnityEngine.Object
-            .FindAnyObjectByType<WideStatRailManager>(FindObjectsInactive.Include);
+        StatRailManager portraitManager = StatRailManagers.Portrait(FindObjectsInactive.Include);
+        StatRailManager wideManager = StatRailManagers.Wide(FindObjectsInactive.Include);
         if (hopper == null || portraitManager == null || wideManager == null)
             throw new InvalidOperationException("Telemetry managers or machine view controller are missing.");
 
@@ -52,7 +50,7 @@ public static class PortraitPaginationUISetup
 
     private static void ConfigurePortrait(
         RectTransform bottom,
-        PortraitStatRailManager manager,
+        StatRailManager manager,
         HybridHopperClipController hopper)
     {
         RectTransform zoom = FindDescendant(bottom, "Camera Zoom Controls");
@@ -98,7 +96,7 @@ public static class PortraitPaginationUISetup
             "Next Telemetry Page", row, LoadSprite(NextIconPath), height, out Graphic nextIcon);
 
         ConfigurePager(
-            rowObject.AddComponent<PortraitTelemetryPager>(), manager, null, hopper, null,
+            rowObject.AddComponent<PortraitTelemetryPager>(), manager, hopper, null,
             previous, previous.GetComponent<CanvasGroup>(), previousIcon,
             next, next.GetComponent<CanvasGroup>(), nextIcon);
     }
@@ -106,7 +104,7 @@ public static class PortraitPaginationUISetup
     private static void ConfigureWide(
         RectTransform bottom,
         RectTransform top,
-        WideStatRailManager manager,
+        StatRailManager manager,
         HybridHopperClipController hopper)
     {
         RectTransform zoom = FindDescendant(bottom, "Camera Zoom Controls");
@@ -174,7 +172,7 @@ public static class PortraitPaginationUISetup
         CanvasGroup paginationGroup = GetOrAddCanvasGroup(paginationObject);
 
         ConfigurePager(
-            paginationObject.AddComponent<PortraitTelemetryPager>(), null, manager, hopper,
+            paginationObject.AddComponent<PortraitTelemetryPager>(), manager, hopper,
             paginationGroup, previous, previousGroup, previousIcon,
             next, nextGroup, nextIcon);
     }
@@ -262,8 +260,7 @@ public static class PortraitPaginationUISetup
 
     private static void ConfigurePager(
         PortraitTelemetryPager pager,
-        PortraitStatRailManager portraitManager,
-        WideStatRailManager wideManager,
+        StatRailManager railManager,
         HybridHopperClipController hopper,
         CanvasGroup paginationGroup,
         Button previous,
@@ -274,8 +271,7 @@ public static class PortraitPaginationUISetup
         Graphic nextIcon)
     {
         SerializedObject data = new(pager);
-        data.FindProperty("railManager").objectReferenceValue = portraitManager;
-        data.FindProperty("wideRailManager").objectReferenceValue = wideManager;
+        data.FindProperty("railManager").objectReferenceValue = railManager;
         data.FindProperty("hopperController").objectReferenceValue = hopper;
         data.FindProperty("paginationCanvasGroup").objectReferenceValue = paginationGroup;
         data.FindProperty("previousButton").objectReferenceValue = previous;

@@ -13,11 +13,12 @@ using UnityEngine.UI;
 /// Batch-only play test of the telemetry detail panel and the control hover
 /// states. Clicks through the behaviour (open, glide, release on an outside
 /// click, pin into a second panel, a camera drag that must change nothing, the
-/// range buttons, hover on idle, selected and pressed controls, handing the
-/// secondary rails back to cards, then turning them off, with reversed leader
-/// lines fading and the HD control sized like the zoom panel) and saves a 1920x1080 capture of each step,
-/// UI included, to Logs/DetailPanelTest. Exits the editor when done. Never
-/// saves the scene.
+/// range buttons, hover on idle, selected and pressed controls, two card
+/// columns per side with the panel on its own detail rail beside them, rows in
+/// a window taller than wide with the panel opening below a top-row card, the
+/// panel switched off, reversed leader lines fading and the SD / HD control
+/// sized like the zoom panel) and saves a capture of each step, UI included,
+/// to Logs/DetailPanelTest. Exits the editor when done. Never saves the scene.
 ///
 /// Run without -quit: the editor has to stay open while play mode runs.
 /// </summary>
@@ -31,6 +32,8 @@ public static class TelemetryDetailPanelPlayTest
 
     // Empty scene over the conveyor, clear of every rail, panel and control.
     private static readonly Vector2 OutsidePoint = new(1200f, 300f);
+    // The same in the 1080x1920 capture: the model, between the rows.
+    private static readonly Vector2 PortraitModelPoint = new(540f, 900f);
 
     private static readonly FieldInfo EmphasisField = typeof(PerformanceStatCardView)
         .GetField("connectionEmphasis", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -40,7 +43,7 @@ public static class TelemetryDetailPanelPlayTest
     private static Camera captureCamera;
     private static TelemetryDetailPanelController controller;
     private static TelemetryCardFocusReleaser releaser;
-    private static WideStatRailManager rails;
+    private static StatRailManager rails;
     private static List<PerformanceStatCardView> leftCards = new();
     private static List<PerformanceStatCardView> rightCards = new();
     private static Button xray;
@@ -81,6 +84,9 @@ public static class TelemetryDetailPanelPlayTest
 
         if (!EditorApplication.isPlaying)
             return;
+        // A batch editor opens behind other windows; keep play mode running
+        // there. Only this session's flag, not the project setting.
+        Application.runInBackground = true;
         float t = Time.time;
         if (step == 0 && t <= 3f)
             return;
@@ -98,8 +104,10 @@ public static class TelemetryDetailPanelPlayTest
 
             case 1:
                 FindCards();
-                Expect(rails.SecondaryRailsReserved && !rails.HasSecondaryRailCards,
-                    "the secondary rails are kept for the panel and hold no cards");
+                Expect(rails.DetailRailActive && rails.GetDetailRail(StatRailSide.Left) != null &&
+                       rails.GetDetailRail(StatRailSide.Right) != null,
+                    "the panel has a detail rail of its own on each side");
+                ExpectNoCardOnDetailRails();
                 Capture("01-rest");
                 Click(leftCards[0]);
                 Next(1.2f);
@@ -256,51 +264,107 @@ public static class TelemetryDetailPanelPlayTest
                     Expect(IsHovering(next.gameObject), "hovering the next-page button shows the hover sprite");
                     Exit(next.gameObject);
                 }
-                SetSecondaryRails(SecondaryRailUse.TelemetryCards);
+                // Two card columns a side, with the panel's rail beside them.
+                SetProfile(false, TelemetryRailCount.Two, true);
                 Next(1.5f);
                 break;
             }
 
             case 17:
-                Capture("15-secondary-rails-for-cards");
-                Expect(!rails.SecondaryRailsReserved && controller.OpenPanels.Count == 0,
-                    "choosing Telemetry Cards hands the rails back and closes the panels");
-                Debug.Log($"DETAIL_PANEL_TEST cards mode: secondaryCards={rails.HasSecondaryRailCards} pages={rails.PageCount}");
+            {
                 FindCards();
-                Click(leftCards[0]);
-                Expect(controller.OpenPanels.Count == 0, "with the rails used for cards a click opens no panel");
-                releaser.HandlePointerGesture(OutsidePoint, OutsidePoint);
-                SetSecondaryRails(SecondaryRailUse.DetailPanel);
-                Next(1.5f);
+                Expect(rails.RailsPerSide == 2 && rails.DetailRailActive, "two columns a side and the detail rail");
+                ExpectNoCardOnDetailRails();
+                PerformanceStatCardView inner = AllCards().FirstOrDefault(card =>
+                    rails.OwnsCard(card) && card.transform.parent.parent == rails.GetRail(card.RailSide, 1));
+                Debug.Log($"DETAIL_PANEL_TEST two columns: secondaryCards={rails.HasSecondaryRailCards} " +
+                          $"inner card={(inner != null ? inner.BoundSource.MetricName : "none")} pages={rails.PageCount}");
+                Click(inner != null ? inner : leftCards[0]);
+                Next(1f);
                 break;
+            }
 
             case 18:
-                Capture("16-back-to-detail-panel");
-                Expect(rails.SecondaryRailsReserved && !rails.HasSecondaryRailCards,
-                    "switching back keeps the rails for the panel again");
-                SetSecondaryRails(SecondaryRailUse.Off);
-                Next(1.5f);
-                break;
-
-            case 19:
             {
-                Capture("17-secondary-rails-off");
-                FindCards();
-                RectTransform innerLeft = rails.GetRail(StatRailSide.Left, true);
-                RectTransform innerRight = rails.GetRail(StatRailSide.Right, true);
-                Expect(rails.SecondaryRailsReserved && !rails.HasSecondaryRailCards &&
-                       (innerLeft == null || !innerLeft.gameObject.activeInHierarchy) &&
-                       (innerRight == null || !innerRight.gameObject.activeInHierarchy),
-                    "Off leaves no secondary rails, only the primary ones");
-                Click(leftCards[0]);
-                Expect(controller.OpenPanels.Count == 0, "with the rails off a click opens no panel");
+                Capture("15-two-columns-with-panel");
+                TelemetryDetailPanel panel = controller.FloatingPanel;
+                Expect(panel != null, "a card on the second column opens its panel");
+                if (panel != null)
+                {
+                    Expect(InsideDetailRail(panel), "the panel sits on the detail rail, clear of every card rail");
+                    Expect(!OverlapsAnyCard(panel), "the panel covers no card");
+                }
                 releaser.HandlePointerGesture(OutsidePoint, OutsidePoint);
-                CheckQualityControlSize();
+                // A window taller than wide: rows above and below the model.
+                UsePortraitCapture(true);
+                SetProfile(true, TelemetryRailCount.Auto, true);
                 Next(1.5f);
                 break;
             }
 
+            case 19:
+            {
+                // The capture's canvas took its new size after the first rebuild.
+                rails.RebuildLayout();
+                IEnumerable<PerformanceStatCardView> rowCards = AllCards().Where(card => rails.OwnsCard(card));
+                PerformanceStatCardView top = rowCards.Where(card => card.RailSide == StatRailSide.Top)
+                    .OrderBy(card => card.transform.position.x).FirstOrDefault();
+                Expect(rails.RailsAreRows && top != null && rowCards.All(card => card.RailSide is StatRailSide.Top or StatRailSide.Bottom),
+                    "a tall window runs the cards in rows");
+                Expect(rails.RailsPerSide >= 2, "Auto runs more than one row an edge in a 1080x1920 window");
+                Debug.Log($"DETAIL_PANEL_TEST rows: perSide={rails.RailsPerSide} top={rowCards.Count(c => c.RailSide == StatRailSide.Top)} " +
+                          $"bottom={rowCards.Count(c => c.RailSide == StatRailSide.Bottom)} pages={rails.PageCount}");
+                if (top != null)
+                    Click(top);
+                Next(1f);
+                break;
+            }
+
             case 20:
+            {
+                Capture("16-rows-with-panel");
+                TelemetryDetailPanel panel = controller.FloatingPanel;
+                Expect(panel != null && panel.Side == StatRailSide.Top,
+                    "in rows a click on a top card opens its panel (it used to open nothing)");
+                if (panel != null)
+                {
+                    Expect(InsideDetailRail(panel), "the row panel hangs from the top rows, on the detail rail");
+                    Expect(!OverlapsAnyCard(panel), "the row panel covers no card");
+                }
+                releaser.HandlePointerGesture(PortraitModelPoint, PortraitModelPoint);
+                SetProfile(true, TelemetryRailCount.Auto, false);
+                Next(1.5f);
+                break;
+            }
+
+            case 21:
+            {
+                Capture("17-rows-panel-off");
+                PerformanceStatCardView top = AllCards().FirstOrDefault(card =>
+                    rails.OwnsCard(card) && card.RailSide == StatRailSide.Top);
+                Expect(!rails.DetailRailActive && rails.GetDetailRail(StatRailSide.Top) == null,
+                    "with the panel off there is no detail rail");
+                if (top != null)
+                    Click(top);
+                Expect(controller.OpenPanels.Count == 0, "with the panel off a click opens no panel");
+                releaser.HandlePointerGesture(PortraitModelPoint, PortraitModelPoint);
+                UsePortraitCapture(false);
+                SetProfile(false, TelemetryRailCount.Auto, true);
+                Next(1.5f);
+                break;
+            }
+
+            case 22:
+                rails.RebuildLayout();
+                FindCards();
+                Expect(!rails.RailsAreRows && rails.RailsPerSide == 2,
+                    "back in the wide window Auto runs two columns a side again");
+                CheckQualityControlSize();
+                // Lines fade over 0.7 s as they start or stop crossing a card.
+                Next(1.5f);
+                break;
+
+            case 23:
             {
                 Capture("18-reversed-lines");
                 StatLeaderLineView[] lines = Object.FindObjectsByType<StatLeaderLineView>()
@@ -311,8 +375,10 @@ public static class TelemetryDetailPanelPlayTest
                           string.Join(", ", lines.Where(line => line.IsReversed).Select(line => line.Source.MetricName)));
                 Expect(lines.Where(line => line.IsReversed).All(line => line.DirectionOpacity <= line.FadedDirectionOpacity + 0.001f),
                     "lines turning back across their card fade");
-                Expect(lines.Where(line => !line.IsReversed).All(line => line.DirectionOpacity >= 0.999f),
-                    "lines leaving their card keep their opacity");
+                foreach (StatLeaderLineView line in lines.Where(line => !line.IsReversed && !line.IsCrossingCard && line.DirectionOpacity < 0.999f))
+                    Debug.Log($"DETAIL_PANEL_TEST faded but clear: '{line.Source.MetricName}' opacity={line.DirectionOpacity:F3}");
+                Expect(lines.Where(line => !line.IsReversed && !line.IsCrossingCard).All(line => line.DirectionOpacity >= 0.999f),
+                    "lines leaving their card, clear of other cards, keep their opacity");
 
                 // Pull a left-rail sensor behind its card (play mode only; the
                 // scene is never saved) so the line has to turn back across it.
@@ -327,7 +393,7 @@ public static class TelemetryDetailPanelPlayTest
                 break;
             }
 
-            case 21:
+            case 24:
                 Debug.Log($"DETAIL_PANEL_TEST reversing '{reversalLine.Source.MetricName}' state={reversalLine.Card.VisualState} " +
                           $"reversed={reversalLine.IsReversed} opacity={reversalLine.DirectionOpacity:F3}");
                 Expect(reversalLine.IsReversed && reversalLine.DirectionOpacity < 0.95f &&
@@ -336,7 +402,7 @@ public static class TelemetryDetailPanelPlayTest
                 Next(0.6f);
                 break;
 
-            case 22:
+            case 25:
                 Capture("19-reversed-line-faded");
                 Expect(reversalLine.IsReversed && Mathf.Abs(reversalLine.DirectionOpacity - reversalLine.FadedDirectionOpacity) < 0.001f,
                     $"after 0.7 s the reversed line is at its faded opacity ({reversalLine.FadedDirectionOpacity:P0})");
@@ -344,7 +410,7 @@ public static class TelemetryDetailPanelPlayTest
                 Next(1f);
                 break;
 
-            case 23:
+            case 26:
                 Capture("20-reversed-line-restored");
                 Expect(!reversalLine.IsReversed && reversalLine.DirectionOpacity >= 0.999f,
                     "back in front of its card the line returns to its usual opacity");
@@ -365,7 +431,7 @@ public static class TelemetryDetailPanelPlayTest
                 Next(1f);
                 break;
 
-            case 24:
+            case 27:
                 Capture("21-line-across-card-faded");
                 Debug.Log($"DETAIL_PANEL_TEST across '{reversalLine.Source.MetricName}' crossing={reversalLine.IsCrossingCard} " +
                           $"reversed={reversalLine.IsReversed} opacity={reversalLine.DirectionOpacity:F3}");
@@ -376,7 +442,7 @@ public static class TelemetryDetailPanelPlayTest
                 Next(1f);
                 break;
 
-            case 25:
+            case 28:
                 Capture("22-line-across-card-restored");
                 Expect(!reversalLine.IsCrossingCard && reversalLine.DirectionOpacity >= 0.999f,
                     "clear of the card the line returns to its usual opacity");
@@ -409,14 +475,17 @@ public static class TelemetryDetailPanelPlayTest
 
         controller = Object.FindAnyObjectByType<TelemetryDetailPanelController>();
         releaser = Object.FindAnyObjectByType<TelemetryCardFocusReleaser>();
-        rails = Object.FindAnyObjectByType<WideStatRailManager>();
-        // The scene ships with the secondary rails off; the panel steps need them on.
-        if (controller != null)
-            SetSecondaryRails(SecondaryRailUse.DetailPanel);
-        Debug.Log($"DETAIL_PANEL_TEST screen={Screen.width}x{Screen.height} controller={(controller != null)} " +
-                  $"ready={(controller != null && controller.IsReady)} releaser={(releaser != null)}");
+        rails = StatRailManagers.Wide();
+        // The batch window can be any shape; the steps choose the layout themselves.
+        SetProfile(false, TelemetryRailCount.Auto, true);
+        // Batch play mode presents no frames, so the rails never finish their own
+        // first build (it waits for the end of a frame), and a requested rebuild
+        // only follows a first build. Build them here, at the capture's size.
+        Canvas.ForceUpdateCanvases();
         if (rails != null)
             rails.RebuildLayout();
+        Debug.Log($"DETAIL_PANEL_TEST screen={Screen.width}x{Screen.height} controller={(controller != null)} " +
+                  $"ready={(controller != null && controller.IsReady)} releaser={(releaser != null)}");
     }
 
     private static void FindCards()
@@ -426,8 +495,8 @@ public static class TelemetryDetailPanelPlayTest
             .OrderByDescending(card => card.transform.position.y);
         leftCards = cards.Where(card => card.RailSide == StatRailSide.Left).ToList();
         rightCards = cards.Where(card => card.RailSide == StatRailSide.Right).ToList();
-        Debug.Log($"DETAIL_PANEL_TEST cards left={leftCards.Count} right={rightCards.Count} " +
-                  $"reserved={rails.SecondaryRailsReserved} secondaryCards={rails.HasSecondaryRailCards} pages={rails.PageCount}");
+        Debug.Log($"DETAIL_PANEL_TEST cards left={leftCards.Count} right={rightCards.Count} perSide={rails.RailsPerSide} " +
+                  $"detail={rails.DetailRailActive} secondaryCards={rails.HasSecondaryRailCards} pages={rails.PageCount}");
     }
 
     private static IEnumerable<PerformanceStatCardView> AllCards() =>
@@ -489,14 +558,80 @@ public static class TelemetryDetailPanelPlayTest
         Debug.Log($"DETAIL_PANEL_TEST HD {hd.rect.size} zoom {((RectTransform)zoom).rect.size}");
         Expect(Mathf.Abs(hd.rect.height - ((RectTransform)zoom).rect.height) < 0.5f &&
                Mathf.Abs(hd.position.y - zoom.position.y) < 0.5f,
-            "the HD control is as tall as the zoom panel and level with it");
+            "the SD / HD control is as tall as the zoom panel and level with it");
     }
 
-    private static void SetSecondaryRails(SecondaryRailUse use)
+    /// <summary>Lays the wide rails out as asked, as the responsive shell would.</summary>
+    private static void SetProfile(bool rowsLayout, TelemetryRailCount count, bool detail)
     {
-        SerializedObject data = new(controller);
-        data.FindProperty("secondaryRails").enumValueIndex = (int)use;
-        data.ApplyModifiedProperties();
+        if (rails == null)
+            return;
+        rails.SetLayoutProfile(new TelemetryLayoutProfile(rowsLayout, count, detail));
+        controller?.SetFeatureEnabled(detail);
+        // On the next frame, as the shell does, once the canvas has taken any new size.
+        rails.RequestRebuild();
+    }
+
+    /// <summary>Renders into a 1080x1920 target, a window taller than wide, or back to 1920x1080.</summary>
+    private static void UsePortraitCapture(bool portrait)
+    {
+        RenderTexture old = captureCamera.targetTexture;
+        captureCamera.targetTexture = portrait
+            ? new RenderTexture(1080, 1920, 24, RenderTextureFormat.ARGB32)
+            : new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32);
+        if (old != null)
+            old.Release();
+        Canvas.ForceUpdateCanvases();
+    }
+
+    private static Rect LayerRect(RectTransform rect)
+    {
+        Vector3[] corners = new Vector3[4];
+        rect.GetWorldCorners(corners);
+        Vector2 min = RectTransformUtility.WorldToScreenPoint(captureCamera, corners[0]);
+        Vector2 max = RectTransformUtility.WorldToScreenPoint(captureCamera, corners[2]);
+        return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+    }
+
+    private static bool InsideDetailRail(TelemetryDetailPanel panel)
+    {
+        RectTransform rail = rails.GetDetailRail(panel.Side);
+        if (rail == null)
+            return false;
+        Rect railRect = LayerRect(rail);
+        Rect panelRect = LayerRect(panel.RectTransform);
+        // Across the rail the panel stays inside it; along it the panel follows its card.
+        bool inside = panel.OnRow
+            ? panelRect.yMin >= railRect.yMin - 2f && panelRect.yMax <= railRect.yMax + 2f
+            : panelRect.xMin >= railRect.xMin - 2f && panelRect.xMax <= railRect.xMax + 2f;
+        Debug.Log($"DETAIL_PANEL_TEST panel {panelRect} detail rail {railRect} inside={inside}");
+        return inside;
+    }
+
+    private static bool OverlapsAnyCard(TelemetryDetailPanel panel)
+    {
+        Rect panelRect = LayerRect(panel.RectTransform);
+        // The glow round the frame may touch a card; the frame itself may not.
+        panelRect = Rect.MinMaxRect(panelRect.xMin + 8f, panelRect.yMin + 8f, panelRect.xMax - 8f, panelRect.yMax - 8f);
+        PerformanceStatCardView hit = AllCards().FirstOrDefault(card =>
+            rails.OwnsCard(card) && LayerRect((RectTransform)card.transform).Overlaps(panelRect));
+        if (hit != null)
+            Debug.Log($"DETAIL_PANEL_TEST panel overlaps '{hit.BoundSource.MetricName}'");
+        return hit != null;
+    }
+
+    private static void ExpectNoCardOnDetailRails()
+    {
+        foreach (StatRailSide side in new[] { StatRailSide.Left, StatRailSide.Right })
+        {
+            RectTransform rail = rails.GetDetailRail(side);
+            if (rail == null)
+                continue;
+            Rect railRect = LayerRect(rail);
+            Rect inner = Rect.MinMaxRect(railRect.xMin + 2f, railRect.yMin, railRect.xMax - 2f, railRect.yMax);
+            Expect(!AllCards().Any(card => rails.OwnsCard(card) && LayerRect((RectTransform)card.transform).Overlaps(inner)),
+                $"no card sits on the {side.ToString().ToLowerInvariant()} detail rail");
+        }
     }
 
     private static bool IsHovering(GameObject control) =>

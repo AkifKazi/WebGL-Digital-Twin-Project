@@ -138,7 +138,7 @@ public sealed class AdaptiveQualityControllerEditor : DigitalTwinComponentEditor
         serializedObject.Update();
         DrawScriptReference();
         EditorGUILayout.HelpBox(
-            "Every device starts on the light preset. On a desktop browser the HD button raises " +
+            "Every device starts on the light preset (SD). On a desktop browser the SD / HD control raises " +
             "it and the choice is remembered in the browser; phones stay light at 30 FPS. The " +
             "preset is never changed automatically.",
             MessageType.Info);

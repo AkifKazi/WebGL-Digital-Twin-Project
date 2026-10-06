@@ -2,12 +2,19 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class WideStatLeaderLineManager : MonoBehaviour
+/// <summary>
+/// Draws a leader line from every card on one layout's rails to its sensor.
+/// Each sensor keeps its own line across rail rebuilds: while its card stays on
+/// screen the line is the same object, still bound to the same card, so its
+/// fades, focus and direction carry on rather than starting over. Only a new
+/// sensor gets a fresh line, and one leaving the screen gives its line back.
+/// </summary>
+public class StatLeaderLineManager : MonoBehaviour
 {
     private const string RuntimeLayerName = "Runtime Leader Line Layer";
 
     [Header("References")]
-    [SerializeField] private WideStatRailManager railManager;
+    [SerializeField] private StatRailManager railManager;
     [SerializeField] private StatLeaderLineView linePrefab;
     [SerializeField] private RectTransform lineLayer;
     [SerializeField] private Camera worldCamera;
@@ -15,13 +22,10 @@ public class WideStatLeaderLineManager : MonoBehaviour
 
     // Every card in this layout; each line fades where it crosses one of them.
     private readonly List<PerformanceStatCardView> layoutCards = new();
-
-    private readonly List<StatLeaderLineView>
-        generatedLines = new();
-
-    private readonly Stack<StatLeaderLineView>
-        linePool = new();
-
+    private readonly List<StatLeaderLineView> generatedLines = new();
+    private readonly Dictionary<PerformanceStatSource, StatLeaderLineView> linesBySource = new();
+    private readonly Dictionary<PerformanceStatSource, StatLeaderLineView> previousLines = new();
+    private readonly Stack<StatLeaderLineView> linePool = new();
     private readonly List<PerformanceStatSource> watchedSources = new();
 
     private bool restingOpacityInitialized;
@@ -37,7 +41,7 @@ public class WideStatLeaderLineManager : MonoBehaviour
     private IEnumerator Start()
     {
         ResolveLineLayer();
-        // Wait for the rail manager to instantiate its cards.
+        // Wait for the rail manager to place its cards.
         yield return null;
         RebuildLines();
     }
@@ -46,76 +50,68 @@ public class WideStatLeaderLineManager : MonoBehaviour
     {
         if (railManager != null)
             railManager.LayoutRebuilt -= RebuildLines;
-
         UnwatchSources();
     }
 
     public void RebuildLines()
     {
         ResolveLineLayer();
-        ClearLines();
+        UnwatchSources();
 
-        if (railManager == null ||
-            linePrefab == null ||
-            lineLayer == null ||
-            worldCamera == null ||
-            canvas == null)
+        if (railManager == null || linePrefab == null || lineLayer == null || worldCamera == null || canvas == null)
         {
-            Debug.LogWarning(
-                "WideStatLeaderLineManager has missing references.",
-                this
-            );
-
+            Debug.LogWarning($"{name} has missing references.", this);
             return;
         }
+
+        previousLines.Clear();
+        foreach (KeyValuePair<PerformanceStatSource, StatLeaderLineView> entry in linesBySource)
+            previousLines[entry.Key] = entry.Value;
+        linesBySource.Clear();
+        generatedLines.Clear();
 
         HashSet<PerformanceStatCardView> linkedCards = new();
         float desiredRestingOpacity = railManager.HasSecondaryRailCards
             ? linePrefab.RestingLineOpacity
             : linePrefab.EmptySecondaryRailsRestingOpacity;
-        float startingRestingOpacity = restingOpacityInitialized
-            ? previousRestingOpacity
-            : desiredRestingOpacity;
-        foreach (KeyValuePair<
-                     PerformanceStatSource,
-                     PerformanceStatCardView
-                 > binding in railManager.ActiveCards)
+        float startingRestingOpacity = restingOpacityInitialized ? previousRestingOpacity : desiredRestingOpacity;
+
+        foreach (KeyValuePair<PerformanceStatSource, PerformanceStatCardView> binding in railManager.ActiveCards)
         {
             PerformanceStatSource source = binding.Key;
             PerformanceStatCardView card = binding.Value;
-
-            if (source == null || card == null)
-                continue;
-            if (!linkedCards.Add(card))
+            if (source == null || card == null || !linkedCards.Add(card))
                 continue;
 
-            StatLeaderLineView line = AcquireLine();
+            if (previousLines.Remove(source, out StatLeaderLineView line) && line != null && line.Card == card)
+            {
+                // The same card stays on screen: its line carries on as it was.
+                line.SetAdaptiveRestingLineOpacity(
+                    desiredRestingOpacity, linePrefab.SecondaryRailOpacityTransitionDuration);
+            }
+            else
+            {
+                if (line != null)
+                    PoolLine(line);
+                line = AcquireLine();
+                line.SetAdaptiveRestingLineOpacity(startingRestingOpacity, 0f, true);
+                StretchInsideParent(line.transform as RectTransform);
+                line.Bind(source, card, worldCamera, canvas, lineLayer);
+                line.SetAdaptiveRestingLineOpacity(
+                    desiredRestingOpacity,
+                    linePrefab.SecondaryRailOpacityTransitionDuration,
+                    !restingOpacityInitialized);
+            }
 
-            line.SetAdaptiveRestingLineOpacity(
-                startingRestingOpacity,
-                0f,
-                true);
-
-            StretchInsideParent(
-                line.transform as RectTransform
-            );
-
-            line.Bind(
-                source,
-                card,
-                worldCamera,
-                canvas,
-                lineLayer
-            );
-
-            line.SetAdaptiveRestingLineOpacity(
-                desiredRestingOpacity,
-                linePrefab.SecondaryRailOpacityTransitionDuration,
-                !restingOpacityInitialized);
-
+            linesBySource[source] = line;
             generatedLines.Add(line);
             WatchState(source);
         }
+
+        // Sensors that left the screen give their lines back.
+        foreach (StatLeaderLineView line in previousLines.Values)
+            PoolLine(line);
+        previousLines.Clear();
 
         layoutCards.Clear();
         layoutCards.AddRange(linkedCards);
@@ -135,10 +131,20 @@ public class WideStatLeaderLineManager : MonoBehaviour
     private void ApplyDrawOrder()
     {
         generatedLines.Sort((first, second) =>
-            Severity(first.Source).CompareTo(Severity(second.Source)));
+        {
+            int severity = Severity(first.Source).CompareTo(Severity(second.Source));
+            // Ties keep a stable order, so equal lines never swap places.
+            return severity != 0
+                ? severity
+                : string.CompareOrdinal(first.Source != null ? first.Source.StatId : null,
+                    second.Source != null ? second.Source.StatId : null);
+        });
 
         for (int i = 0; i < generatedLines.Count; i++)
-            generatedLines[i].transform.SetSiblingIndex(i);
+        {
+            if (generatedLines[i].transform.GetSiblingIndex() != i)
+                generatedLines[i].transform.SetSiblingIndex(i);
+        }
     }
 
     private static int Severity(PerformanceStatSource source) => source == null
@@ -155,7 +161,6 @@ public class WideStatLeaderLineManager : MonoBehaviour
     {
         if (source == null || watchedSources.Contains(source))
             return;
-
         watchedSources.Add(source);
         source.Changed += HandleSourceChanged;
     }
@@ -167,7 +172,6 @@ public class WideStatLeaderLineManager : MonoBehaviour
             if (source != null)
                 source.Changed -= HandleSourceChanged;
         }
-
         watchedSources.Clear();
     }
 
@@ -179,32 +183,22 @@ public class WideStatLeaderLineManager : MonoBehaviour
     {
         if (!drawOrderDirty)
             return;
-
         drawOrderDirty = false;
         ApplyDrawOrder();
     }
 
-    private void ClearLines()
+    private void PoolLine(StatLeaderLineView line)
     {
-        UnwatchSources();
-
-        foreach (StatLeaderLineView line in generatedLines)
-        {
-            if (line != null)
-            {
-                line.Unbind();
-                line.gameObject.SetActive(false);
-                linePool.Push(line);
-            }
-        }
-
-        generatedLines.Clear();
+        if (line == null)
+            return;
+        line.Unbind();
+        line.gameObject.SetActive(false);
+        linePool.Push(line);
     }
 
     private StatLeaderLineView AcquireLine()
     {
         StatLeaderLineView line = null;
-
         while (line == null && linePool.Count > 0)
             line = linePool.Pop();
 
@@ -228,24 +222,17 @@ public class WideStatLeaderLineManager : MonoBehaviour
     }
 
 #if UNITY_EDITOR
-    private void OnValidate()
-    {
-        ResolveLineLayer();
-    }
+    private void OnValidate() => ResolveLineLayer();
 #endif
 
-    private static void StretchInsideParent(
-        RectTransform rectTransform)
+    private static void StretchInsideParent(RectTransform rectTransform)
     {
         if (rectTransform == null)
             return;
-
         rectTransform.anchorMin = Vector2.zero;
         rectTransform.anchorMax = Vector2.one;
-
         rectTransform.offsetMin = Vector2.zero;
         rectTransform.offsetMax = Vector2.zero;
-
         rectTransform.localScale = Vector3.one;
         rectTransform.localRotation = Quaternion.identity;
     }

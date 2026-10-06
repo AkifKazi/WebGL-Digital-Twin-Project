@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// The showcase polish pass: the HD control beside the zoom buttons, the X-Ray
+/// The showcase polish pass: the SD / HD control beside the zoom buttons, the X-Ray
 /// segment's own icon, both rotors answering the rotor sensors, and the
 /// hand-placed rotor and vibration components folded into the list-driven ones.
 /// Telemetry anchors are left where they have been placed. Safe to run again.
@@ -17,23 +17,13 @@ using UnityEngine.UI;
 public static class ShowcasePolishSetup
 {
     private const string ScenePath = "Assets/Scenes/SampleScene.unity";
-    private const string IdleSpritePath = "Assets/UI/Sprites/Solid UI Fill.png";
-    private const string PressedSpritePath = "Assets/UI/Sprites/Compact Button Background.png";
-    private const string HoverSpritePath = "Assets/UI/Sprites/Button Hover Background.png";
-    private const string PanelSpritePath = "Assets/UI/Sprites/Panel Background.png";
-    private const string HdIconPath = "Assets/UI/Sprites/HD Icon.png";
     private const string XRayIconPath = "Assets/UI/Sprites/XRay Icon.png";
     private const string ControlName = "Graphics Quality Control";
 
-    // Matches the zoom controls: a 68 tall panel, 4 inside it, a 48 px icon. The
-    // bottom row does not size its children's height, so the panel sets its own.
+    // As tall as the zoom panel; each segment wide enough for two letters at
+    // the view-mode control's type size.
     private const float ControlHeight = 68f;
-    private const float ControlWidth = 104f;
-    private const float IconSize = 48f;
-
-    // White at rest like the zoom icons, cyan while HD is on.
-    private static readonly Color IconOnColor = new(0.212f, 0.929f, 1f, 1f);
-    private static readonly Color IconOffColor = Color.white;
+    private const float QualitySegmentWidth = 96f;
 
     private static readonly string[] RotorSensorIds =
     {
@@ -63,103 +53,159 @@ public static class ShowcasePolishSetup
     // Bottom controls
     // -----------------------------------------------------------------------
 
-    /// <summary>Adds the HD control to each layout's bottom row, beside the zoom buttons.</summary>
+    /// <summary>
+    /// Adds the SD / HD control to each layout's bottom row, beside the zoom
+    /// buttons. It is drawn like the view-mode and Telemetry / Service controls:
+    /// the same container, and segments cloned from the view-mode control with
+    /// the icon removed. An older single HD button is replaced.
+    /// </summary>
     private static int ConfigureQualityControls()
     {
-        Sprite idle = Load<Sprite>(IdleSpritePath);
-        Sprite pressed = Load<Sprite>(PressedSpritePath);
-        Sprite hover = Load<Sprite>(HoverSpritePath);
-        Sprite panel = Load<Sprite>(PanelSpritePath);
-        Sprite hdIcon = Load<Sprite>(HdIconPath);
         AdaptiveQualityController quality = UnityEngine.Object.FindAnyObjectByType<AdaptiveQualityController>(
             FindObjectsInactive.Include);
         int built = 0;
 
-        foreach (Transform zoom in FindAll("Camera Zoom Controls"))
+        // Listed up front: rebuilding destroys transforms the lazy search would visit.
+        foreach (Transform zoom in FindAll("Camera Zoom Controls").ToList())
         {
             Transform row = zoom.parent;
-            if (row == null)
+            ViewModeSegmentedControl viewMode = FindViewModeControl(zoom);
+            if (row == null || viewMode == null)
                 continue;
 
+            // Checked before the old control is removed, so a renamed or
+            // restyled view-mode control leaves the current one in place.
+            Transform source = viewMode.transform;
+            HorizontalLayoutGroup sourceStack = source.GetComponent<HorizontalLayoutGroup>();
+            Image sourceImage = source.GetComponent<Image>();
+            Transform template = source.Find("Full Model Button");
+            if (sourceStack == null || sourceImage == null || template == null ||
+                template.GetComponent<Button>() == null ||
+                template.GetComponent<LayoutElement>() == null ||
+                template.GetComponentInChildren<TMP_Text>(true) == null)
+            {
+                Debug.LogWarning(
+                    $"SHOWCASE_POLISH SD/HD control under '{GetPath(row)}' skipped: the view-mode control " +
+                    "needs a HorizontalLayoutGroup, an Image and a 'Full Model Button' with a Button, " +
+                    "a LayoutElement and a label.");
+                continue;
+            }
+
+            // Rebuilt from scratch each run, at the place it already holds:
+            // immediately before the zoom buttons, one row gap away.
             Transform existing = row.Find(ControlName);
-            RectTransform control = existing as RectTransform ?? CreateUIObject(ControlName, row);
-            // Immediately before the zoom buttons, one row gap away, which is the
-            // screen padding. Measured after any earlier move, so running this
-            // again leaves the control where it already is.
-            int target = zoom.GetSiblingIndex();
-            if (control.GetSiblingIndex() < target)
-                target--;
-            control.SetSiblingIndex(target);
+            if (existing != null)
+                UnityEngine.Object.DestroyImmediate(existing.gameObject);
+            RectTransform control = CreateUIObject(ControlName, row);
+            control.SetSiblingIndex(zoom.GetSiblingIndex());
 
-            Image background = Ensure<Image>(control.gameObject);
-            background.sprite = panel;
-            background.type = Image.Type.Sliced;
-            background.color = Color.white;
-            background.raycastTarget = true;
+            int padding = sourceStack.padding.horizontal;
+            float width = QualitySegmentWidth * 2f + sourceStack.spacing + padding;
 
-            HorizontalLayoutGroup row_ = Ensure<HorizontalLayoutGroup>(control.gameObject);
-            row_.padding = new RectOffset(4, 4, 4, 4);
-            row_.spacing = 0f;
-            row_.childAlignment = TextAnchor.MiddleCenter;
-            row_.childControlWidth = true;
-            row_.childControlHeight = true;
-            row_.childForceExpandWidth = true;
-            row_.childForceExpandHeight = true;
+            CopyImage(sourceImage, Ensure<Image>(control.gameObject));
+            HorizontalLayoutGroup stack = Ensure<HorizontalLayoutGroup>(control.gameObject);
+            stack.padding = new RectOffset(sourceStack.padding.left, sourceStack.padding.right,
+                sourceStack.padding.top, sourceStack.padding.bottom);
+            stack.spacing = sourceStack.spacing;
+            stack.childAlignment = sourceStack.childAlignment;
+            stack.childControlWidth = true;
+            stack.childControlHeight = true;
+            stack.childForceExpandWidth = true;
+            stack.childForceExpandHeight = true;
 
+            // The bottom row does not size its children's height, so the control
+            // sets its own: as tall as the zoom panel.
             LayoutElement size = Ensure<LayoutElement>(control.gameObject);
-            size.minWidth = size.preferredWidth = ControlWidth;
+            size.minWidth = size.preferredWidth = width;
             size.minHeight = size.preferredHeight = ControlHeight;
             size.flexibleWidth = 0f;
             size.flexibleHeight = 0f;
-            control.sizeDelta = new Vector2(ControlWidth, ControlHeight);
+            control.sizeDelta = new Vector2(width, ControlHeight);
 
-            RectTransform buttonRect = control.Find("HD Button") as RectTransform
-                                       ?? CreateUIObject("HD Button", control);
-            Image face = Ensure<Image>(buttonRect.gameObject);
-            face.sprite = idle;
-            face.type = Image.Type.Sliced;
-            face.color = Color.white;
-            face.raycastTarget = true;
-
-            Button button = Ensure<Button>(buttonRect.gameObject);
-            button.targetGraphic = face;
-            button.transition = Selectable.Transition.SpriteSwap;
-            button.spriteState = new SpriteState { pressedSprite = pressed };
-
-            RectTransform iconRect = buttonRect.Find("Icon") as RectTransform
-                                     ?? CreateUIObject("Icon", buttonRect);
-            iconRect.anchorMin = iconRect.anchorMax = new Vector2(0.5f, 0.5f);
-            iconRect.sizeDelta = new Vector2(IconSize, IconSize);
-            iconRect.anchoredPosition = Vector2.zero;
-            Image icon = Ensure<Image>(iconRect.gameObject);
-            icon.sprite = hdIcon;
-            icon.preserveAspect = true;
-            icon.raycastTarget = false;
-
-            // The same three looks as every other control: idle, hover, pressed.
-            SerializedObject hoverState = new(Ensure<UIHoverSprite>(buttonRect.gameObject));
-            hoverState.FindProperty("target").objectReferenceValue = face;
-            hoverState.FindProperty("hoverSprite").objectReferenceValue = hover;
-            hoverState.FindProperty("idleSprite").objectReferenceValue = idle;
-            hoverState.ApplyModifiedPropertiesWithoutUndo();
+            SerializedObject sourceData = new(viewMode);
+            Sprite selected = (Sprite)sourceData.FindProperty("selectedSprite").objectReferenceValue;
+            Sprite idle = (Sprite)sourceData.FindProperty("inactiveSprite").objectReferenceValue;
+            Button sd = CloneSegment(template, control, "SD Button", "SD", idle);
+            Button hd = CloneSegment(template, control, "HD Button", "HD", idle);
 
             SerializedObject toggle = new(Ensure<QualityToggleControl>(control.gameObject));
             toggle.FindProperty("quality").objectReferenceValue = quality;
-            toggle.FindProperty("button").objectReferenceValue = button;
-            toggle.FindProperty("background").objectReferenceValue = face;
-            toggle.FindProperty("icon").objectReferenceValue = icon;
-            toggle.FindProperty("idleSprite").objectReferenceValue = idle;
-            toggle.FindProperty("selectedSprite").objectReferenceValue = pressed;
+            toggle.FindProperty("sdButton").objectReferenceValue = sd;
+            toggle.FindProperty("hdButton").objectReferenceValue = hd;
             toggle.FindProperty("controlRoot").objectReferenceValue = control.gameObject;
-            toggle.FindProperty("onIconColor").colorValue = IconOnColor;
-            toggle.FindProperty("offIconColor").colorValue = IconOffColor;
+            toggle.FindProperty("selectedSprite").objectReferenceValue = selected;
+            toggle.FindProperty("idleSprite").objectReferenceValue = idle;
+            toggle.FindProperty("selectedTextColor").colorValue = sourceData.FindProperty("selectedTextColor").colorValue;
+            toggle.FindProperty("idleTextColor").colorValue = sourceData.FindProperty("inactiveTextColor").colorValue;
             toggle.ApplyModifiedPropertiesWithoutUndo();
 
             built++;
-            Debug.Log($"SHOWCASE_POLISH hd control under '{GetPath(row)}'");
+            Debug.Log($"SHOWCASE_POLISH SD/HD control under '{GetPath(row)}' width={width}");
         }
 
         return built;
+    }
+
+    /// <summary>The view-mode control in the same layout as these zoom buttons.</summary>
+    private static ViewModeSegmentedControl FindViewModeControl(Transform zoom)
+    {
+        for (Transform level = zoom.parent; level != null; level = level.parent)
+        {
+            ViewModeSegmentedControl found = level.GetComponentInChildren<ViewModeSegmentedControl>(true);
+            if (found != null)
+                return found;
+        }
+
+        return null;
+    }
+
+    /// <summary>A text-only segment cloned from the view-mode control: same sprites, hover and type.</summary>
+    private static Button CloneSegment(Transform template, Transform parent, string name, string text, Sprite idle)
+    {
+        GameObject segment = UnityEngine.Object.Instantiate(template.gameObject, parent, false);
+        segment.name = name;
+
+        Transform icon = segment.transform.Find("Icon");
+        if (icon != null)
+            UnityEngine.Object.DestroyImmediate(icon.gameObject);
+
+        // Short copy, the same in every language, so it is not bound to the text table.
+        TMP_Text label = segment.GetComponentInChildren<TMP_Text>(true);
+        if (label.TryGetComponent(out UITextBinding binding))
+            UnityEngine.Object.DestroyImmediate(binding);
+        label.text = text;
+
+        LayoutElement size = segment.GetComponent<LayoutElement>();
+        size.minWidth = 0f;
+        size.preferredWidth = QualitySegmentWidth;
+
+        Button button = segment.GetComponent<Button>();
+        // Drop anything wired to the view-mode control.
+        button.onClick = new Button.ButtonClickedEvent();
+        if (button.targetGraphic is Image face)
+            face.sprite = idle;
+
+        // The hover sprite only ever replaces the idle one, whichever segment
+        // was selected when the template was cloned.
+        if (segment.TryGetComponent(out UIHoverSprite hover))
+        {
+            SerializedObject hoverState = new(hover);
+            hoverState.FindProperty("idleSprite").objectReferenceValue = idle;
+            hoverState.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        return button;
+    }
+
+    private static void CopyImage(Image from, Image to)
+    {
+        to.sprite = from.sprite;
+        to.type = from.type;
+        to.color = from.color;
+        to.pixelsPerUnitMultiplier = from.pixelsPerUnitMultiplier;
+        to.fillCenter = from.fillCenter;
+        to.material = from.material;
+        to.raycastTarget = from.raycastTarget;
     }
 
     /// <summary>The X-Ray segment had the cross-section icon; it has its own now.</summary>

@@ -56,7 +56,7 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
     [Tooltip("Space between two graphs.")]
     [SerializeField, Min(0f)] private float graphSpacing = 24f;
 
-    [Tooltip("Closest the pointer gets to the top or bottom of the panel.")]
+    [Tooltip("Closest the pointer gets to the ends of the edge it sits on.")]
     [SerializeField, Min(0f)] private float pointerInset = 34f;
 
     [Header("Colours")]
@@ -88,12 +88,20 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
     public TelemetryHistoryRange Range { get; private set; }
     public RectTransform RectTransform => (RectTransform)transform;
     public float Height => RectTransform.sizeDelta.y;
+    public float Width => RectTransform.sizeDelta.x;
 
-    // Placement state, owned by the controller.
-    internal float CurrentTop;
-    internal float TopVelocity;
+    /// <summary>True when the panel opened from a card row, so it sits below or above the cards.</summary>
+    public bool OnRow => Side is StatRailSide.Top or StatRailSide.Bottom;
+
+    // Placement state, owned by the controller: the panel's top edge beside a
+    // column, its left edge beside a row.
+    internal float CurrentAlong;
+    internal float AlongVelocity;
     internal bool SnapNextLayout = true;
     internal float Alpha;
+
+    private Vector2 pointerSize;
+    private bool pointerSizeCaptured;
 
     public void Initialise(
         IReadOnlyList<TelemetryGraphKind> kinds,
@@ -181,18 +189,74 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
         Source = card != null ? card.BoundSource : null;
         Side = card != null ? card.RailSide : StatRailSide.Left;
 
-        bool left = Side == StatRailSide.Left;
-        if (pointer != null)
-        {
-            pointer.PointLeft = left;
-            AnchorToEdge(pointer.rectTransform, left ? 0f : 1f, left ? 1f : 0f);
-        }
-        if (linkAnchor != null)
-            AnchorToEdge(linkAnchor, left ? 1f : 0f, 0.5f);
+        OrientToSide();
         if (card != null && !IsSheet)
             card.SetConnectionPointOverride(linkAnchor);
 
         Refresh();
+    }
+
+    /// <summary>
+    /// The pointer goes on the edge facing the card and points at it; the
+    /// leader line leaves from the opposite edge, the model's side. A panel
+    /// beside a column has them on its left and right edges, one below or
+    /// above a row on its top and bottom edges.
+    /// </summary>
+    private void OrientToSide()
+    {
+        if (pointer != null)
+        {
+            RectTransform rect = pointer.rectTransform;
+            if (!pointerSizeCaptured)
+            {
+                // Authored pointing sideways: wide as the tip is deep, tall as its base.
+                pointerSize = rect.sizeDelta;
+                pointerSizeCaptured = true;
+            }
+
+            switch (Side)
+            {
+                case StatRailSide.Top:
+                    pointer.Direction = UITriangleGraphic.PointDirection.Up;
+                    SetAnchors(rect, new Vector2(0f, 1f), new Vector2(0.5f, 0f));
+                    rect.sizeDelta = new Vector2(pointerSize.y, pointerSize.x);
+                    break;
+                case StatRailSide.Bottom:
+                    pointer.Direction = UITriangleGraphic.PointDirection.Down;
+                    SetAnchors(rect, new Vector2(0f, 0f), new Vector2(0.5f, 1f));
+                    rect.sizeDelta = new Vector2(pointerSize.y, pointerSize.x);
+                    break;
+                case StatRailSide.Right:
+                    pointer.Direction = UITriangleGraphic.PointDirection.Right;
+                    SetAnchors(rect, new Vector2(1f, 1f), new Vector2(0f, 0.5f));
+                    rect.sizeDelta = pointerSize;
+                    break;
+                default:
+                    pointer.Direction = UITriangleGraphic.PointDirection.Left;
+                    SetAnchors(rect, new Vector2(0f, 1f), new Vector2(1f, 0.5f));
+                    rect.sizeDelta = pointerSize;
+                    break;
+            }
+        }
+
+        if (linkAnchor != null)
+        {
+            switch (Side)
+            {
+                case StatRailSide.Top:
+                    SetAnchors(linkAnchor, new Vector2(0f, 0f), new Vector2(0.5f, 0.5f));
+                    break;
+                case StatRailSide.Bottom:
+                    SetAnchors(linkAnchor, new Vector2(0f, 1f), new Vector2(0.5f, 0.5f));
+                    break;
+                case StatRailSide.Right:
+                    SetAnchors(linkAnchor, new Vector2(0f, 1f), new Vector2(0.5f, 0.5f));
+                    break;
+                default:
+                    SetAnchors(linkAnchor, new Vector2(1f, 1f), new Vector2(0.5f, 0.5f));
+                    break;
+            }
+        }
     }
 
     public void Unbind()
@@ -219,21 +283,39 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
         Refresh();
     }
 
-    /// <summary>Points at the card from <paramref name="yFromTop"/> down the panel's frame line.</summary>
-    public void SetPointer(float yFromTop)
+    /// <summary>
+    /// Points at the card from <paramref name="offset"/> along the panel's
+    /// frame line: down from the top beside a column, across from the left
+    /// below or above a row.
+    /// </summary>
+    public void SetPointer(float offset)
     {
-        float y = Mathf.Clamp(yFromTop, pointerInset, Mathf.Max(pointerInset, Height - pointerInset));
-        bool left = Side == StatRailSide.Left;
+        float length = OnRow ? Width : Height;
+        float along = Mathf.Clamp(offset, pointerInset, Mathf.Max(pointerInset, length - pointerInset));
+        // The pointer's base overlaps the frame line by a pixel so the two read as one.
+        float edge = frameInset + 1f;
         if (pointer != null)
         {
-            // The pointer's base overlaps the frame line by a pixel so the two read as one.
-            float x = frameInset + 1f;
-            pointer.rectTransform.anchoredPosition = new Vector2(left ? x : -x, -y);
+            pointer.rectTransform.anchoredPosition = Side switch
+            {
+                StatRailSide.Top => new Vector2(along, -edge),
+                StatRailSide.Bottom => new Vector2(along, edge),
+                StatRailSide.Right => new Vector2(-edge, -along),
+                _ => new Vector2(edge, -along)
+            };
             pointer.color = pointerColor;
         }
         // The leader line leaves from the frame line on the model's side.
         if (linkAnchor != null)
-            linkAnchor.anchoredPosition = new Vector2(left ? -frameInset : frameInset, -y);
+        {
+            linkAnchor.anchoredPosition = Side switch
+            {
+                StatRailSide.Top => new Vector2(along, frameInset),
+                StatRailSide.Bottom => new Vector2(along, -frameInset),
+                StatRailSide.Right => new Vector2(frameInset, -along),
+                _ => new Vector2(-frameInset, -along)
+            };
+        }
     }
 
     public void SetWidth(float width)
@@ -364,11 +446,11 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
         }
     }
 
-    private static void AnchorToEdge(RectTransform rect, float anchorX, float pivotX)
+    private static void SetAnchors(RectTransform rect, Vector2 anchor, Vector2 pivot)
     {
-        rect.anchorMin = new Vector2(anchorX, 1f);
-        rect.anchorMax = new Vector2(anchorX, 1f);
-        rect.pivot = new Vector2(pivotX, 0.5f);
+        rect.anchorMin = anchor;
+        rect.anchorMax = anchor;
+        rect.pivot = pivot;
     }
 
     private void OnDestroy() => Unbind();

@@ -428,7 +428,7 @@ public static class FeedbackPlayTest
     /// <summary>Each shown card's rail and sensor, top to bottom.</summary>
     private static List<string> CardLayout()
     {
-        WideStatRailManager rails = Object.FindAnyObjectByType<WideStatRailManager>();
+        StatRailManager rails = StatRailManagers.Wide();
         return Cards().Where(c => rails == null || rails.OwnsCard(c))
             .Select(c => (card: c, y: Mathf.Round(RectTransformUtility.WorldToScreenPoint(captureCamera, c.transform.position).y)))
             .OrderBy(e => e.card.RailSide).ThenByDescending(e => e.y)
@@ -466,11 +466,11 @@ public static class FeedbackPlayTest
         // The wide layout's panel; the portrait layout has one of its own.
         servicePanel = Object.FindObjectsByType<ServicePanelView>(FindObjectsInactive.Include)
             .FirstOrDefault(panel => panel.transform.parent != null && panel.transform.parent.name == "Wide layout");
-        SerializedObject data = new(detailPanels);
-        data.FindProperty("secondaryRails").enumValueIndex = (int)SecondaryRailUse.DetailPanel;
-        data.ApplyModifiedProperties();
-        // The rails measured the batch window; lay them out for the capture size.
-        Object.FindAnyObjectByType<WideStatRailManager>()?.RebuildLayout();
+        detailPanels.SetFeatureEnabled(true);
+        // The rails measured the batch window; lay them out for the capture size,
+        // once the canvas has taken that size (Auto fits rails to it).
+        Canvas.ForceUpdateCanvases();
+        StatRailManagers.Wide()?.RebuildLayout();
     }
 
     private static void Click(PerformanceStatCardView card)

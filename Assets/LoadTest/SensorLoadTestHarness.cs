@@ -92,8 +92,8 @@ public sealed class SensorLoadTestHarness : MonoBehaviour
 
     private TelemetryRegistry registry;
     private TelemetryJsonIngestor ingestor;
-    private WideStatRailManager wide;
-    private PortraitStatRailManager portrait;
+    private StatRailManager wide;
+    private StatRailManager portrait;
     private OrbitCameraController orbit;
     private FieldInfo desiredYaw;
     private bool orbitActive;
@@ -200,8 +200,9 @@ public sealed class SensorLoadTestHarness : MonoBehaviour
     {
         registry = FindAnyObjectByType<TelemetryRegistry>(FindObjectsInactive.Include);
         ingestor = FindAnyObjectByType<TelemetryJsonIngestor>(FindObjectsInactive.Include);
-        wide = FindAnyObjectByType<WideStatRailManager>(FindObjectsInactive.Include);
-        portrait = FindAnyObjectByType<PortraitStatRailManager>(FindObjectsInactive.Include);
+        StatRailManager[] rails = FindObjectsByType<StatRailManager>(FindObjectsInactive.Include);
+        wide = Array.Find(rails, manager => !manager.AlwaysRows);
+        portrait = Array.Find(rails, manager => manager.AlwaysRows);
         orbit = FindAnyObjectByType<OrbitCameraController>();
         if (registry == null || ingestor == null || (wide == null && portrait == null))
             return false;

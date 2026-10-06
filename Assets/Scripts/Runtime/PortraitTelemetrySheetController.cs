@@ -18,6 +18,9 @@ using UnityEngine.UI;
 ///
 /// The first tap that focuses a card shows a hint that a second tap opens the
 /// sheet, once per visit, until the person has opened one.
+///
+/// Whether the sheet opens at all is the phone's history-panel switch in the
+/// <see cref="TelemetryLayoutSettings"/>; the responsive shell passes it on.
 /// </summary>
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(45)]
@@ -103,9 +106,22 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour
     private bool projectionShifted;
     private Canvas rootCanvas;
     private bool searchedForInsight;
+    private bool featureEnabled = true;
     private static readonly Vector3[] Corners = new Vector3[4];
 
     public bool IsOpen => open;
+    public bool FeatureEnabled => featureEnabled;
+
+    /// <summary>Turns the sheet on or off. Off closes it, and a second tap only keeps the card marked.</summary>
+    public void SetFeatureEnabled(bool enabled)
+    {
+        featureEnabled = enabled;
+        if (!enabled)
+        {
+            Close();
+            hintUntil = 0f;
+        }
+    }
     public TelemetryDetailPanel Panel => panel;
     public bool HintShowing => hint != null && hintGroup.alpha > 0.01f;
 
@@ -171,7 +187,7 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour
 
     private void HandleDetailRequested(PerformanceStatCardView card)
     {
-        if (!IsOwnCard(card) || panelPrefab == null || History == null || !History.IsReady)
+        if (!featureEnabled || !IsOwnCard(card) || panelPrefab == null || History == null || !History.IsReady)
             return;
 
         Open(card);
@@ -192,7 +208,7 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour
     {
         // Any pointer: this layout is a phone's, and the hint must not hang on
         // telling a finger from a mouse.
-        if (!IsOwnCard(card) || !card.IsFocused || open || hintShownThisVisit)
+        if (!featureEnabled || !IsOwnCard(card) || !card.IsFocused || open || hintShownThisVisit)
             return;
         if (PlayerPrefs.GetInt(HintLearnedKey, 0) == 1)
             return;

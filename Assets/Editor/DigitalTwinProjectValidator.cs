@@ -51,8 +51,7 @@ public static class DigitalTwinProjectValidator
         ValidateEnvironmentModelSize(result);
         ValidateRegistry(sources, result);
         ValidateTelemetryArchitecture(sources, result);
-        ValidateManagerSources<WideStatRailManager>(sources, result);
-        ValidateManagerSources<PortraitStatRailManager>(sources, result);
+        ValidateManagerSources<StatRailManager>(sources, result);
         ValidateOverflowRails(result);
         ValidatePortraitPagination(result);
         ValidateSharedMachineViewController(result);
@@ -441,10 +440,9 @@ public static class DigitalTwinProjectValidator
 
     private static void ValidateOverflowRails(ValidationResult result)
     {
-        ValidateRailReferences<WideStatRailManager>(
-            new[] { "innerLeftCardContainer", "innerRightCardContainer" }, result);
-        ValidateRailReferences<PortraitStatRailManager>(
-            new[] { "innerTopCardContainer", "innerBottomCardContainer" }, result);
+        string[] innerRails = { "innerFirstCardContainer", "innerSecondCardContainer" };
+        ValidateRailReferences(StatRailManagers.Wide(FindObjectsInactive.Include), innerRails, result);
+        ValidateRailReferences(StatRailManagers.Portrait(FindObjectsInactive.Include), innerRails, result);
     }
 
     private static void ValidatePortraitPagination(ValidationResult result)
@@ -460,14 +458,14 @@ public static class DigitalTwinProjectValidator
         foreach (PortraitTelemetryPager pager in pagers)
         {
             string path = GetPath(pager.transform);
-            if (!pager.HasExactlyOneRailManager || pager.HopperController == null ||
+            if (pager.RailManager == null || pager.HopperController == null ||
                 pager.PreviousButton == null || pager.NextButton == null ||
                 pager.PreviousIcon == null || pager.NextIcon == null)
             {
                 result.Errors.Add($"Telemetry pager '{path}' has incomplete references.");
             }
             RectTransform row = pager.GetComponent<RectTransform>();
-            if (pager.RailManager != null)
+            if (pager.RailManager != null && pager.RailManager.AlwaysRows)
             {
                 RectTransform bottomControls = row?.parent as RectTransform;
                 RectTransform viewControls = bottomControls?
@@ -546,10 +544,11 @@ public static class DigitalTwinProjectValidator
                wrapper.anchorMin == Vector2.zero && wrapper.anchorMax == Vector2.one;
     }
 
-    private static void ValidateRailReferences<T>(string[] propertyNames, ValidationResult result)
-        where T : MonoBehaviour
+    private static void ValidateRailReferences(
+        StatRailManager manager,
+        string[] propertyNames,
+        ValidationResult result)
     {
-        T manager = UnityEngine.Object.FindAnyObjectByType<T>(FindObjectsInactive.Include);
         if (manager == null)
             return;
         SerializedObject data = new(manager);
@@ -630,8 +629,6 @@ public static class DigitalTwinProjectValidator
 
         foreach (TelemetryDetailPanelController controller in controllers)
         {
-            if (controller.SecondaryRails != SecondaryRailUse.DetailPanel)
-                continue;
             SerializedObject data = new(controller);
             if (data.FindProperty("railManager").objectReferenceValue == null)
                 result.Errors.Add("The telemetry detail panel has no rail manager.");

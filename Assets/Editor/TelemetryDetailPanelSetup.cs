@@ -336,9 +336,9 @@ public static class TelemetryDetailPanelSetup
 
     private static void ConfigureController(TelemetryDetailPanel prefab, TelemetryHistoryRecorder recorder)
     {
-        WideStatRailManager rails = FindRailManager();
+        StatRailManager rails = FindRailManager();
         RectTransform leftContainer = new SerializedObject(rails)
-            .FindProperty("leftCardContainer").objectReferenceValue as RectTransform;
+            .FindProperty("firstCardContainer").objectReferenceValue as RectTransform;
         RectTransform content = leftContainer != null ? leftContainer.parent?.parent as RectTransform : null;
         if (content == null)
             throw new InvalidOperationException("The wide layout's Content area was not found.");
@@ -517,8 +517,8 @@ public static class TelemetryDetailPanelSetup
     private static void RenameSecondaryRails()
     {
         SerializedObject data = new(FindRailManager());
-        RenameRail(data.FindProperty("innerLeftCardContainer").objectReferenceValue as RectTransform, "Left");
-        RenameRail(data.FindProperty("innerRightCardContainer").objectReferenceValue as RectTransform, "Right");
+        RenameRail(data.FindProperty("innerFirstCardContainer").objectReferenceValue as RectTransform, "Left");
+        RenameRail(data.FindProperty("innerSecondCardContainer").objectReferenceValue as RectTransform, "Right");
     }
 
     private static void RenameRail(RectTransform container, string side)
@@ -534,10 +534,9 @@ public static class TelemetryDetailPanelSetup
     // Helpers
     // -----------------------------------------------------------------------
 
-    private static WideStatRailManager FindRailManager() =>
-        UnityEngine.Object.FindObjectsByType<WideStatRailManager>(
-                FindObjectsInactive.Include)
-            .FirstOrDefault() ?? throw new InvalidOperationException("Wide Stat Rail Manager not found.");
+    private static StatRailManager FindRailManager() =>
+        StatRailManagers.Wide(FindObjectsInactive.Include) ??
+        throw new InvalidOperationException("The wide layout's Stat Rail Manager was not found.");
 
     /// <summary>
     /// The 128 px white icons are drawn at about 17 px; mipmaps keep them from

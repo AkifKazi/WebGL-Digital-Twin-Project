@@ -143,7 +143,8 @@ Do not connect a public browser directly to a PLC. See `DigitalTwinIntegration.m
 
 - Desktop and laptop browsers use adaptive PC/WebGL quality.
 - Mobile WebGL is locked to the Mobile quality preset and 30 FPS to reduce heat and battery use.
-- A vertical desktop monitor remains a desktop interface instead of being mistaken for a phone.
+- A vertical desktop monitor remains a desktop interface instead of being mistaken for a phone; its telemetry cards run in rows above and below the model, as on a phone held upright.
+- How many card columns or rows each screen shows, and whether a card opens its history panel, is set in **Telemetry Layout Settings** on the layout controller (see `DigitalTwinIntegration.md`).
 - Phones can switch between portrait and landscape layouts.
 - Portrait telemetry uses paged rails so readings are never permanently inaccessible because of screen capacity.
 - The browser page reports the notch, home indicator and bottom-toolbar insets to Unity (`DeviceSafeArea`), and keeps the canvas at its tallest height on phones so a changing toolbar never resizes it. This needs the **DigitalTwin** WebGL template.

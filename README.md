@@ -52,7 +52,7 @@ sensors, hierarchy categories, engineering limits, and anchor positions.
 The current feeder-specific simulator and particle setup live in
 `VibratoryFeederSceneConfigurator`, outside the central setup script.
 
-`TelemetryRegistry`, `WideStatRailManager`, and `PortraitStatRailManager` use the same source-selection rule. The default **Scene Discovery** mode automatically finds `PerformanceStatSource` components created from the selected machine configuration. **Explicit List** remains available when a scene needs strict manual control.
+`TelemetryRegistry` and the two layouts' `StatRailManager` components (wide and portrait) use the same source-selection rule. The default **Scene Discovery** mode automatically finds `PerformanceStatSource` components created from the selected machine configuration. **Explicit List** remains available when a scene needs strict manual control.
 
 See [`Assets/Documentation/ARCHITECTURE.md`](Assets/Documentation/ARCHITECTURE.md) for ownership and extension rules.
 

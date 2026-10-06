@@ -3,10 +3,12 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// The HD button in the bottom controls. It raises the graphics preset on a
-/// desktop browser and hides itself on phones, which stay on the light preset.
-/// The three looks follow the other bottom controls: the idle sprite, the hover
-/// sprite while a mouse is over it, and the pressed sprite while HD is on.
+/// The SD / HD segmented control in the bottom controls. Styled like the
+/// view-mode and Telemetry / Service controls: the selected segment takes the
+/// outlined sprite and cannot be pressed again, the other stays idle and shows
+/// the hover sprite. SD is the light preset every device starts on; HD raises
+/// the graphics preset on a desktop browser. Phones never show the control,
+/// because they stay on the light preset.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class QualityToggleControl : MonoBehaviour
@@ -15,46 +17,33 @@ public sealed class QualityToggleControl : MonoBehaviour
     [Tooltip("The quality controller. Empty finds the one in the scene.")]
     [SerializeField] private AdaptiveQualityController quality;
 
-    [Tooltip("The HD button itself.")]
-    [SerializeField] private Button button;
-
-    [Tooltip("The button's background, which shows the idle and pressed sprites.")]
-    [SerializeField] private Image background;
-
-    [Tooltip("The HD icon.")]
-    [SerializeField] private Image icon;
-
-    [Tooltip("Optional label beside the icon.")]
-    [SerializeField] private TMP_Text label;
+    [SerializeField] private Button sdButton;
+    [SerializeField] private Button hdButton;
 
     [Tooltip("The whole control, hidden on phones. Empty hides this object.")]
     [SerializeField] private GameObject controlRoot;
 
-    [Header("Sprites")]
-    [Tooltip("Shown while HD is off.")]
-    [SerializeField] private Sprite idleSprite;
-
-    [Tooltip("Shown while HD is on, the same sprite the selected view-mode segment uses.")]
+    [Header("Look")]
     [SerializeField] private Sprite selectedSprite;
+    [SerializeField] private Sprite idleSprite;
+    [SerializeField] private Color selectedTextColor = new Color32(234, 253, 255, 255);
+    [SerializeField] private Color idleTextColor = new Color32(104, 166, 175, 255);
 
-    [Header("Colours")]
-    [SerializeField] private Color onIconColor = new(0.212f, 0.929f, 1f, 1f);
-    [SerializeField] private Color offIconColor = Color.white;
-    [SerializeField] private Color onTextColor = new(0.918f, 0.992f, 1f, 1f);
-    [SerializeField] private Color offTextColor = new(0.408f, 0.651f, 0.686f, 1f);
+    public Button SdButton => sdButton;
+    public Button HdButton => hdButton;
 
     private void Awake()
     {
         if (quality == null)
             quality = FindAnyObjectByType<AdaptiveQualityController>(FindObjectsInactive.Include);
-        if (button == null)
-            button = GetComponentInChildren<Button>(true);
     }
 
     private void OnEnable()
     {
-        if (button != null)
-            button.onClick.AddListener(Toggle);
+        if (sdButton != null)
+            sdButton.onClick.AddListener(SelectSD);
+        if (hdButton != null)
+            hdButton.onClick.AddListener(SelectHD);
         if (quality != null)
             quality.QualityChanged += Apply;
 
@@ -69,32 +58,48 @@ public sealed class QualityToggleControl : MonoBehaviour
 
     private void OnDisable()
     {
-        if (button != null)
-            button.onClick.RemoveListener(Toggle);
+        if (sdButton != null)
+            sdButton.onClick.RemoveListener(SelectSD);
+        if (hdButton != null)
+            hdButton.onClick.RemoveListener(SelectHD);
         if (quality != null)
             quality.QualityChanged -= Apply;
     }
 
-    private void Toggle()
+    public void SelectSD() => SetHighQuality(false);
+
+    public void SelectHD() => SetHighQuality(true);
+
+    private void SetHighQuality(bool enabled)
     {
         if (quality != null)
-            quality.ToggleHighQuality();
+            quality.SetHighQuality(enabled);
     }
 
     private void Apply()
     {
-        bool on = quality != null && quality.HighQualityEnabled;
+        bool hd = quality != null && quality.HighQualityEnabled;
+        ApplySegment(sdButton, !hd);
+        ApplySegment(hdButton, hd);
+    }
 
-        if (background != null)
+    private void ApplySegment(Button button, bool selected)
+    {
+        if (button == null)
+            return;
+
+        if (button.targetGraphic is Image background)
         {
-            // The idle sprite stays the base: UIHoverSprite lays the hover sprite
-            // over it, and it must never show while the pressed look is on.
-            background.sprite = on ? selectedSprite : idleSprite;
+            background.sprite = selected ? selectedSprite : idleSprite;
+            // Preserve the colours authored into the sprites.
             background.color = Color.white;
         }
-        if (icon != null)
-            icon.color = on ? onIconColor : offIconColor;
+
+        TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
         if (label != null)
-            label.color = on ? onTextColor : offTextColor;
+            label.color = selected ? selectedTextColor : idleTextColor;
+
+        // The selected preset cannot be selected again.
+        button.interactable = !selected;
     }
 }

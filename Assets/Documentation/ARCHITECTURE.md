@@ -17,7 +17,7 @@ The following classes are machine-independent and should not contain hopper tag 
 - `PerformanceStatSource` — sensor definition, latest state, alarm evaluation, and world anchor.
 - `TelemetryCardPresentation` — a strict one-sensor/one-card presentation boundary.
 - `ConnectionHealthMonitor` — provider and aggregate data-health state.
-- `WideStatRailManager` and `PortraitStatRailManager` — responsive presentation.
+- `StatRailManager` and `StatLeaderLineManager` — responsive presentation: one of each per layout, the portrait one set to always run rows.
 - Card, leader-line, responsive-shell, camera, and text-fitting components.
 
 ## Machine-specific responsibilities

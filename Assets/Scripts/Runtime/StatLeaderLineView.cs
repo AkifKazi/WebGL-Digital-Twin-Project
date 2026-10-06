@@ -2,6 +2,14 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// The line from a telemetry card (or the detail panel opened from it) to its
+/// sensor on the model. It is drawn last each frame, after the rails have moved
+/// the cards, the detail panels have moved, and the views that shift the
+/// camera's projection have run, so it always meets both ends of this frame
+/// rather than trailing one of them by a frame.
+/// </summary>
+[DefaultExecutionOrder(100)]
 public class StatLeaderLineView : MonoBehaviour
 {
     [Header("Line Parts")]
@@ -259,6 +267,9 @@ public class StatLeaderLineView : MonoBehaviour
         float transitionDuration,
         bool applyInstantly = false)
     {
+        // An unchanged rest level must not restart a fade already under way.
+        if (!applyInstantly && Mathf.Approximately(activeRestingLineOpacity, Mathf.Clamp01(opacity)))
+            return;
         activeRestingLineOpacity = Mathf.Clamp01(opacity);
 
         // Focused, warning and critical lines stay at 100%. The new resting
@@ -284,24 +295,12 @@ public class StatLeaderLineView : MonoBehaviour
             return;
         }
 
-        Vector3 projectedSensorPoint = worldCamera.WorldToScreenPoint(
-            card.WorldAnchor.position
-        );
-
-        // A point behind the camera has no truthful 2D screen location.
-        // Points beyond the left, right, top or bottom are intentionally
-        // NOT rejected or clamped. Their line geometry continues to update
-        // using the real projected sensor position.
-        if (projectedSensorPoint.z <= 0f)
-        {
-            SetGeometryVisible(false);
-            return;
-        }
-
-        Vector2 sensorScreenPoint = new Vector2(
-            projectedSensorPoint.x,
-            projectedSensorPoint.y
-        );
+        // The point the rails place the card by: the sensor's projection on
+        // screen, held just past the edge when it is further out or behind the
+        // camera, so the line runs off that edge towards it.
+        Vector2 sensorScreenPoint = TelemetryPresentationBuilder.PlacementScreenPoint(
+            worldCamera,
+            card.WorldAnchor.position);
 
         Camera uiCamera = GetUICamera();
         Vector2 cardScreenPoint = RectTransformUtility.WorldToScreenPoint(

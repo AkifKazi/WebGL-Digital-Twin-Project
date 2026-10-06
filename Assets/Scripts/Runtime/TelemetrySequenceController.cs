@@ -8,11 +8,9 @@ public class TelemetrySequenceController : MonoBehaviour
     [SerializeField]
     private HybridHopperClipController hopperController;
 
+    [Tooltip("The rails of the layout this sequence reveals.")]
     [SerializeField]
-    private WideStatRailManager railManager;
-
-    [SerializeField]
-    private PortraitStatRailManager portraitRailManager;
+    private StatRailManager railManager;
 
     [Tooltip(
         "A parent containing the generated cards and leader lines."
@@ -156,15 +154,6 @@ public class TelemetrySequenceController : MonoBehaviour
             railManager.LayoutRebuilt +=
                 HandleLayoutRebuilt;
         }
-
-        if (portraitRailManager != null)
-        {
-            portraitRailManager.LayoutRebuilt -=
-                HandleLayoutRebuilt;
-
-            portraitRailManager.LayoutRebuilt +=
-                HandleLayoutRebuilt;
-        }
     }
 
     private void Unsubscribe()
@@ -178,12 +167,6 @@ public class TelemetrySequenceController : MonoBehaviour
         if (railManager != null)
         {
             railManager.LayoutRebuilt -=
-                HandleLayoutRebuilt;
-        }
-
-        if (portraitRailManager != null)
-        {
-            portraitRailManager.LayoutRebuilt -=
                 HandleLayoutRebuilt;
         }
     }

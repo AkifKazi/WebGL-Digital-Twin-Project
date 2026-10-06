@@ -113,8 +113,7 @@ public static class DigitalTwinSceneSetup
         RemoveUnconfiguredSources(existingSources, orderedSources);
         RemoveEmptyTelemetryCategories(sensorRoot.transform);
 
-        AssignSourcesToAll<WideStatRailManager>(orderedSources);
-        AssignSourcesToAll<PortraitStatRailManager>(orderedSources);
+        AssignSourcesToAll<StatRailManager>(orderedSources);
         RemoveLegacyPresentationGroups();
         ConfigureRegistry(orderedSources);
         ConfigureLiveDataAndMachineBehavior(configuration);

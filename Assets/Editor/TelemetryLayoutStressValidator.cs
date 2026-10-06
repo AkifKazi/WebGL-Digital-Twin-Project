@@ -199,20 +199,15 @@ public static class TelemetryLayoutStressValidator
 
     private static void ValidateRailManagers(ICollection<string> errors)
     {
-        WideStatRailManager wide = UnityEngine.Object.FindAnyObjectByType<WideStatRailManager>(
-            FindObjectsInactive.Include);
-        PortraitStatRailManager portrait = UnityEngine.Object.FindAnyObjectByType<PortraitStatRailManager>(
-            FindObjectsInactive.Include);
-        ValidateReferences(wide, new[]
+        StatRailManager wide = StatRailManagers.Wide(FindObjectsInactive.Include);
+        StatRailManager portrait = StatRailManagers.Portrait(FindObjectsInactive.Include);
+        string[] containers =
         {
-            "leftCardContainer", "rightCardContainer",
-            "innerLeftCardContainer", "innerRightCardContainer"
-        }, errors);
-        ValidateReferences(portrait, new[]
-        {
-            "topCardContainer", "bottomCardContainer",
-            "innerTopCardContainer", "innerBottomCardContainer"
-        }, errors);
+            "firstCardContainer", "secondCardContainer",
+            "innerFirstCardContainer", "innerSecondCardContainer"
+        };
+        ValidateReferences(wide, containers, errors);
+        ValidateReferences(portrait, containers, errors);
         ValidateMetricHeight(wide, errors);
         ValidateMetricHeight(portrait, errors);
     }
@@ -239,13 +234,13 @@ public static class TelemetryLayoutStressValidator
 
         foreach (PortraitTelemetryPager pager in pagers)
         {
-            if (!pager.HasExactlyOneRailManager || pager.HopperController == null ||
+            if (pager.RailManager == null || pager.HopperController == null ||
                 pager.PreviousButton == null || pager.NextButton == null ||
                 pager.PreviousIcon == null || pager.NextIcon == null)
             {
                 errors.Add($"Telemetry pager '{pager.name}' has incomplete references.");
             }
-            if (pager.WideRailManager != null && pager.PaginationCanvasGroup == null)
+            if (pager.RailManager != null && !pager.RailManager.AlwaysRows && pager.PaginationCanvasGroup == null)
                 errors.Add("Wide pagination must own a standalone visibility group.");
         }
     }
