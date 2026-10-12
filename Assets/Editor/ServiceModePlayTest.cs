@@ -149,7 +149,7 @@ public static class ServiceModePlayTest
             case 4:
                 Capture("04-hover");
                 Expect(panel.HoveredPart != null && panel.HoveredPart.name == HoverPart, "hovering a card marks its part");
-                Expect(hovered != null && hovered.GetComponent<UIHoverSprite>().IsShowingHover, "the hovered card shows the hover look");
+                Expect(hovered != null && hovered.GetComponent<UIControlState>().IsHovered, "the hovered card shows the hover look");
                 Expect(ActivePins() == DueCount() + 1, "the hovered part gets a pin too");
                 Expect(SelectionOutline.Targets.Count > 0 && SelectionOutline.Strength > 0.9f, "the hovered part is outlined");
                 Expect(Mathf.Abs(Distance() - distanceBefore) < 0.01f, "hovering leaves the camera alone");
@@ -177,7 +177,7 @@ public static class ServiceModePlayTest
 
             case 6:
                 Capture("06-detail-scrolled");
-                Expect(panel.BackButton.GetComponent<UIHoverSprite>().IsShowingHover, "the back arrow shows the hover look");
+                Expect(panel.BackButton.GetComponent<UIControlState>().IsHovered, "the back arrow shows the hover look");
                 Pointer(panel.BackButton.gameObject, ExecuteEvents.pointerExitHandler);
                 panel.BackButton.onClick.Invoke();
                 Next(0.3f);

@@ -165,7 +165,7 @@ public sealed class MachineXRayPresenter : MonoBehaviour
 
         // The UI publishes which sensor is focused; this component is the only
         // thing that knows which geometry that sensor belongs to.
-        PerformanceStatCardView.ActiveFocusChanged += HandleCardFocusChanged;
+        CardFocus.Changed += HandleCardFocusChanged;
 
         // A reveal or dissolve cut off by disabling this object plays again, so
         // the materials settle on the presentation that was asked for.
@@ -184,7 +184,7 @@ public sealed class MachineXRayPresenter : MonoBehaviour
                 group.StateChanged -= HandleGroupStateChanged;
         }
 
-        PerformanceStatCardView.ActiveFocusChanged -= HandleCardFocusChanged;
+        CardFocus.Changed -= HandleCardFocusChanged;
 
         // Disabling stops coroutines without clearing their handles; a stale
         // transition handle would refuse every later presentation change.

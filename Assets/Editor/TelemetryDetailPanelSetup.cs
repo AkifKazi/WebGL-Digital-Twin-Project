@@ -33,7 +33,7 @@ public static class TelemetryDetailPanelSetup
     private static readonly Color Idle = new(0.408f, 0.651f, 0.686f, 1f);
     private static readonly Color Ink = new(0.918f, 0.992f, 1f, 1f);
     private static readonly Color Clear = new(1f, 1f, 1f, 0f);
-    private static readonly Color Section = new(0.035f, 0.102f, 0.137f, 1f);
+    private static readonly Color Section = new(0.008f, 0.027f, 0.039f, 1f);
 
     // Panel geometry, in canvas units. The panel sprite draws its frame line
     // 10 in from the rectangle's edge; the spacing below is measured from it.

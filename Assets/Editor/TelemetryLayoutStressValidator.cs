@@ -97,8 +97,8 @@ public static class TelemetryLayoutStressValidator
             errors.Add("Card top and bottom content padding must be exactly 16.");
 
         SerializedProperty contentGap = data.FindProperty("metricContentGap");
-        if (contentGap == null || !Mathf.Approximately(contentGap.floatValue, 8f))
-            errors.Add("Card label-to-reading spacing must be exactly 8.");
+        if (contentGap == null || !Mathf.Approximately(contentGap.floatValue, 2f))
+            errors.Add("Card label-to-reading spacing must be exactly 2.");
 
         SerializedProperty valueHeight = data.FindProperty("valueRowHeight");
         if (valueHeight == null || !Mathf.Approximately(valueHeight.floatValue, 48f))
@@ -217,8 +217,8 @@ public static class TelemetryLayoutStressValidator
         if (manager == null)
             return;
         SerializedProperty height = new SerializedObject(manager).FindProperty("cardHeight");
-        if (height == null || !Mathf.Approximately(height.floatValue, 119f))
-            errors.Add($"'{manager.name}' base card height must be 119 for the 16/8/16 spacing model.");
+        if (height == null || !Mathf.Approximately(height.floatValue, 113f))
+            errors.Add($"'{manager.name}' base card height must be 113 for the 16/2/16 spacing model.");
     }
 
     private static void ValidatePortraitPagination(ICollection<string> errors)

@@ -21,6 +21,8 @@ See [Language table](Assets/Documentation/DigitalTwinIntegration.md#language-tab
 
 For a non-technical walkthrough, read [`Assets/Documentation/USER_GUIDE.md`](Assets/Documentation/USER_GUIDE.md).
 
+The UI design system has an interactive reference site: open [`docs/design-system/index.html`](docs/design-system/index.html) in a browser (see its [README](docs/design-system/README.md)).
+
 ## Project status
 
 The project is a working visualization prototype, not a plant-control system. The hopper process model and engineering limits are demonstration values. A production deployment must use approved tag mappings, limits, security, and machine data.

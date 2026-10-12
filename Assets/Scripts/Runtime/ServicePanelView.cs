@@ -33,9 +33,6 @@ public sealed partial class ServicePanelView : MonoBehaviour
     [SerializeField] private TMP_FontAsset labelFont;
     [SerializeField] private TMP_FontAsset valueFont;
 
-    [Tooltip("The hover look the other controls use, laid over a card or button while the pointer is on it.")]
-    [SerializeField] private Sprite hoverSprite;
-
     [Tooltip("Draws the run bars with a pulse travelling into their leading end. Empty: plain bars.")]
     [SerializeField] private Material runBarMaterial;
 
@@ -57,10 +54,11 @@ public sealed partial class ServicePanelView : MonoBehaviour
     [SerializeField] private Color warning = new(1f, 0.70f, 0.10f, 1f);
     [SerializeField] private Color critical = new(1f, 0.22f, 0.20f, 1f);
 
-    [Tooltip("The panel's fill. Near opaque, so the model does not show through the list.")]
+    [Tooltip("The panel's fill without the design system (no theme). Near opaque, so the model " +
+             "does not show through the list.")]
     [SerializeField] private Color backdrop = new(0.031f, 0.086f, 0.118f, 0.96f);
 
-    [Tooltip("Every card's fill, whatever its state: a solid step lighter than the panel.")]
+    [Tooltip("Every card's fill without the design system: a solid step lighter than the panel.")]
     [SerializeField] private Color card = new(0.063f, 0.122f, 0.153f, 1f);
 
     private const float CardHeight = 104f;
@@ -86,7 +84,8 @@ public sealed partial class ServicePanelView : MonoBehaviour
     private readonly List<ServiceItemStatus> items = new();
     private readonly List<ComponentCard> cards = new();
 
-    private RectTransform border;
+    // The panel's surface: the Sheet component, its off-screen edges pushed past the screen.
+    private RectTransform sheet;
     private RectTransform header;
     private RectTransform headerText;
     private TextMeshProUGUI runHoursText;
@@ -175,10 +174,11 @@ public sealed partial class ServicePanelView : MonoBehaviour
         }
 
         // Beside the viewport only the left edge is drawn: the others fall on
-        // the screen's edges. Over the content area the panel is framed.
-        float outside = beside ? 2f : 0f;
-        border.offsetMin = new Vector2(0f, -outside);
-        border.offsetMax = new Vector2(outside, outside);
+        // the screen's edges. Over the content area the panel is framed; full
+        // screen, every edge is the screen's.
+        float outside = beside || fullScreen ? 2f : 0f;
+        sheet.offsetMin = new Vector2(fullScreen ? -outside : 0f, -outside);
+        sheet.offsetMax = new Vector2(outside, outside);
     }
 
     private IEnumerable<ScrollView> ScrollViews()
@@ -296,6 +296,7 @@ public sealed partial class ServicePanelView : MonoBehaviour
         bool alert = status.State != ServiceState.OnTrack;
         Color state = StateColor(status.State);
         card.Hover.Part = status.Part;
+        card.State.Tone = ToneOf(status.State);
         card.Number.color = state;
         SetText(card.Number, number.ToString(CultureInfo.InvariantCulture));
         SetText(card.Name, DisplayName(status.Part));
@@ -402,6 +403,7 @@ public sealed partial class ServicePanelView : MonoBehaviour
     {
         public RectTransform Root;
         public ServiceHoverTarget Hover;
+        public UIControlState State;
         public TextMeshProUGUI Number;
         public RectTransform NameArea;
         public TextMeshProUGUI Name;
@@ -431,19 +433,11 @@ public sealed partial class ServicePanelView : MonoBehaviour
 
         RectTransform root = (RectTransform)transform;
 
-        RectTransform fill = CreateRect("Backdrop", root);
-        Stretch(fill, 0f, 0f, 0f, 0f);
+        sheet = CreateRect("Backdrop", root);
+        Stretch(sheet, 0f, 0f, 0f, 0f);
         // Catches the pointer over the whole panel, so the wheel and drags
         // here never reach the model behind it.
-        AddFrame(fill, backdrop, 0f, true);
-
-        border = CreateRect("Border", root);
-        Stretch(border, 0f, 0f, 0f, 0f);
-        UIFrameGraphic edge = AddFrame(border, Color.clear, 2f, false);
-        edge.SetColors(new Color(normal.r, normal.g, normal.b, 0.5f), Color.clear);
-        // Full screen, every edge is the screen's.
-        if (fullScreen)
-            border.gameObject.SetActive(false);
+        AddSurface(sheet, "Sheet", backdrop, true);
 
         header = CreateRect("Header", root);
         header.anchorMin = new Vector2(0f, 1f);
@@ -576,11 +570,11 @@ public sealed partial class ServicePanelView : MonoBehaviour
         size.preferredHeight = CardHeight;
         size.minHeight = CardHeight;
 
-        AddFrame(card.Root, this.card, 0f, true);
+        AddSurface(card.Root, "List Row", this.card, true);
         card.Hover = card.Root.gameObject.AddComponent<ServiceHoverTarget>();
         card.Hover.HoverChanged += HandleHover;
         card.Hover.Clicked += HandleClicked;
-        AddHoverLook(card.Root);
+        card.State = card.Root.gameObject.AddComponent<UIControlState>();
 
         RectTransform inner = CreateRect("Content", card.Root);
         Stretch(inner, CardPadding, CardPadding, 0f, 0f);
@@ -633,25 +627,27 @@ public sealed partial class ServicePanelView : MonoBehaviour
     }
 
     /// <summary>
-    /// The other controls' hover look over <paramref name="target"/>, shown
-    /// while a mouse is on it. <paramref name="target"/> must take the pointer.
+    /// A surface drawn as a design-system component (see UIComponentStyle).
+    /// Without a theme, a flat frame in <paramref name="fallback"/>.
     /// </summary>
-    private void AddHoverLook(RectTransform target)
+    private static Graphic AddSurface(RectTransform rect, string component, Color fallback, bool raycast)
     {
-        if (hoverSprite == null)
-            return;
-
-        RectTransform rect = CreateRect("Hover", target);
-        Stretch(rect, 0f, 0f, 0f, 0f);
-        Image image = rect.gameObject.AddComponent<Image>();
-        image.sprite = hoverSprite;
-        image.type = Image.Type.Sliced;
-        image.raycastTarget = false;
-        // Switched off: shown only while hovered.
-        image.enabled = false;
-
-        target.gameObject.AddComponent<UIHoverSprite>().Configure(image, hoverSprite, null, null);
+        UIComponentStyle style = UITheme.Active != null ? UITheme.Active.Component(component) : null;
+        if (style == null)
+            return AddFrame(rect, fallback, 0f, raycast);
+        UIShape shape = rect.gameObject.AddComponent<UIShape>();
+        shape.Component = style;
+        shape.raycastTarget = raycast;
+        return shape;
     }
+
+    /// <summary>The design system's tone for a service state.</summary>
+    private static UITone ToneOf(ServiceState state) => state switch
+    {
+        ServiceState.Overdue => UITone.Critical,
+        ServiceState.DueSoon => UITone.Warning,
+        _ => UITone.Normal
+    };
 
     private void BuildLegend(RectTransform root)
     {

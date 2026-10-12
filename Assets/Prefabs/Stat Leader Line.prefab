@@ -54,7 +54,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 141712653185553317}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Script: {fileID: 11500000, guid: da03c947a065f4a6e84e7de07b037af2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 2100000, guid: e13f7877228e74ac99230bef19b1a523, type: 2}
@@ -75,6 +75,10 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  component: {fileID: 0}
+  state: 0
+  style: {fileID: 0}
+  variant: 
 --- !u!1 &2942971750210190534
 GameObject:
   m_ObjectHideFlags: 0
@@ -110,7 +114,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 50, y: 50}
+  m_SizeDelta: {x: 12, y: 12}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &262522557706377694
 CanvasRenderer:
@@ -129,7 +133,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 2942971750210190534}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Script: {fileID: 11500000, guid: da03c947a065f4a6e84e7de07b037af2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
@@ -150,6 +154,10 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  component: {fileID: 0}
+  state: 0
+  style: {fileID: 0}
+  variant: 
 --- !u!1 &4566632485431810698
 GameObject:
   m_ObjectHideFlags: 0
@@ -289,7 +297,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 7294951810797098089}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Script: {fileID: 11500000, guid: da03c947a065f4a6e84e7de07b037af2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 2100000, guid: e13f7877228e74ac99230bef19b1a523, type: 2}
@@ -310,3 +318,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+  component: {fileID: 0}
+  state: 0
+  style: {fileID: 0}
+  variant: 

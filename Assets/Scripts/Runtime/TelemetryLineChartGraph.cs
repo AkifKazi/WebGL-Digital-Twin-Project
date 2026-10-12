@@ -9,7 +9,7 @@ using UnityEngine.UI;
 /// <summary>
 /// The average of each bucket as a smooth line, Apple Health style: faint
 /// gridlines with values on the right,
-/// dotted guides at the time labels, the warning and critical limits as thin
+/// faint guides at the time labels, the warning and critical limits as thin
 /// coloured lines, and the latest value as a ringed dot.
 /// </summary>
 public sealed class TelemetryLineChartGraph : TelemetryGraphView
@@ -96,6 +96,7 @@ public sealed class TelemetryLineChartGraph : TelemetryGraphView
         {
             SetGutter(0f);
             chart.SetData(points, 0f, 1f, null, Guides, null, null);
+            chart.SetBands(float.NaN, float.NaN, float.NaN, float.NaN, Style.warning, Style.critical);
             foreach (TextMeshProUGUI label in yLabels)
                 label.gameObject.SetActive(false);
             PlaceTimeLabels(buckets, data.Range);
@@ -157,12 +158,19 @@ public sealed class TelemetryLineChartGraph : TelemetryGraphView
 
         chart.lineColor = Style.normal;
         Color area = Style.normal;
-        area.a = 0.16f;
+        area.a = 0.12f;
         chart.areaColor = area;
         chart.fillArea = Style.fillLineArea;
         chart.gridColor = Style.grid;
         chart.markerRingColor = Style.surface;
         chart.SetData(points, low, high, grid, Guides, limits, limitColors);
+        // The line takes the tone of the band it is in, by the source's own limits.
+        chart.SetBands(
+            sourceLimits.HasHigh ? sourceLimits.WarningAbove : float.NaN,
+            sourceLimits.HasHigh ? sourceLimits.CriticalAbove : float.NaN,
+            sourceLimits.HasLow ? sourceLimits.WarningBelow : float.NaN,
+            sourceLimits.HasLow ? sourceLimits.CriticalBelow : float.NaN,
+            Style.warning, Style.critical);
 
         for (int i = 0; i < grid.Count && i < yLabels.Count; i++)
         {
@@ -186,7 +194,8 @@ public sealed class TelemetryLineChartGraph : TelemetryGraphView
     {
         if (value < low - span * 0.6f || value > high + span * 0.6f)
             return;
-        color.a *= 0.75f;
+        // Solid now, so fainter than the dashes were.
+        color.a *= 0.6f;
         limits.Add(value);
         limitColors.Add(color);
     }

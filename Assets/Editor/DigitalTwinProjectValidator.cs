@@ -57,6 +57,7 @@ public static class DigitalTwinProjectValidator
         ValidateSharedMachineViewController(result);
         ValidateNoTelemetryGrouping(result);
         ValidateTelemetryVisibility(result);
+        ValidateLeaderLineObstacles(result);
         ValidateParticleController(result);
         ValidateCamera(result);
         ValidateAdaptiveQuality(result);
@@ -602,6 +603,21 @@ public static class DigitalTwinProjectValidator
             CheckPointsAt<PortraitTelemetrySheetController>(layout, "visibility", visibility, result);
             CheckPointsAt<PortraitTelemetryPager>(layout, "visibility", visibility, result);
             CheckPointsAt<TelemetrySequenceController>(layout, "visibility", visibility, result);
+        }
+    }
+
+    /// <summary>Leader lines fade over every translucent control: each one carries the marker.</summary>
+    private static void ValidateLeaderLineObstacles(ValidationResult result)
+    {
+        IEnumerable<Component> controls = UnityEngine.Object.FindObjectsByType<ViewModeSegmentedControl>(FindObjectsInactive.Include)
+            .Cast<Component>()
+            .Concat(UnityEngine.Object.FindObjectsByType<QualityToggleControl>(FindObjectsInactive.Include))
+            .Concat(UnityEngine.Object.FindObjectsByType<ZoomControlAvailabilityView>(FindObjectsInactive.Include))
+            .Concat(UnityEngine.Object.FindObjectsByType<DigitalTwinModeSwitch>(FindObjectsInactive.Include));
+        foreach (Component control in controls)
+        {
+            if (control.GetComponent<LeaderLineObstacle>() == null)
+                result.Errors.Add($"'{GetPath(control.transform)}' is not marked as a leader line obstacle.");
         }
     }
 

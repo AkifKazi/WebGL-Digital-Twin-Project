@@ -59,15 +59,15 @@ public sealed class MachineSelectionHighlighter : MonoBehaviour
 
     private void OnEnable()
     {
-        PerformanceStatCardView.ActiveFocusChanged += HandleCardFocusChanged;
+        CardFocus.Changed += HandleCardFocusChanged;
 
         // A card may already hold focus, for example after a view change.
-        HandleCardFocusChanged(PerformanceStatCardView.ActiveFocusedCard);
+        HandleCardFocusChanged(CardFocus.Focused);
     }
 
     private void OnDisable()
     {
-        PerformanceStatCardView.ActiveFocusChanged -= HandleCardFocusChanged;
+        CardFocus.Changed -= HandleCardFocusChanged;
 
         target = null;
         drawn = null;

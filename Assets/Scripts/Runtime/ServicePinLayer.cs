@@ -17,15 +17,17 @@ public sealed class ServicePinLayer : MonoBehaviour
     [SerializeField] private Camera targetCamera;
     [SerializeField] private TMP_FontAsset font;
 
-    [SerializeField, Min(8f)] private float pinSize = 36f;
-    [SerializeField] private Color onPin = new(0.024f, 0.075f, 0.102f, 1f);
-    [SerializeField] private Color hoverRing = new(0.918f, 0.992f, 1f, 1f);
+    [SerializeField, Min(8f)] private float pinSize = 34f;
+
+    [Tooltip("Seconds for the hovered pin's selection frame to settle in.")]
+    [SerializeField, Min(0f)] private float selectSeconds = 0.14f;
 
     [Tooltip("Seconds for the hovered part's outline to appear or go.")]
     [SerializeField, Min(0f)] private float outlineFadeSeconds = 0.15f;
 
     private readonly List<Pin> pins = new();
     private readonly List<ServiceItemStatus> shown = new();
+    private readonly List<Pin> stack = new();
     private RectTransform layer;
     private Canvas rootCanvas;
 
@@ -36,9 +38,9 @@ public sealed class ServicePinLayer : MonoBehaviour
     private sealed class Pin
     {
         public RectTransform Root;
-        public UIFrameGraphic Fill;
-        public UIFrameGraphic Ring;
+        public UIServicePinGraphic Graphic;
         public TextMeshProUGUI Number;
+        public float Selected;
     }
 
     private void Awake()
@@ -91,12 +93,22 @@ public sealed class ServicePinLayer : MonoBehaviour
             if (pin.Root.gameObject.activeSelf != visible)
                 pin.Root.gameObject.SetActive(visible);
             if (!visible)
+            {
+                pin.Selected = 0f;
                 continue;
+            }
 
             ServiceItemStatus item = shown[i];
             Color state = panel.StateColor(item.State);
-            pin.Fill.SetColors(Color.clear, state);
-            pin.Ring.gameObject.SetActive(item.Part == hovered);
+            pin.Graphic.SetState(state, item.State != ServiceState.OnTrack);
+            if (pin.Number.color != state)
+                pin.Number.color = state;
+
+            float goal = item.Part == hovered ? 1f : 0f;
+            pin.Selected = selectSeconds <= 0f
+                ? goal
+                : Mathf.MoveTowards(pin.Selected, goal, Time.unscaledDeltaTime / selectSeconds);
+            pin.Graphic.SetSelected(pin.Selected);
             if (panel.TryGetNumber(item.Part, out int number))
             {
                 string text = number.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -104,6 +116,35 @@ public sealed class ServicePinLayer : MonoBehaviour
                     pin.Number.text = text;
             }
         }
+
+        Stack(hovered);
+    }
+
+    /// <summary>
+    /// Where pins overlap, the soonest due draws on top, and the hovered one
+    /// above them all.
+    /// </summary>
+    private void Stack(MachinePartGroup hovered)
+    {
+        stack.Clear();
+        Pin top = null;
+        for (int i = pins.Count - 1; i >= 0; i--)
+        {
+            if (hovered != null && i < shown.Count && shown[i].Part == hovered)
+                top = pins[i];
+            else
+                stack.Add(pins[i]);
+        }
+        if (top != null)
+            stack.Add(top);
+
+        bool ordered = layer.childCount == stack.Count;
+        for (int i = 0; ordered && i < stack.Count; i++)
+            ordered = layer.GetChild(i) == stack[i].Root;
+        if (ordered)
+            return;
+        foreach (Pin pin in stack)
+            pin.Root.SetAsLastSibling();
     }
 
     private bool TryPlace(Pin pin, in ServiceItemStatus item, Camera uiCamera)
@@ -188,29 +229,19 @@ public sealed class ServicePinLayer : MonoBehaviour
         pin.Root.pivot = new Vector2(0.5f, 0.5f);
         pin.Root.sizeDelta = new Vector2(pinSize, pinSize);
 
-        RectTransform ring = CreateRect("Hover Ring", pin.Root);
-        ring.anchorMin = Vector2.zero;
-        ring.anchorMax = Vector2.one;
-        ring.offsetMin = new Vector2(-6f, -6f);
-        ring.offsetMax = new Vector2(6f, 6f);
-        pin.Ring = ring.gameObject.AddComponent<UIFrameGraphic>();
-        pin.Ring.SetThickness(2.5f);
-        pin.Ring.SetColors(hoverRing, Color.clear);
-        pin.Ring.raycastTarget = false;
+        pin.Graphic = pin.Root.gameObject.AddComponent<UIServicePinGraphic>();
+        pin.Graphic.raycastTarget = false;
 
-        pin.Fill = pin.Root.gameObject.AddComponent<UIFrameGraphic>();
-        pin.Fill.SetThickness(0f);
-        pin.Fill.raycastTarget = false;
-
+        // Clear of the lit bar down the left edge.
         RectTransform label = CreateRect("Number", pin.Root);
         label.anchorMin = Vector2.zero;
         label.anchorMax = Vector2.one;
-        label.offsetMin = label.offsetMax = Vector2.zero;
+        label.offsetMin = new Vector2(2f, 0f);
+        label.offsetMax = Vector2.zero;
         pin.Number = label.gameObject.AddComponent<TextMeshProUGUI>();
         if (font != null)
             pin.Number.font = font;
-        pin.Number.fontSize = pinSize * 0.58f;
-        pin.Number.color = onPin;
+        pin.Number.fontSize = pinSize * 0.56f;
         pin.Number.alignment = TextAlignmentOptions.Center;
         pin.Number.textWrappingMode = TextWrappingModes.NoWrap;
         pin.Number.raycastTarget = false;

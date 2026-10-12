@@ -22,15 +22,15 @@ public sealed class TelemetryAnchorFramer : MonoBehaviour
         if (orbitCamera == null)
             orbitCamera = FindAnyObjectByType<OrbitCameraController>(FindObjectsInactive.Include);
 
-        PerformanceStatCardView.Clicked += HandleCardClicked;
+        CardFocus.Changed += HandleCardFocused;
     }
 
     private void OnDisable()
     {
-        PerformanceStatCardView.Clicked -= HandleCardClicked;
+        CardFocus.Changed -= HandleCardFocused;
     }
 
-    private void HandleCardClicked(PerformanceStatCardView card)
+    private void HandleCardFocused(PerformanceStatCardView card)
     {
         if (!frameOffscreenAnchors || orbitCamera == null || card == null || !card.IsFocused)
             return;

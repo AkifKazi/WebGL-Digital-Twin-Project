@@ -13,9 +13,13 @@ using UnityEngine.UI;
 /// On a phone held upright the same panel is a bottom sheet (see
 /// <see cref="UseAsSheet"/>): no pin, no pointer or leader line to the card,
 /// and a close button sized for a thumb.
+///
+/// Bound to a card, it records with <see cref="CardFocus"/> that the card's
+/// detail is open, and, beside the rails, where the card's connector meets it
+/// and where its leader line leaves it.
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class TelemetryDetailPanel : MonoBehaviour
+public sealed class TelemetryDetailPanel : MonoBehaviour, ICardDetailLink
 {
     [Header("Parts")]
     [SerializeField] private CanvasGroup canvasGroup;
@@ -59,6 +63,21 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
     [Tooltip("Closest the pointer gets to the ends of the edge it sits on.")]
     [SerializeField, Min(0f)] private float pointerInset = 34f;
 
+    [Header("Header")]
+    [Tooltip("Height of the range control and of the pin and close buttons. The sheet's close button " +
+             "can be taller, for a thumb; then everything in the header takes its height.")]
+    [SerializeField, Min(16f)] private float headerControlHeight = 40f;
+
+    [Tooltip("Narrowest and widest a range button gets. Between the two, they share the room the pin " +
+             "and close buttons and the gap before them leave.")]
+    [SerializeField] private Vector2 rangeCellWidth = new(40f, 52f);
+
+    [Tooltip("Space between the range control and the pin button.")]
+    [SerializeField, Min(0f)] private float headerGap = 36f;
+
+    [Tooltip("Space between the pin and close buttons.")]
+    [SerializeField, Min(0f)] private float headerButtonSpacing = 6f;
+
     [Header("Colours")]
     [SerializeField] private Color rangeSelected = new(0.918f, 0.992f, 1f, 1f);
     [SerializeField] private Color rangeIdle = new(0.408f, 0.651f, 0.686f, 1f);
@@ -100,8 +119,13 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
     internal bool SnapNextLayout = true;
     internal float Alpha;
 
+    RectTransform ICardDetailLink.CardSidePoint => pointer != null ? pointer.rectTransform : null;
+    RectTransform ICardDetailLink.ModelSidePoint => linkAnchor;
+    float ICardDetailLink.Alpha => Alpha;
+
     private Vector2 pointerSize;
     private bool pointerSizeCaptured;
+    private float headerLaidOutFor = float.NaN;
 
     public void Initialise(
         IReadOnlyList<TelemetryGraphKind> kinds,
@@ -165,12 +189,17 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
     public void UseAsSheet(float closeSize, float closeHitPadding)
     {
         IsSheet = true;
+        headerLaidOutFor = float.NaN;
         if (pinButton != null)
             pinButton.gameObject.SetActive(false);
         if (pointer != null)
             pointer.gameObject.SetActive(false);
+        // A sheet is not beside the rails: no connector, and the line leaves from the card.
         if (Card != null)
-            Card.SetConnectionPointOverride(null);
+        {
+            CardFocus.CloseDetail(Card, this);
+            CardFocus.OpenDetail(Card, null);
+        }
         if (closeButton == null)
             return;
         RectTransform close = (RectTransform)closeButton.transform;
@@ -183,15 +212,15 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
     public void Bind(PerformanceStatCardView card)
     {
         if (Card != null && Card != card)
-            Card.SetConnectionPointOverride(null);
+            CloseDetail();
 
         Card = card;
         Source = card != null ? card.BoundSource : null;
         Side = card != null ? card.RailSide : StatRailSide.Left;
 
         OrientToSide();
-        if (card != null && !IsSheet)
-            card.SetConnectionPointOverride(linkAnchor);
+        if (card != null)
+            CardFocus.OpenDetail(card, IsSheet ? null : this);
 
         Refresh();
     }
@@ -261,9 +290,15 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
 
     public void Unbind()
     {
-        if (Card != null)
-            Card.SetConnectionPointOverride(null);
+        CloseDetail();
         Card = null;
+    }
+
+    private void CloseDetail()
+    {
+        if (Card == null)
+            return;
+        CardFocus.CloseDetail(Card, IsSheet ? null : this);
     }
 
     public void SetPinned(bool pinned)
@@ -386,6 +421,7 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
     private void UpdateLayout()
     {
         float width = RectTransform.sizeDelta.x;
+        UpdateHeaderLayout(width);
         float graphsHeight = 0f;
         foreach (TelemetryGraphView view in graphViews)
             graphsHeight += view.PreferredHeight;
@@ -408,6 +444,70 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
         }
 
         RectTransform.sizeDelta = new Vector2(width, y + sectionInset);
+    }
+
+    /// <summary>
+    /// The header across the sections' width: the range control on their left
+    /// edge, close on their right with pin beside it, all one height. The range
+    /// buttons widen to take what room the panel has, short of the gap before pin.
+    /// </summary>
+    private void UpdateHeaderLayout(float width)
+    {
+        if (Mathf.Approximately(headerLaidOutFor, width) || rangeButtons.Length == 0 || rangeButtons[0] == null)
+            return;
+        RectTransform ranges = rangeButtons[0].transform.parent as RectTransform;
+        RectTransform header = ranges != null ? ranges.parent as RectTransform : null;
+        if (header == null)
+            return;
+        headerLaidOutFor = width;
+
+        header.offsetMin = new Vector2(sectionInset, header.offsetMin.y);
+        header.offsetMax = new Vector2(-sectionInset, header.offsetMax.y);
+
+        float height = headerControlHeight;
+        float buttons = 0f;
+        if (closeButton != null)
+        {
+            RectTransform close = (RectTransform)closeButton.transform;
+            if (IsSheet)
+                height = Mathf.Max(height, close.sizeDelta.y);
+            close.anchoredPosition = new Vector2(0f, close.anchoredPosition.y);
+            close.sizeDelta = new Vector2(height, height);
+            SizeIcon(close, height);
+            buttons += height;
+        }
+        if (pinButton != null && pinButton.gameObject.activeSelf)
+        {
+            RectTransform pin = (RectTransform)pinButton.transform;
+            pin.anchoredPosition = new Vector2(-(buttons + headerButtonSpacing), pin.anchoredPosition.y);
+            pin.sizeDelta = new Vector2(height, height);
+            SizeIcon(pin, height);
+            buttons += headerButtonSpacing + height;
+        }
+
+        HorizontalLayoutGroup row = ranges.GetComponent<HorizontalLayoutGroup>();
+        float padX = row != null ? row.padding.horizontal : 0f;
+        float padY = row != null ? row.padding.vertical : 0f;
+        float spacing = row != null ? row.spacing : 0f;
+        int count = rangeButtons.Length;
+        float room = width - sectionInset * 2f - buttons - headerGap - padX - spacing * (count - 1);
+        float cell = Mathf.Clamp(room / count, rangeCellWidth.x, Mathf.Max(rangeCellWidth.x, rangeCellWidth.y));
+        foreach (Button button in rangeButtons)
+        {
+            if (button == null || !button.TryGetComponent(out LayoutElement size))
+                continue;
+            size.minWidth = size.preferredWidth = cell;
+            size.minHeight = size.preferredHeight = height - padY;
+        }
+        ranges.anchoredPosition = new Vector2(0f, ranges.anchoredPosition.y);
+        ranges.sizeDelta = new Vector2(cell * count + spacing * (count - 1) + padX, height);
+    }
+
+    /// <summary>An icon button's glyph, a little over half its height, centred.</summary>
+    private static void SizeIcon(RectTransform button, float height)
+    {
+        if (button.Find("Icon") is RectTransform icon)
+            icon.sizeDelta = -Vector2.one * Mathf.Round(height * 0.45f);
     }
 
     private void PlaceSection(RectTransform rect, float top, float height)
@@ -442,7 +542,12 @@ public sealed class TelemetryDetailPanel : MonoBehaviour
             if (i < rangeUnderlines.Length && rangeUnderlines[i] != null)
                 rangeUnderlines[i].enabled = selected;
             if (i < rangeButtons.Length && rangeButtons[i] != null)
+            {
                 rangeButtons[i].interactable = available;
+                // Ranges drawn as a segmented control show the range on show as selected.
+                if (rangeButtons[i].targetGraphic is UIShape segment)
+                    segment.State = selected ? UIState.Selected : available ? UIState.Idle : UIState.Disabled;
+            }
         }
     }
 

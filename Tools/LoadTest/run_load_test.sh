@@ -88,7 +88,8 @@ if [ $RUN_TESTS = 1 ]; then
     "TelemetryDetailPanelPlay|TelemetryDetailPanelPlayTest.Run|0|600" \
     "ServiceModePlay|ServiceModePlayTest.Run|0|600" \
     "PortraitServiceModePlay|PortraitServiceModePlayTest.Run|0|600" \
-    "LeaderLineStability|LeaderLineStabilityPlayTest.Run|0|600"
+    "LeaderLineStability|LeaderLineStabilityPlayTest.Run|0|600" \
+    "LeaderLineOpacity|LeaderLineOpacityPlayTest.Run|0|600"
   do
     IFS='|' read -r name method quit limit <<< "$t"
     read -r code secs <<< "$(run_unity "$name" "$method" "$quit" "$limit")"

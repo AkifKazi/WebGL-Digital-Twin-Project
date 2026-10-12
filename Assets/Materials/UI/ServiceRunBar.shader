@@ -120,6 +120,8 @@ Shader "UI/Service Run Bar"
             float _CornerRadius;
             float _GlowStrength;
             float _GlowStart;
+            // Set globally by the viewer's Reduce Motion setting: 1 stills the pulse.
+            float _DigitalTwinReduceMotion;
 
             v2f vert(appdata_t v)
             {
@@ -169,7 +171,7 @@ Shader "UI/Service Run Bar"
                     float phase = frac(_Time.y / max(_PulseSeconds, 0.1) + frac(IN.extra.y));
                     float centre = phase / max(_PulseTravel, 0.01);
                     float spread = (t - centre) / max(_PulseWidth, 0.001);
-                    float pulse = exp(-spread * spread) * _PulseStrength;
+                    float pulse = exp(-spread * spread) * _PulseStrength * (1.0 - saturate(_DigitalTwinReduceMotion));
 
                     // Signed distance to the fill, a box with slightly rounded corners.
                     float corner = min(halfHeight, _CornerRadius);

@@ -56,7 +56,7 @@ public sealed class TelemetryGraphStyle
     public Color grid = new(1f, 1f, 1f, 0.1f);
 
     [Tooltip("The fill behind the graphs (the panel's graph section), used for the ring round the latest-value marker.")]
-    public Color surface = new(0.035f, 0.102f, 0.137f, 1f);
+    public Color surface = new(0.02f, 0.04f, 0.05f, 1f);
 
     [Tooltip("A soft fill under the line chart's line. Off matches the reference charts.")]
     public bool fillLineArea;

@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using Keyboard = UnityEngine.InputSystem.Keyboard;
 
 public class OrbitCameraController : MonoBehaviour
 {
@@ -42,8 +43,11 @@ public class OrbitCameraController : MonoBehaviour
     [Tooltip("The absolute maximum speed limit for all inputs. The Inspector will clamp values to ensure they do not exceed this.")]
     public float maxAllowedSpeed = 15f;
 
-    [Tooltip("Used only for W and S keyboard zoom.")]
+    [Tooltip("Used for keyboard zoom: W and S, + and -.")]
     public float keyboardZoomSpeed = 10f;
+
+    [Tooltip("Degrees a second the arrow keys (or A and D) turn the camera."), Min(0f)]
+    public float keyboardOrbitSpeed = 70f;
 
     [Tooltip("Used for + and - UI buttons.")]
     public float buttonZoomSpeed = 10f;
@@ -289,20 +293,47 @@ public class OrbitCameraController : MonoBehaviour
         ApplyCameraPosition(true);
     }
 
+    /// <summary>
+    /// Keys: A and D or the left and right arrows turn the camera round the
+    /// model; the up and down arrows tilt it; W and S, + and -, zoom; R or Home
+    /// goes back to the opening view. The arrow keys move between controls
+    /// instead while a control has the keyboard's focus, and nothing here
+    /// runs while a modal (the settings) is open.
+    /// </summary>
     private void HandleKeyboardInput()
     {
-        if (!enableKeyboardWS)
+        Keyboard keyboard = Keyboard.current;
+        if (!enableKeyboardWS || keyboard == null || KeyboardNavigator.Scope != null)
             return;
 
-        if (Input.GetKey(KeyCode.W))
-        {
-            desiredDistance -= keyboardZoomSpeed * Time.deltaTime;
-        }
+        float zoomSpeed = keyboardZoomSpeed * DigitalTwinSettings.ZoomSensitivity * Time.deltaTime;
+        if (keyboard.wKey.isPressed || keyboard.equalsKey.isPressed || keyboard.numpadPlusKey.isPressed)
+            desiredDistance -= zoomSpeed;
+        if (keyboard.sKey.isPressed || keyboard.minusKey.isPressed || keyboard.numpadMinusKey.isPressed)
+            desiredDistance += zoomSpeed;
 
-        if (Input.GetKey(KeyCode.S))
-        {
-            desiredDistance += keyboardZoomSpeed * Time.deltaTime;
-        }
+        bool arrowsFree = !KeyboardNavigator.HasFocus;
+        float turn = keyboardOrbitSpeed * DigitalTwinSettings.OrbitSensitivity * Time.deltaTime;
+        if (keyboard.aKey.isPressed || (arrowsFree && keyboard.leftArrowKey.isPressed))
+            desiredYaw += turn;
+        if (keyboard.dKey.isPressed || (arrowsFree && keyboard.rightArrowKey.isPressed))
+            desiredYaw -= turn;
+        if (arrowsFree && keyboard.upArrowKey.isPressed)
+            desiredPitch += turn * 0.6f;
+        if (arrowsFree && keyboard.downArrowKey.isPressed)
+            desiredPitch -= turn * 0.6f;
+
+        if (keyboard.rKey.wasPressedThisFrame || keyboard.homeKey.wasPressedThisFrame)
+            ResetView();
+    }
+
+    /// <summary>Eases back to the view the intro ends on.</summary>
+    public void ResetView()
+    {
+        framingZoomActive = false;
+        desiredDistance = introTargetDistance;
+        desiredYaw = Mathf.LerpAngle(desiredYaw, introTargetYaw, 1f);
+        desiredPitch = introTargetPitch;
     }
 
     private void HandleButtonZoomInput()
@@ -334,7 +365,7 @@ public class OrbitCameraController : MonoBehaviour
             UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
             return;
 
-        desiredDistance -= scroll * mouseWheelZoomSpeed;
+        desiredDistance -= scroll * mouseWheelZoomSpeed * DigitalTwinSettings.ZoomSensitivity;
     }
 
     private void HandleMouseDragInput()
@@ -357,8 +388,9 @@ public class OrbitCameraController : MonoBehaviour
             float mouseX = Input.GetAxis("Mouse X");
             float mouseY = Input.GetAxis("Mouse Y");
 
-            desiredYaw += mouseX * mouseOrbitSpeed;
-            desiredPitch -= mouseY * mouseOrbitSpeed;
+            float speed = mouseOrbitSpeed * DigitalTwinSettings.OrbitSensitivity;
+            desiredYaw += mouseX * speed;
+            desiredPitch -= mouseY * speed * (DigitalTwinSettings.InvertVertical ? -1f : 1f);
         }
 #endif
     }
@@ -396,8 +428,9 @@ public class OrbitCameraController : MonoBehaviour
         {
             Vector2 delta = touch.position - lastTouchPosition;
 
-            desiredYaw += delta.x * touchOrbitSpeed;
-            desiredPitch -= delta.y * touchOrbitSpeed;
+            float speed = touchOrbitSpeed * DigitalTwinSettings.OrbitSensitivity;
+            desiredYaw += delta.x * speed;
+            desiredPitch -= delta.y * speed * (DigitalTwinSettings.InvertVertical ? -1f : 1f);
 
             lastTouchPosition = touch.position;
         }
@@ -448,7 +481,7 @@ public class OrbitCameraController : MonoBehaviour
         {
             // A ratio makes the gesture consistent across screen resolutions.
             float distanceRatio = previousPinchDistance / currentPinchDistance;
-            desiredDistance *= Mathf.Pow(distanceRatio, pinchZoomSensitivity);
+            desiredDistance *= Mathf.Pow(distanceRatio, pinchZoomSensitivity * DigitalTwinSettings.ZoomSensitivity);
             ClampValues();
         }
 
@@ -478,7 +511,7 @@ public class OrbitCameraController : MonoBehaviour
         Quaternion rotation = Quaternion.Euler(desiredPitch, desiredYaw, 0f);
         Vector3 desiredPosition = center - rotation * Vector3.forward * desiredDistance;
 
-        if (instant || !smoothMotion)
+        if (instant || !smoothMotion || !DigitalTwinSettings.SmoothCamera)
         {
             transform.position = desiredPosition;
             transform.rotation = rotation;

@@ -20,8 +20,10 @@ public class StatLeaderLineManager : MonoBehaviour
     [SerializeField] private Camera worldCamera;
     [SerializeField] private Canvas canvas;
 
-    // Every card in this layout; each line fades where it crosses one of them.
+    // Every card in this layout, and its translucent controls; each line fades
+    // where it crosses one of them.
     private readonly List<PerformanceStatCardView> layoutCards = new();
+    private readonly List<LeaderLineObstacle> layoutObstacles = new();
     private readonly List<StatLeaderLineView> generatedLines = new();
     private readonly Dictionary<PerformanceStatSource, StatLeaderLineView> linesBySource = new();
     private readonly Dictionary<PerformanceStatSource, StatLeaderLineView> previousLines = new();
@@ -115,8 +117,9 @@ public class StatLeaderLineManager : MonoBehaviour
 
         layoutCards.Clear();
         layoutCards.AddRange(linkedCards);
+        FindObstacles();
         foreach (StatLeaderLineView line in generatedLines)
-            line.SetCardsToAvoid(layoutCards);
+            line.SetUiToAvoid(layoutCards, layoutObstacles);
 
         previousRestingOpacity = desiredRestingOpacity;
         restingOpacityInitialized = true;
@@ -178,6 +181,14 @@ public class StatLeaderLineManager : MonoBehaviour
     // An alarm can start at any moment. Sorting waits for the end of the frame,
     // so a burst of readings reorders the lines once rather than per reading.
     private void HandleSourceChanged(PerformanceStatSource source) => drawOrderDirty = true;
+
+    /// <summary>The translucent controls of this manager's layout: everything under its parent marked as a <see cref="LeaderLineObstacle"/>.</summary>
+    private void FindObstacles()
+    {
+        layoutObstacles.Clear();
+        Transform layout = transform.parent != null ? transform.parent : transform;
+        layout.GetComponentsInChildren(true, layoutObstacles);
+    }
 
     private void LateUpdate()
     {

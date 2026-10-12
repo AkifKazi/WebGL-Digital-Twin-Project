@@ -19,7 +19,7 @@ using UnityEngine;
 /// <see cref="TelemetryLayoutSettings"/>; the responsive shell passes it on.
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class TelemetryDetailPanelController : MonoBehaviour
+public sealed class TelemetryDetailPanelController : MonoBehaviour, ICardDetailPresenter
 {
     [Header("References")]
     [SerializeField] private StatRailManager railManager;
@@ -136,18 +136,14 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
 
     private void OnEnable()
     {
-        PerformanceStatCardView.Clicked += HandleCardClicked;
-        PerformanceStatCardView.DetailRequested += HandleDetailRequested;
-        TelemetryCardFocusReleaser.Dismissed += DismissUnpinned;
+        CardFocus.Register(this);
         if (railManager != null)
             railManager.LayoutRebuilt += HandleLayoutRebuilt;
     }
 
     private void OnDisable()
     {
-        PerformanceStatCardView.Clicked -= HandleCardClicked;
-        PerformanceStatCardView.DetailRequested -= HandleDetailRequested;
-        TelemetryCardFocusReleaser.Dismissed -= DismissUnpinned;
+        CardFocus.Unregister(this);
         if (railManager != null)
             railManager.LayoutRebuilt -= HandleLayoutRebuilt;
 
@@ -181,23 +177,20 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
     // Clicks
     // -----------------------------------------------------------------------
 
-    private void HandleCardClicked(PerformanceStatCardView card)
-    {
-        if (!AcceptsCard(card))
-            return;
+    // A click opens the panel at once; on a touch screen a tap only focuses
+    // the card and a second tap opens it, unless a panel is already open, which
+    // then moves to the tapped card.
+    CardDetailOpening ICardDetailPresenter.Opening => CardDetailOpening.FirstClickOrSecondTap;
 
-        // A tap only focuses: a second tap opens its panel.
-        if (card.LastPressWasTouch && floating == null)
-            return;
+    bool ICardDetailPresenter.ShowsDetail => floating != null;
 
-        ShowPanel(card);
-    }
+    bool ICardDetailPresenter.Presents(PerformanceStatCardView card) => AcceptsCard(card);
 
-    private void HandleDetailRequested(PerformanceStatCardView card)
-    {
-        if (AcceptsCard(card) && card.IsFocused)
-            ShowPanel(card);
-    }
+    void ICardDetailPresenter.ShowDetail(PerformanceStatCardView card) => ShowPanel(card);
+
+    void ICardDetailPresenter.FocusedWithoutDetail(PerformanceStatCardView card) { }
+
+    void ICardDetailPresenter.Dismiss() => DismissUnpinned();
 
     private bool AcceptsCard(PerformanceStatCardView card)
     {
@@ -219,8 +212,6 @@ public sealed class TelemetryDetailPanelController : MonoBehaviour
     /// <summary>Opens the floating panel on <paramref name="card"/>, or moves it there.</summary>
     private void ShowPanel(PerformanceStatCardView card)
     {
-        card.HoldFocus();
-
         foreach (TelemetryDetailPanel panel in panels)
         {
             if (panel.IsPinned && panel.Card == card)

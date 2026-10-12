@@ -4,7 +4,9 @@ using UnityEngine.UI;
 
 /// <summary>
 /// The line from a telemetry card (or the detail panel opened from it) to its
-/// sensor on the model. It is drawn last each frame, after the rails have moved
+/// sensor on the model. While a detail panel beside the rails shows the card,
+/// the line leaves from the panel, and a connector runs from the card to the
+/// panel so it is plain which card the panel belongs to. It is drawn last each frame, after the rails have moved
 /// the cards, the detail panels have moved, and the views that shift the
 /// camera's projection have run, so it always meets both ends of this frame
 /// rather than trailing one of them by a frame.
@@ -43,8 +45,8 @@ public class StatLeaderLineView : MonoBehaviour
 
     [Header("Reversed Lines")]
     [Tooltip("Opacity of a line that doubles back across its own card, because the sensor sits " +
-             "on the card's side of the connection point, or that runs across another card. " +
-             "Keeps the line off the cards' text.")]
+             "on the card's side of the connection point, or that runs across another card or a " +
+             "translucent control. Keeps the line off their text.")]
     [SerializeField, Range(0f, 1f)] private float reversedLineOpacity = 0.02f;
     [Tooltip("The same fade for warning and critical lines, a little above the normal fade. " +
              "Their anchor stays at full strength, so the sensor is still easy to find.")]
@@ -52,12 +54,12 @@ public class StatLeaderLineView : MonoBehaviour
     [Tooltip("Seconds a line takes to fade when it turns back across its card or crosses " +
              "another card, and to return.")]
     [SerializeField, Min(0.01f)] private float reversedLineFadeDuration = 0.7f;
-    [Tooltip("Also fade a line where it runs across another card, not only when it doubles " +
-             "back across its own.")]
+    [Tooltip("Also fade a line where it runs across another card or a translucent control " +
+             "(a LeaderLineObstacle), not only when it doubles back across its own card.")]
     [SerializeField] private bool fadeLinesCrossingOtherCards = true;
-    [Tooltip("How far into another card, in canvas units, a line has to cut before it fades, " +
-             "and how far clear it has to be to come back. Stops a line grazing a card edge " +
-             "from flickering.")]
+    [Tooltip("How far into another card or control, in canvas units, a line has to cut before " +
+             "it fades, and how far clear it has to be to come back. Stops a line grazing an " +
+             "edge from flickering.")]
     [SerializeField, Min(0f)] private float cardCrossingMargin = 6f;
     [Tooltip("How far past the connection point, in canvas units, the sensor has to move before " +
              "the line changes direction. Stops the fade flickering at the edge.")]
@@ -65,6 +67,11 @@ public class StatLeaderLineView : MonoBehaviour
     [Tooltip("Off: warning and critical lines fade to the alarm opacity above when they turn " +
              "back across their card or cross another. On: they stay at full opacity.")]
     [SerializeField] private bool keepAlarmLinesOpaqueWhenReversed;
+
+    [Header("Panel Connector")]
+    [Tooltip("Lowest opacity of the connector from a card to its open detail panel. A pinned " +
+             "panel's card rests like any other, but its connector must stay easy to follow.")]
+    [SerializeField, Range(0f, 1f)] private float restingConnectorOpacity = 0.35f;
 
     private PerformanceStatSource source;
     private PerformanceStatCardView card;
@@ -94,18 +101,20 @@ public class StatLeaderLineView : MonoBehaviour
     private float activeRestingLineOpacity;
     private bool fadingToRest;
     private CanvasGroup peerPresentationGroup;
-    private float peerPresentationAlpha = 1f;
-    private float peerPresentationStartAlpha = 1f;
-    private float peerPresentationTargetAlpha = 1f;
-    private float peerPresentationTransitionStartedAt;
-    private bool peerPresentationTransitioning;
+    private SmoothFade peerFade = new(1f);
+    private bool cardFocused;
+    private RectTransform connectorSegment;
+    private Image connectorImage;
+    private bool connectorActive;
+    private bool connectorCrossing;
+    private SmoothFade connectorCrossingFade = new(1f);
     private bool lineReversed;
     private bool directionKnown;
     private float directionOpacity = 1f;
     private float directionStartOpacity = 1f;
     private float directionTargetOpacity = 1f;
     private float directionTransitionStartedAt;
-    private bool crossingCard;
+    private bool crossingUi;
     private Vector2 lastBendPoint;
     private Vector2 lastCardPoint;
     private Vector2 lastSensorPoint;
@@ -118,6 +127,7 @@ public class StatLeaderLineView : MonoBehaviour
     private bool anchorActive = true;
     private float appliedAnchorProgress = float.NaN;
     private IReadOnlyList<PerformanceStatCardView> cardsToAvoid;
+    private IReadOnlyList<LeaderLineObstacle> obstaclesToAvoid;
     private static readonly Vector3[] CardCorners = new Vector3[4];
 
     private const int UnknownRevealState = -1;
@@ -138,8 +148,17 @@ public class StatLeaderLineView : MonoBehaviour
     public float EmptySecondaryRailsRestingOpacity => emptySecondaryRailsRestingOpacity;
     public float SecondaryRailOpacityTransitionDuration =>
         secondaryRailOpacityTransitionDuration;
-    public bool IsReversed => lineReversed;
-    public bool IsCrossingCard => crossingCard;
+    /// <summary>
+    /// True while the line doubles back across its own card. A line leaving
+    /// from a detail panel never does: if it turns back, it runs behind the
+    /// opaque panel.
+    /// </summary>
+    public bool IsReversed => lineReversed && !LeavesFromPanel;
+
+    /// <summary>True while the line runs across another card or a translucent control.</summary>
+    public bool IsCrossingUi => crossingUi;
+
+    private bool LeavesFromPanel => card != null && card.ConnectsFromPanel;
     public float DirectionOpacity => directionOpacity;
     public float FadedDirectionOpacity => IsAlarmState() ? reversedAlarmLineOpacity : reversedLineOpacity;
 
@@ -163,15 +182,15 @@ public class StatLeaderLineView : MonoBehaviour
 
     private void OnEnable()
     {
-        PerformanceStatCardView.ActiveFocusChanged -= HandleActiveFocusChanged;
-        PerformanceStatCardView.ActiveFocusChanged += HandleActiveFocusChanged;
+        CardFocus.Changed -= HandleFocusChanged;
+        CardFocus.Changed += HandleFocusChanged;
         CachePeerPresentationGroup();
-        ApplyPeerPresentationInstant(ResolvePeerPresentationAlpha());
+        ApplyPeerPresentationInstant(CardFocus.PeerAlpha(card));
     }
 
     private void OnDisable()
     {
-        PerformanceStatCardView.ActiveFocusChanged -= HandleActiveFocusChanged;
+        CardFocus.Changed -= HandleFocusChanged;
         ApplyPeerPresentationInstant(1f);
     }
 
@@ -190,20 +209,18 @@ public class StatLeaderLineView : MonoBehaviour
         gameObject.name = newSource != null && !string.IsNullOrWhiteSpace(newSource.MetricName)
             ? $"Leader Line - {newSource.MetricName}"
             : "Leader Line";
-        if (card != null)
-        {
-            card.FocusChanged -= HandleCardFocusChanged;
-            card.FocusChanged += HandleCardFocusChanged;
-        }
-        if (IsAlarmState() || (card != null && card.IsFocused))
+        cardFocused = card != null && card.IsFocused;
+        if (IsAlarmState() || cardFocused)
             SetPresentationOpacityInstant(1f, 1f);
         else
             SetPresentationOpacityInstant(activeRestingLineOpacity, restingAnchorOpacity);
         fadingToRest = false;
         directionKnown = false;
-        crossingCard = false;
+        crossingUi = false;
         geometryValid = false;
-        ApplyPeerPresentationInstant(ResolvePeerPresentationAlpha());
+        connectorCrossing = false;
+        connectorCrossingFade.Snap(1f);
+        ApplyPeerPresentationInstant(CardFocus.PeerAlpha(card));
         CacheImages();
         CreateRuntimeMaterials();
         PrepareLinePart(horizontalSegment);
@@ -214,11 +231,10 @@ public class StatLeaderLineView : MonoBehaviour
 
     public void Unbind()
     {
-        if (card != null)
-            card.FocusChanged -= HandleCardFocusChanged;
         source = null;
         card = null;
         cardsToAvoid = null;
+        obstaclesToAvoid = null;
         worldCamera = null;
         canvas = null;
         lineLayer = null;
@@ -232,6 +248,7 @@ public class StatLeaderLineView : MonoBehaviour
         UpdatePeerPresentation();
         UpdateFocusPresentation();
         UpdateLine();
+        UpdateConnector();
     }
 
     public void SetRevealProgress(float progress)
@@ -247,12 +264,16 @@ public class StatLeaderLineView : MonoBehaviour
     }
 
     /// <summary>
-    /// The cards laid out with this line. It fades where it runs across any of
-    /// them other than its own. The list is read every frame, not copied.
+    /// The cards laid out with this line, and the translucent controls of its
+    /// layout. It fades where it runs across any of them other than its own
+    /// card. The lists are read every frame, not copied.
     /// </summary>
-    public void SetCardsToAvoid(IReadOnlyList<PerformanceStatCardView> cards)
+    public void SetUiToAvoid(
+        IReadOnlyList<PerformanceStatCardView> cards,
+        IReadOnlyList<LeaderLineObstacle> obstacles)
     {
         cardsToAvoid = cards;
+        obstaclesToAvoid = obstacles;
     }
 
     public void SetPresentationInstant(bool visible)
@@ -274,7 +295,7 @@ public class StatLeaderLineView : MonoBehaviour
 
         // Focused, warning and critical lines stay at 100%. The new resting
         // target is retained and used when they next return to rest.
-        if (card != null && (card.IsFocused || IsAlarmState()))
+        if (card != null && (cardFocused || IsAlarmState()))
             return;
 
         if (applyInstantly || transitionDuration <= 0.01f)
@@ -671,10 +692,10 @@ public class StatLeaderLineView : MonoBehaviour
         else if (!lineReversed && travel < -reversedDirectionMargin)
             lineReversed = true;
 
-        crossingCard = fadeLinesCrossingOtherCards &&
-                       CrossesOtherCard(cardPoint, lastBendPoint, sensorPoint, directionKnown && crossingCard);
+        crossingUi = fadeLinesCrossingOtherCards &&
+                     CrossesOtherUi(cardPoint, lastBendPoint, sensorPoint, directionKnown && crossingUi);
 
-        bool fade = (lineReversed || crossingCard) &&
+        bool fade = (IsReversed || crossingUi) &&
                     !(keepAlarmLinesOpaqueWhenReversed && IsAlarmState());
         float target = fade ? FadedDirectionOpacity : 1f;
 
@@ -702,42 +723,63 @@ public class StatLeaderLineView : MonoBehaviour
     }
 
     /// <summary>
-    /// True when either segment runs through another visible card. Entering
-    /// needs the line to cut <see cref="cardCrossingMargin"/> into the card;
-    /// leaving needs it to clear the card by the same margin.
+    /// True when either segment runs through another visible card or a shown
+    /// translucent control. Entering needs the line to cut
+    /// <see cref="cardCrossingMargin"/> into it; leaving needs it to clear it
+    /// by the same margin.
     /// </summary>
-    private bool CrossesOtherCard(Vector2 cardPoint, Vector2 bendPoint, Vector2 sensorPoint, bool wasCrossing)
+    private bool CrossesOtherUi(Vector2 cardPoint, Vector2 bendPoint, Vector2 sensorPoint, bool wasCrossing)
     {
-        if (cardsToAvoid == null)
-            return false;
-
         float grow = wasCrossing ? cardCrossingMargin : -cardCrossingMargin;
-        foreach (PerformanceStatCardView other in cardsToAvoid)
+        if (cardsToAvoid != null)
         {
-            if (other == null || other == card || !other.isActiveAndEnabled ||
-                (other.TryGetComponent(out CanvasGroup group) && group.alpha < 0.05f))
-                continue;
-
-            ((RectTransform)other.transform).GetWorldCorners(CardCorners);
-            Vector2 min = lineLayer.InverseTransformPoint(CardCorners[0]);
-            Vector2 max = min;
-            for (int i = 1; i < 4; i++)
+            foreach (PerformanceStatCardView other in cardsToAvoid)
             {
-                Vector2 corner = lineLayer.InverseTransformPoint(CardCorners[i]);
-                min = Vector2.Min(min, corner);
-                max = Vector2.Max(max, corner);
+                if (other == null || other == card || !other.isActiveAndEnabled ||
+                    (other.TryGetComponent(out CanvasGroup group) && group.alpha < 0.05f))
+                    continue;
+                if (Crosses((RectTransform)other.transform, cardPoint, bendPoint, sensorPoint, grow))
+                    return true;
             }
-            min -= Vector2.one * grow;
-            max += Vector2.one * grow;
-            if (min.x >= max.x || min.y >= max.y)
-                continue;
+        }
 
-            if (SegmentHitsRect(cardPoint, bendPoint, min, max) ||
-                SegmentHitsRect(bendPoint, sensorPoint, min, max))
-                return true;
+        if (obstaclesToAvoid != null)
+        {
+            foreach (LeaderLineObstacle obstacle in obstaclesToAvoid)
+            {
+                if (obstacle != null && obstacle.IsShown &&
+                    Crosses(obstacle.Rect, cardPoint, bendPoint, sensorPoint, grow))
+                    return true;
+            }
         }
 
         return false;
+    }
+
+    private bool Crosses(RectTransform rect, Vector2 cardPoint, Vector2 bendPoint, Vector2 sensorPoint, float grow)
+    {
+        if (!TryGetLocalBounds(rect, grow, out Vector2 min, out Vector2 max))
+            return false;
+
+        return SegmentHitsRect(cardPoint, bendPoint, min, max) ||
+               SegmentHitsRect(bendPoint, sensorPoint, min, max);
+    }
+
+    /// <summary>The rect's bounds in the line layer, grown by <paramref name="grow"/>. False when nothing is left of it.</summary>
+    private bool TryGetLocalBounds(RectTransform rect, float grow, out Vector2 min, out Vector2 max)
+    {
+        rect.GetWorldCorners(CardCorners);
+        min = lineLayer.InverseTransformPoint(CardCorners[0]);
+        max = min;
+        for (int i = 1; i < 4; i++)
+        {
+            Vector2 corner = lineLayer.InverseTransformPoint(CardCorners[i]);
+            min = Vector2.Min(min, corner);
+            max = Vector2.Max(max, corner);
+        }
+        min -= Vector2.one * grow;
+        max += Vector2.one * grow;
+        return min.x < max.x && min.y < max.y;
     }
 
     /// <summary>Liang-Barsky clip of a segment against an axis-aligned rectangle.</summary>
@@ -774,8 +816,14 @@ public class StatLeaderLineView : MonoBehaviour
         return true;
     }
 
-    private void HandleCardFocusChanged(PerformanceStatCardView changedCard, bool focused)
+    private void HandleFocusChanged(PerformanceStatCardView focusedCard)
     {
+        bool focused = card != null && focusedCard == card;
+        peerFade.Begin(CardFocus.PeerAlpha(card), Time.unscaledTime);
+        if (card == null || focused == cardFocused)
+            return;
+        cardFocused = focused;
+
         if (IsAlarmState())
         {
             SetPresentationOpacityInstant(1f, 1f);
@@ -845,74 +893,26 @@ public class StatLeaderLineView : MonoBehaviour
         card != null && (card.VisualState == StatVisualState.Warning ||
                          card.VisualState == StatVisualState.Critical);
 
-    private void HandleActiveFocusChanged(PerformanceStatCardView activeCard)
-    {
-        BeginPeerPresentation(ResolvePeerPresentationAlpha());
-    }
-
-    private float ResolvePeerPresentationAlpha()
-    {
-        PerformanceStatCardView activeCard = PerformanceStatCardView.ActiveFocusedCard;
-        if (card == null || activeCard == null || activeCard == card || IsAlarmState())
-            return 1f;
-
-        return card.UnfocusedPeerOpacity;
-    }
-
-    private void BeginPeerPresentation(float target)
-    {
-        target = Mathf.Clamp01(target);
-        if (Mathf.Approximately(peerPresentationTargetAlpha, target) &&
-            (!peerPresentationTransitioning ||
-             Mathf.Approximately(peerPresentationAlpha, target)))
-        {
-            return;
-        }
-
-        peerPresentationStartAlpha = peerPresentationAlpha;
-        peerPresentationTargetAlpha = target;
-        peerPresentationTransitionStartedAt = Time.unscaledTime;
-        peerPresentationTransitioning = true;
-    }
-
     private void UpdatePeerPresentation()
     {
-        float resolvedTarget = ResolvePeerPresentationAlpha();
-        if (!Mathf.Approximately(resolvedTarget, peerPresentationTargetAlpha))
-            BeginPeerPresentation(resolvedTarget);
-
-        if (!peerPresentationTransitioning)
-            return;
-
+        // The card's alarm state can change while the focus stays put.
+        peerFade.Begin(CardFocus.PeerAlpha(card), Time.unscaledTime);
         float duration = card != null ? card.PeerFocusTransitionDuration : 0.23f;
-        float progress = Mathf.Clamp01(
-            (Time.unscaledTime - peerPresentationTransitionStartedAt) /
-            Mathf.Max(0.02f, duration));
-        float eased = Mathf.SmoothStep(0f, 1f, progress);
-        ApplyPeerPresentationAlpha(Mathf.Lerp(
-            peerPresentationStartAlpha,
-            peerPresentationTargetAlpha,
-            eased));
-
-        if (progress >= 1f)
-            peerPresentationTransitioning = false;
+        if (peerFade.Step(Time.unscaledTime, duration))
+            ApplyPeerPresentationAlpha(peerFade.Value);
     }
 
     private void ApplyPeerPresentationInstant(float alpha)
     {
-        peerPresentationAlpha = Mathf.Clamp01(alpha);
-        peerPresentationStartAlpha = peerPresentationAlpha;
-        peerPresentationTargetAlpha = peerPresentationAlpha;
-        peerPresentationTransitioning = false;
-        ApplyPeerPresentationAlpha(peerPresentationAlpha);
+        peerFade.Snap(alpha);
+        ApplyPeerPresentationAlpha(peerFade.Value);
     }
 
     private void ApplyPeerPresentationAlpha(float alpha)
     {
-        peerPresentationAlpha = Mathf.Clamp01(alpha);
         CachePeerPresentationGroup();
         if (peerPresentationGroup != null)
-            peerPresentationGroup.alpha = peerPresentationAlpha;
+            peerPresentationGroup.alpha = alpha;
     }
 
     private void CachePeerPresentationGroup()
@@ -920,6 +920,105 @@ public class StatLeaderLineView : MonoBehaviour
         if (peerPresentationGroup == null)
             peerPresentationGroup = GetComponent<CanvasGroup>();
     }
+
+    /// <summary>
+    /// The connector from the card's own edge to the detail panel showing it,
+    /// while one does: straight across the rails between them, in the line's
+    /// colour, fading in and out with the panel. The cards on the rails it
+    /// crosses step aside for it; where one could not, it fades as a line
+    /// crossing a card does.
+    /// </summary>
+    private void UpdateConnector()
+    {
+        if (!horizontalActive || card == null || lineLayer == null ||
+            !CardFocus.TryGetDetailLink(card, out ICardDetailLink link) ||
+            link.CardSidePoint == null || card.OwnConnectionPoint == null)
+        {
+            SetConnectorActive(false);
+            return;
+        }
+
+        Camera uiCamera = GetUICamera();
+        if (!ToLineLayer(card.OwnConnectionPoint.position, uiCamera, out Vector2 from) ||
+            !ToLineLayer(link.CardSidePoint.position, uiCamera, out Vector2 to) ||
+            !EnsureConnector())
+        {
+            SetConnectorActive(false);
+            return;
+        }
+
+        if (!connectorActive)
+        {
+            connectorCrossing = false;
+            connectorCrossingFade.Snap(1f);
+        }
+        SetLineSegment(connectorSegment, from, to);
+
+        bool crossing = fadeLinesCrossingOtherCards && ConnectorCrossesCards(from, to, connectorCrossing);
+        if (crossing != connectorCrossing)
+        {
+            connectorCrossing = crossing;
+            connectorCrossingFade.Begin(crossing ? FadedDirectionOpacity : 1f, Time.unscaledTime);
+        }
+        connectorCrossingFade.Step(Time.unscaledTime, reversedLineFadeDuration);
+
+        Color color = LineColor();
+        color.a *= Mathf.Max(presentationLineOpacity, restingConnectorOpacity) *
+                   connectorCrossingFade.Value * Mathf.Clamp01(link.Alpha);
+        connectorImage.color = color;
+        SetConnectorActive(true);
+    }
+
+    private bool EnsureConnector()
+    {
+        if (connectorSegment != null)
+            return true;
+        if (horizontalSegment == null)
+            return false;
+
+        // A copy of the line's first segment, so it draws exactly as the line does.
+        GameObject copy = Instantiate(horizontalSegment.gameObject, horizontalSegment.parent, false);
+        copy.name = "Panel Connector";
+        copy.transform.SetSiblingIndex(horizontalSegment.GetSiblingIndex());
+        connectorSegment = (RectTransform)copy.transform;
+        PrepareLinePart(connectorSegment);
+        connectorImage = copy.GetComponent<Image>();
+        if (connectorImage != null)
+            connectorImage.material = null;
+        connectorActive = true;
+        SetConnectorActive(false);
+        return connectorImage != null;
+    }
+
+    private void SetConnectorActive(bool active)
+    {
+        if (connectorSegment == null)
+            return;
+        SetPartActive(connectorSegment, active, ref connectorActive);
+    }
+
+    private bool ConnectorCrossesCards(Vector2 from, Vector2 to, bool wasCrossing)
+    {
+        if (cardsToAvoid == null)
+            return false;
+        float grow = wasCrossing ? cardCrossingMargin : -cardCrossingMargin;
+        foreach (PerformanceStatCardView other in cardsToAvoid)
+        {
+            if (other == null || other == card || !other.isActiveAndEnabled ||
+                (other.TryGetComponent(out CanvasGroup group) && group.alpha < 0.05f))
+                continue;
+            if (TryGetLocalBounds((RectTransform)other.transform, grow, out Vector2 min, out Vector2 max) &&
+                SegmentHitsRect(from, to, min, max))
+                return true;
+        }
+        return false;
+    }
+
+    private bool ToLineLayer(Vector3 worldPoint, Camera uiCamera, out Vector2 local) =>
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            lineLayer, RectTransformUtility.WorldToScreenPoint(uiCamera, worldPoint), uiCamera, out local);
+
+    private Color LineColor() => matchCardStateColor && card != null ? card.StateColor : defaultColor;
 
     private bool ReferencesAreValid()
     {
@@ -943,6 +1042,8 @@ public class StatLeaderLineView : MonoBehaviour
 
     private void SetGeometryVisible(bool visible)
     {
+        if (!visible)
+            SetConnectorActive(false);
         SetPartActive(horizontalSegment, visible, ref horizontalActive);
         SetPartActive(angledSegment, visible, ref angledActive);
         SetPartActive(anchorMarker, visible, ref anchorActive);
@@ -973,9 +1074,7 @@ public class StatLeaderLineView : MonoBehaviour
 
     private void OnDestroy()
     {
-        PerformanceStatCardView.ActiveFocusChanged -= HandleActiveFocusChanged;
-        if (card != null)
-            card.FocusChanged -= HandleCardFocusChanged;
+        CardFocus.Changed -= HandleFocusChanged;
         DestroyRuntimeMaterial(horizontalMaterialInstance);
         DestroyRuntimeMaterial(angledMaterialInstance);
     }

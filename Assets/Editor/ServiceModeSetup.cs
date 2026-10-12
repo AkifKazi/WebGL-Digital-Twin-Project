@@ -220,6 +220,8 @@ public static class ServiceModeSetup
         // Points the switches, pins, sheet, pagers and sequences at each
         // layout's telemetry visibility, and gives it its regions.
         TelemetryVisibilitySetup.WireAll();
+        // The switches were rebuilt: lines fade over them again.
+        LeaderLineObstacleSetup.MarkAll();
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
@@ -247,6 +249,7 @@ public static class ServiceModeSetup
             ?? throw new InvalidOperationException("Run Set Up Service Mode first: no service schedule.");
         BuildPortrait(schedule, Load<TMP_FontAsset>(LabelFontPath), Load<TMP_FontAsset>(ValueFontPath));
         TelemetryVisibilitySetup.Wire(FindTransform("Portrait layout"), false);
+        LeaderLineObstacleSetup.MarkAll();
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
     }
@@ -498,7 +501,6 @@ public static class ServiceModeSetup
         data.FindProperty("schedule").objectReferenceValue = schedule;
         data.FindProperty("labelFont").objectReferenceValue = labelFont;
         data.FindProperty("valueFont").objectReferenceValue = valueFont;
-        data.FindProperty("hoverSprite").objectReferenceValue = Load<Sprite>(HoverSpritePath);
         data.FindProperty("runBarMaterial").objectReferenceValue = RunBarMaterial();
         data.FindProperty("fullScreen").boolValue = fullScreen;
         data.ApplyModifiedPropertiesWithoutUndo();

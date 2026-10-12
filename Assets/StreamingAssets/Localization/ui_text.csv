@@ -197,3 +197,49 @@ view.full_body,FULL BODY,View mode segment
 view.interior,INTERIOR,View mode segment
 view.x_ray,X-RAY,View mode segment
 hint.tap_again,TAP AGAIN FOR DETAILS,Telemetry sheet on a phone: second-tap hint
+settings.breadcrumb,DIGITAL TWIN,SettingsPanel
+settings.contrast,High contrast,SettingsPanel
+settings.contrast.about,"Panels become near opaque and their edges firmer, so the interface reads over a bright scene, on a projector or in a bright room.",SettingsPanel
+settings.detail,Detail,SettingsPanel
+settings.detail.about,HD renders sharper shadows and more effects. Phones stay on SD to keep the frame rate up.,SettingsPanel
+settings.dim,Dim other cards,SettingsPanel
+settings.dim.about,"While a card is focused, the others fade back so its reading and leader line stand out. Alarm cards never fade.",SettingsPanel
+settings.fps,Show frame rate,SettingsPanel
+settings.fps.about,"Shows frames per second, frame time and the detail level in the top left corner.",SettingsPanel
+settings.invert,Invert tilt,SettingsPanel
+settings.invert.about,"Dragging up tilts the camera down, as some flight controls do.",SettingsPanel
+settings.motion,Reduce motion,SettingsPanel
+settings.motion.about,"Stops glows breathing and pulses travelling along the bars, and switches looks at once instead of blending them.",SettingsPanel
+settings.off,OFF,SettingsPanel
+settings.on,ON,SettingsPanel
+settings.orbit,Orbit sensitivity,SettingsPanel
+settings.orbit.about,"How far the camera turns for a drag, a swipe or a key held down.",SettingsPanel
+settings.rate,Frame rate limit,SettingsPanel
+settings.rate.about,Display matches the screen's refresh rate. A limit uses less power.,SettingsPanel
+settings.rate.display,DISPLAY,SettingsPanel
+settings.reset,RESET TO DEFAULTS,SettingsPanel
+settings.saved,SAVED IN THIS BROWSER,SettingsPanel
+settings.scale,Interface scale,SettingsPanel
+settings.scale.about,"Makes every panel, card and control larger or smaller. The new size is applied a moment after you stop moving the slider, so the layout does not jump while you drag.",SettingsPanel
+settings.shade,Edge shading,SettingsPanel
+settings.shade.about,"Darkens the top and bottom of the screen behind the controls there, so they stand out against a bright sky or a pale floor.",SettingsPanel
+settings.shade.off,OFF,SettingsPanel
+settings.shade.strong,STRONG,SettingsPanel
+settings.shade.subtle,SUBTLE,SettingsPanel
+settings.smooth,Smooth camera,SettingsPanel
+settings.smooth.about,"The camera eases to where it is sent. Off, it follows the pointer exactly.",SettingsPanel
+settings.tab.camera,CAMERA,SettingsPanel
+settings.tab.camera.about,"Drag, or use A and D and the arrow keys, to turn round the model. W and S, + and -, or the wheel zoom. R goes back to the opening view.",SettingsPanel
+settings.tab.display,DISPLAY,SettingsPanel
+settings.tab.display.about,"How the interface is drawn: its size, its contrast and motion, and the shading behind the controls at the top and bottom of the screen.",SettingsPanel
+settings.tab.graphics,GRAPHICS,SettingsPanel
+settings.tab.graphics.about,Rendering detail and frame rate. A lower limit keeps a laptop cooler and its battery going longer.,SettingsPanel
+settings.tab.telemetry,TELEMETRY,SettingsPanel
+settings.tab.telemetry.about,"How readings are written on the cards, and how the cards behave while one of them is focused.",SettingsPanel
+settings.title,SETTINGS,SettingsPanel
+settings.units,Units,SettingsPanel
+settings.units.about,"Engineering writes units as they appear on data sheets: mm/s, kW, °C. Capitals matches the rest of the interface: MM/S, KW.",SettingsPanel
+settings.units.capitals,MM/S,SettingsPanel
+settings.units.engineering,mm/s,SettingsPanel
+settings.zoom,Zoom sensitivity,SettingsPanel
+settings.zoom.about,"How far the camera moves in or out for a turn of the wheel, a pinch or a key held down.",SettingsPanel

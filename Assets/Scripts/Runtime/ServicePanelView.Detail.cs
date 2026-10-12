@@ -35,9 +35,13 @@ public sealed partial class ServicePanelView
     private const float ChartTop = 88f;
     private const float ChartHeight = 110f;
     private const int MaximumHistoryColumns = 5;
-    // The back button's square: 64 units is about 46 points on a phone held
-    // upright, past the 44 the platform guidelines ask for.
+    // The back button's touch square: 64 units is about 46 points on a phone
+    // held upright, past the 44 the platform guidelines ask for. Its visible
+    // face is smaller and starts at the header's text edge; the part's name
+    // follows a gap after it.
     private const float BackHitSize = 64f;
+    private const float BackFaceSize = 44f;
+    private const float BackNameGap = 12f;
 
     private RectTransform listHeader;
     private RectTransform detailHeader;
@@ -45,7 +49,7 @@ public sealed partial class ServicePanelView
     private Button backButton;
     private TextMeshProUGUI detailName;
     private RectTransform detailNameArea;
-    private UIFrameGraphic detailChip;
+    private Graphic detailChip;
     private TextMeshProUGUI detailChipText;
 
     private TextMeshProUGUI detailHours;
@@ -108,6 +112,9 @@ public sealed partial class ServicePanelView
         if (changed)
             detailView.Content.anchoredPosition = Vector2.zero;
     }
+
+    /// <summary>True while a part's detail is shown in place of the list.</summary>
+    public bool IsShowingDetail => selectedPart != null;
 
     public void ShowList()
     {
@@ -172,8 +179,17 @@ public sealed partial class ServicePanelView
         };
         SetText(detailChipText, chip);
         detailChipText.color = state;
-        detailChip.SetColors(state, Color.clear);
-        float chipWidth = Mathf.Ceil(detailChipText.GetPreferredValues(chip).x) + 24f;
+        if (detailChip is UIShape badge)
+            badge.State = ToneOf(status.State) switch
+            {
+                UITone.Critical => UIState.Critical,
+                UITone.Warning => UIState.Warning,
+                _ => UIState.Idle
+            };
+        else if (detailChip is UIFrameGraphic frame)
+            frame.SetColors(Color.clear, Color.clear);
+        // The state is text alone (a badge has no box), so it needs no padding.
+        float chipWidth = Mathf.Ceil(detailChipText.GetPreferredValues(chip).x) + 4f;
         // A long translation is cut short rather than pushing the part's name out.
         float chipLimit = Mathf.Max(96f, detailHeader.rect.width * 0.45f);
         detailChipText.overflowMode = chipWidth > chipLimit ? TextOverflowModes.Ellipsis : TextOverflowModes.Overflow;
@@ -357,19 +373,25 @@ public sealed partial class ServicePanelView
 
     private void BuildDetailHeader(RectTransform headerContent)
     {
+        // Reaches left past the header's text edge to the cards' edge, so the
+        // back button lines up with the cards below it.
         detailHeader = CreateRect("Detail", headerContent);
-        Stretch(detailHeader, 0f, 0f, 0f, 0f);
+        Stretch(detailHeader, -(inset - ListLeft), 0f, 0f, 0f);
 
-        // The arrow draws in line with the list's title; its square reaches
-        // past it on every side, so a thumb finds it easily on a phone.
+        // The face sits on the cards' edge; the touch square reaches past it on
+        // every side, so a thumb finds it easily on a phone, and is never drawn.
         RectTransform back = CreateRect("Back Button", detailHeader);
         back.anchorMin = back.anchorMax = new Vector2(0f, 0.5f);
-        back.pivot = new Vector2(0f, 0.5f);
-        back.anchoredPosition = new Vector2(12f - BackHitSize * 0.5f, 0f);
+        back.pivot = new Vector2(0.5f, 0.5f);
+        back.anchoredPosition = new Vector2(BackFaceSize * 0.5f, 0f);
         back.sizeDelta = new Vector2(BackHitSize, BackHitSize);
         UIFrameGraphic hit = AddFrame(back, Color.clear, 0f, true);
-        AddHoverLook(back);
-        RectTransform arrowRect = CreateRect("Arrow", back);
+        RectTransform face = CreateRect("Face", back);
+        face.anchorMin = face.anchorMax = face.pivot = new Vector2(0.5f, 0.5f);
+        face.sizeDelta = new Vector2(BackFaceSize, BackFaceSize);
+        AddSurface(face, "Icon Button", Color.clear, false);
+        back.gameObject.AddComponent<UIControlState>();
+        RectTransform arrowRect = CreateRect("Arrow", face);
         Stretch(arrowRect, 0f, 0f, 0f, 0f);
         UIBackArrowGraphic arrow = arrowRect.gameObject.AddComponent<UIBackArrowGraphic>();
         arrow.color = normal;
@@ -386,7 +408,7 @@ public sealed partial class ServicePanelView
         detailNameArea.anchorMin = new Vector2(0f, 0.5f);
         detailNameArea.anchorMax = new Vector2(1f, 0.5f);
         detailNameArea.pivot = new Vector2(0f, 0.5f);
-        detailNameArea.offsetMin = new Vector2(44f, -18f);
+        detailNameArea.offsetMin = new Vector2(BackFaceSize + BackNameGap, -18f);
         detailNameArea.offsetMax = new Vector2(0f, 18f);
         detailName = CreateSlidingText("Name", detailNameArea, 24f, ink);
         detailName.characterSpacing = 3f;
@@ -395,8 +417,10 @@ public sealed partial class ServicePanelView
         chip.anchorMin = chip.anchorMax = new Vector2(1f, 0.5f);
         chip.pivot = new Vector2(1f, 0.5f);
         chip.anchoredPosition = Vector2.zero;
-        detailChip = AddFrame(chip, Color.clear, 2f, false);
-        detailChipText = CreateText("Label", chip, 17f, true, normal, TextAlignmentOptions.Center);
+        detailChip = AddSurface(chip, "Badge", Color.clear, false);
+        if (detailChip is UIFrameGraphic frame)
+            frame.SetThickness(0f);
+        detailChipText = CreateText("Label", chip, 17f, true, normal, TextAlignmentOptions.MidlineRight);
         detailChipText.characterSpacing = 3f;
         detailChipText.overflowMode = TextOverflowModes.Overflow;
         Stretch(detailChipText.rectTransform, 0f, 0f, 0f, 0f);
@@ -409,7 +433,7 @@ public sealed partial class ServicePanelView
         LayoutElement size = cardRect.gameObject.AddComponent<LayoutElement>();
         size.preferredHeight = height;
         size.minHeight = height;
-        AddFrame(cardRect, card, 0f, false);
+        AddSurface(cardRect, "Section", card, false);
 
         RectTransform inner = CreateRect("Content", cardRect);
         Stretch(inner, CardPadding, CardPadding, 0f, 0f);

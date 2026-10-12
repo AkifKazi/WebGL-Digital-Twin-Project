@@ -106,7 +106,20 @@ public class ResponsiveLayoutShell : MonoBehaviour
             telemetrySettings = FindAnyObjectByType<TelemetryLayoutSettings>(FindObjectsInactive.Include);
         if (telemetrySettings != null)
             telemetrySettings.Changed += HandleTelemetrySettingsChanged;
+        DigitalTwinSettings.Changed += HandleViewerSettingsChanged;
     }
+
+    /// <summary>
+    /// The viewer's interface scale. The settings panel only sets it once the
+    /// slider has rested, so the layout is rebuilt once, as after a resize.
+    /// </summary>
+    private void HandleViewerSettingsChanged()
+    {
+        if (initialized && !Mathf.Approximately(appliedInterfaceScale, DigitalTwinSettings.InterfaceScale))
+            RefreshLayout(false);
+    }
+
+    private float appliedInterfaceScale = 1f;
 
     private void Update()
     {
@@ -217,6 +230,7 @@ public class ResponsiveLayoutShell : MonoBehaviour
     {
         if (telemetrySettings != null)
             telemetrySettings.Changed -= HandleTelemetrySettingsChanged;
+        DigitalTwinSettings.Changed -= HandleViewerSettingsChanged;
         if (telemetryRebuildRoutine != null)
         {
             StopCoroutine(telemetryRebuildRoutine);
@@ -283,9 +297,11 @@ public class ResponsiveLayoutShell : MonoBehaviour
         bool portrait = currentMode == LayoutMode.Portrait;
 
         canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        canvasScaler.referenceResolution = portrait
+        // A smaller reference resolution draws everything larger.
+        appliedInterfaceScale = DigitalTwinSettings.InterfaceScale;
+        canvasScaler.referenceResolution = (portrait
             ? portraitReferenceResolution
-            : landscapeReferenceResolution;
+            : landscapeReferenceResolution) / appliedInterfaceScale;
 
         canvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         canvasScaler.matchWidthOrHeight = portrait ? portraitMatch : landscapeMatch;

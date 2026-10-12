@@ -29,23 +29,16 @@ public enum MetricLabelLayoutMode
     AdaptiveWrap
 }
 
+/// <summary>
+/// One sensor's telemetry card. Presses on it go to <see cref="CardFocus"/>,
+/// which decides whether it takes the focus or opens its detail; the card
+/// only shows what card focus says: its focused look, and dimming while
+/// another card is focused.
+/// </summary>
 [DisallowMultipleComponent]
 public sealed class PerformanceStatCardView : MonoBehaviour,
-    IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler, IPointerDownHandler
+    IPointerClickHandler, IPointerDownHandler, IKeyboardTarget
 {
-    public event Action<PerformanceStatCardView, bool> FocusChanged;
-    public static event Action<PerformanceStatCardView> ActiveFocusChanged;
-
-    public static PerformanceStatCardView ActiveFocusedCard { get; private set; }
-
-    /// <summary>Raised after a clean click on a card has updated its focus.</summary>
-    public static event Action<PerformanceStatCardView> Clicked;
-
-    /// <summary>
-    /// Raised when the focused card is clicked or tapped again: that opens its
-    /// telemetry detail. The card stays focused; a click on the scene releases it.
-    /// </summary>
-    public static event Action<PerformanceStatCardView> DetailRequested;
 
     [Header("Text")]
     [SerializeField] private TMP_Text metricName;
@@ -110,14 +103,10 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
     [SerializeField, Range(2, 4)] private int maximumWrappedLabelLines = 4;
     [SerializeField, Min(28f)] private float singleLineHeaderHeight = 31f;
     [SerializeField, Min(20f)] private float wrappedLineHeight = 30f;
-    [SerializeField, Min(0f)] private float metricContentGap = 8f;
+    [SerializeField, Min(0f)] private float metricContentGap = 2f;
     [SerializeField, Min(32f)] private float valueRowHeight = 48f;
     [SerializeField, Tooltip("Preserve case-sensitive engineering unit symbols such as mm/s, kN, kW and MPa. Disable for an all-uppercase visual style.")]
     private bool useAccurateUnitCasing;
-    [SerializeField, Tooltip("Legacy behaviour: a card focuses while the pointer is over it. " +
-        "Off, only a click (a press and release that moves less than the drag threshold) " +
-        "focuses a card, so turning the camera across the rails never triggers it.")]
-    private bool focusOnHover;
     [SerializeField, Min(0.05f)] private float focusToRestDuration = 0.5f;
     [SerializeField, Range(0.05f, 1f)] private float unfocusedPeerOpacity = 0.15f;
     [SerializeField, Min(0.02f)] private float peerFocusTransitionDuration = 0.23f;
@@ -127,9 +116,8 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
     private readonly List<MetricSlot> metricSlots = new();
     private PerformanceStatSource boundSource;
     private RectTransform metricTemplateRoot;
+    // The focus this card shows; card focus owns the real one.
     private bool focused;
-    private float tapFocusUntil;
-    private RectTransform connectionPointOverride;
     private Transform presentationAnchor;
     private bool fadingConnectionToRest;
     private float connectionFadeStartedAt;
@@ -138,11 +126,7 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
     private RectTransformSnapshot[] accentGeometry = Array.Empty<RectTransformSnapshot>();
     private float nextAccentGeometryCheck;
     private Graphic[] focusGraphics = Array.Empty<Graphic>();
-    private float peerPresentationAlpha = 1f;
-    private float peerPresentationStartAlpha = 1f;
-    private float peerPresentationTargetAlpha = 1f;
-    private float peerPresentationTransitionStartedAt;
-    private bool peerPresentationTransitioning;
+    private SmoothFade peerFade = new(1f);
 
     private const float AccentGeometryCheckInterval = 0.5f;
 
@@ -153,31 +137,31 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
     public Transform WorldAnchor => presentationAnchor != null
         ? presentationAnchor
         : boundSource != null ? boundSource.WorldAnchor : null;
-    public bool IsFocused => focused;
+    public bool IsFocused => CardFocus.IsFocused(this);
+    public bool IsAlarm => IsAlarmState();
 
-    /// <summary>True when the last press on this card was a finger rather than a mouse or pen.</summary>
-    public bool LastPressWasTouch { get; private set; }
     public float UnfocusedPeerOpacity => unfocusedPeerOpacity;
     public float PeerFocusTransitionDuration => peerFocusTransitionDuration;
-    public RectTransform ActiveConnectionPoint
-    {
-        get
-        {
-            // A detail panel opened from this card draws the leader line from
-            // its own model-side edge instead.
-            if (connectionPointOverride != null && connectionPointOverride.gameObject.activeInHierarchy)
-                return connectionPointOverride;
+    /// <summary>
+    /// True while a detail panel beside the rails shows this card: the leader
+    /// line then leaves from the panel's model-side edge, and a connector runs
+    /// from the card to the panel.
+    /// </summary>
+    public bool ConnectsFromPanel => CardFocus.TryGetDetailLink(this, out _);
 
-            return railSide switch
-            {
-                StatRailSide.Left => rightConnectionPoint,
-                StatRailSide.Right => leftConnectionPoint,
-                StatRailSide.Top => bottomConnectionPoint,
-                StatRailSide.Bottom => topConnectionPoint,
-                _ => rightConnectionPoint
-            };
-        }
-    }
+    /// <summary>Where the leader line leaves for the sensor: the detail panel while one shows this card, else the card itself.</summary>
+    public RectTransform ActiveConnectionPoint =>
+        CardFocus.TryGetDetailLink(this, out ICardDetailLink link) ? link.ModelSidePoint : OwnConnectionPoint;
+
+    /// <summary>The card's own edge facing the model, whatever is open.</summary>
+    public RectTransform OwnConnectionPoint => railSide switch
+    {
+        StatRailSide.Left => rightConnectionPoint,
+        StatRailSide.Right => leftConnectionPoint,
+        StatRailSide.Top => bottomConnectionPoint,
+        StatRailSide.Bottom => topConnectionPoint,
+        _ => rightConnectionPoint
+    };
 
     private void Awake()
     {
@@ -193,8 +177,11 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
 
     private void OnEnable()
     {
-        ActiveFocusChanged -= HandleActiveFocusChanged;
-        ActiveFocusChanged += HandleActiveFocusChanged;
+        CardFocus.Changed -= HandleFocusChanged;
+        CardFocus.Changed += HandleFocusChanged;
+        DigitalTwinSettings.Changed -= HandleSettingsChanged;
+        DigitalTwinSettings.Changed += HandleSettingsChanged;
+        KeyboardNavigator.Register(this);
         // Pooled cards may have previously been resized, reoriented, or caught
         // mid-presentation. Reapply the prefab accent geometry before the card
         // becomes visible in its new rail.
@@ -203,34 +190,27 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
         RestoreAccentGeometry();
         SetConnectionEmphasis(IsAlarmState() ? 1f : 0f);
         nextAccentGeometryCheck = Time.unscaledTime + AccentGeometryCheckInterval;
-        ApplyPeerPresentationInstant(ResolvePeerPresentationAlpha(ActiveFocusedCard));
+        ShowFocus(CardFocus.IsFocused(this), instant: true);
+        ApplyPeerPresentationInstant(CardFocus.PeerAlpha(this));
     }
 
     private void OnDisable()
     {
-        ActiveFocusChanged -= HandleActiveFocusChanged;
-        if (ActiveFocusedCard == this)
-            SetActiveFocusedCard(null);
+        CardFocus.Changed -= HandleFocusChanged;
+        DigitalTwinSettings.Changed -= HandleSettingsChanged;
+        KeyboardNavigator.Unregister(this);
 
-        bool wasFocused = focused;
+        // A card off screen (pooled, another page, the other layout) holds no focus.
+        CardFocus.Release(this);
         focused = false;
-        tapFocusUntil = 0f;
+        ApplyFocusLook();
         fadingConnectionToRest = false;
         connectionFadeStartEmphasis = 0f;
         SetConnectionEmphasis(0f);
         ApplyPeerPresentationInstant(1f);
-        if (wasFocused)
-            FocusChanged?.Invoke(this, false);
     }
 
-    private void OnApplicationFocus(bool hasFocus)
-    {
-        // Browsers do not always deliver a pointer-exit event when the tab or
-        // window loses focus. Never leave a hover-focused card focused. A card
-        // focused by a click stays focused until it is released explicitly.
-        if (focusOnHover && !hasFocus && focused && !IsAlarmState())
-            SetFocused(false);
-    }
+    private void OnDestroy() => CardFocus.Forget(this);
 
     private void OnRectTransformDimensionsChange()
     {
@@ -241,12 +221,6 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
 
     private void Update()
     {
-        if (tapFocusUntil > 0f && Time.unscaledTime >= tapFocusUntil)
-        {
-            tapFocusUntil = 0f;
-            SetFocused(false);
-        }
-
         if (IsAlarmState())
         {
             fadingConnectionToRest = false;
@@ -262,7 +236,8 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
                 fadingConnectionToRest = false;
         }
 
-        UpdatePeerPresentation();
+        if (peerFade.Step(Time.unscaledTime, peerFocusTransitionDuration))
+            ApplyPeerPresentationAlpha(peerFade.Value);
     }
 
     private void LateUpdate()
@@ -291,7 +266,7 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
             valueText.text = value;
 
         if (unitText != null)
-            unitText.text = string.IsNullOrEmpty(unit) ? string.Empty : unit.ToUpperInvariant();
+            unitText.text = string.IsNullOrEmpty(unit) ? string.Empty : AccurateUnits ? unit : unit.ToUpperInvariant();
     }
 
     public void SetPresentation(TelemetryCardPresentation presentation, StatRailSide side)
@@ -323,13 +298,13 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
                     maximumWrappedLabelLines,
                     singleLineHeaderHeight,
                     wrappedLineHeight,
-                    useAccurateUnitCasing,
+                    AccurateUnits,
                     GetStateColor());
         }
 
         // TextMeshPro can refresh its renderers when telemetry text changes.
         // Reapply the presentation alpha so a dimmed peer cannot flash opaque.
-        ApplyPeerPresentationAlpha(peerPresentationAlpha);
+        ApplyPeerPresentationAlpha(peerFade.Value);
     }
 
     public void RefreshBoundSources()
@@ -352,10 +327,20 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
             metricName.text = string.IsNullOrEmpty(label) ? string.Empty : label.ToUpperInvariant();
     }
 
+    /// <summary>Units as engineers write them (mm/s, kW), set here or by the viewer's settings.</summary>
+    private bool AccurateUnits =>
+        useAccurateUnitCasing || DigitalTwinSettings.Units == DigitalTwinSettings.UnitStyle.Engineering;
+
+    private void HandleSettingsChanged()
+    {
+        RefreshBoundSources();
+        peerFade.Begin(CardFocus.PeerAlpha(this), Time.unscaledTime);
+    }
+
     public void SetUnit(string unit)
     {
         if (unitText != null)
-            unitText.text = string.IsNullOrEmpty(unit) ? string.Empty : unit.ToUpperInvariant();
+            unitText.text = string.IsNullOrEmpty(unit) ? string.Empty : AccurateUnits ? unit : unit.ToUpperInvariant();
     }
 
     public void SetSide(StatRailSide side)
@@ -370,13 +355,13 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
     {
         if (visualState == state)
         {
-            ApplyPeerPresentationAlpha(peerPresentationAlpha);
+            ApplyPeerPresentationAlpha(peerFade.Value);
             return;
         }
         visualState = state;
         ApplyState();
-        BeginPeerPresentation(ResolvePeerPresentationAlpha(ActiveFocusedCard));
-        ApplyPeerPresentationAlpha(peerPresentationAlpha);
+        peerFade.Begin(CardFocus.PeerAlpha(this), Time.unscaledTime);
+        ApplyPeerPresentationAlpha(peerFade.Value);
     }
 
     private void ApplySide()
@@ -471,6 +456,7 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
 
             backgroundImage.color = Color.white;
         }
+        ApplyFocusLook();
 
         if (IsAlarmState())
             SetConnectionEmphasis(1f);
@@ -491,28 +477,14 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
         SetTrailAlpha(bottomAccentTrail, emphasis);
     }
 
-    public void OnPointerEnter(PointerEventData eventData)
-    {
-        if (!focusOnHover)
-            return;
-        tapFocusUntil = 0f;
-        SetFocused(true);
-    }
-
-    public void OnPointerExit(PointerEventData eventData)
-    {
-        if (focusOnHover && tapFocusUntil <= 0f)
-            SetFocused(false);
-    }
-
-    public void OnPointerDown(PointerEventData eventData) =>
-        LastPressWasTouch = UIPointerUtility.IsTouch(eventData);
+    // Takes the press, so the click that follows lands on this card.
+    public void OnPointerDown(PointerEventData eventData) { }
 
     /// <summary>
-    /// A click on a card focuses it: the part is marked on the model and the
-    /// other cards dim. A click on the card already focused asks for its
-    /// telemetry detail (<see cref="DetailRequested"/>). Focus stays until a
-    /// click on the scene, another card, Esc or a closed panel releases it.
+    /// A clean click or tap on a card goes to card focus: the first focuses
+    /// it (the part is marked on the model and the other cards dim), the next
+    /// opens its telemetry detail. Focus stays until a click on the scene,
+    /// another card, Esc or a closed panel releases it.
     /// </summary>
     public void OnPointerClick(PointerEventData eventData)
     {
@@ -520,56 +492,48 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
         if (!UIPointerUtility.IsCleanClick(eventData))
             return;
 
-        bool touch = UIPointerUtility.IsTouch(eventData);
-
-        // Legacy mode: a mouse hover already owns focus.
-        if (focusOnHover && !touch)
-            return;
-
-        if (focused && !focusOnHover)
-        {
-            tapFocusUntil = 0f;
-            DetailRequested?.Invoke(this);
-            return;
-        }
-
-        SetFocused(true);
-        tapFocusUntil = 0f;
-        Clicked?.Invoke(this);
+        CardFocus.Press(this, UIPointerUtility.IsTouch(eventData) ? CardPressKind.Touch : CardPressKind.Mouse);
     }
 
-    /// <summary>Keeps a tapped card focused until it is released explicitly.</summary>
-    public void HoldFocus() => tapFocusUntil = 0f;
+    RectTransform IKeyboardTarget.FocusRect =>
+        backgroundImage != null ? backgroundImage.rectTransform : (RectTransform)transform;
 
-    public void ReleaseFocus()
+    bool IKeyboardTarget.CanTakeKeyboardFocus => isActiveAndEnabled && boundSource != null;
+
+    /// <summary>The keyboard on a card shows its hover look, as the pointer does.</summary>
+    void IKeyboardTarget.SetKeyboardFocus(bool keyboardFocused)
     {
-        tapFocusUntil = 0f;
-        SetFocused(false);
+        if (backgroundImage is UIShape shape)
+            shape.SetOwnerPointer(keyboardFocused, false);
     }
 
-    /// <summary>Releases whichever card is focused.</summary>
-    public static void ClearActiveFocus()
+    /// <summary>Enter on a card does what a click does: focus it, then open its detail.</summary>
+    void IKeyboardTarget.ActivateFromKeyboard() => CardFocus.Press(this, CardPressKind.Keyboard);
+
+    public void ReleaseFocus() => CardFocus.Release(this);
+
+    private void HandleFocusChanged(PerformanceStatCardView focusedCard)
     {
-        if (ActiveFocusedCard != null)
-            ActiveFocusedCard.ReleaseFocus();
+        ShowFocus(focusedCard == this, instant: false);
+        peerFade.Begin(CardFocus.PeerAlpha(this), Time.unscaledTime);
     }
 
-    /// <summary>Draw this card's leader line from <paramref name="point"/> instead (null restores the card's own).</summary>
-    public void SetConnectionPointOverride(RectTransform point) => connectionPointOverride = point;
-
-    private void SetFocused(bool value)
+    /// <summary>The focused look, and the accent trail lit while focused, fading to rest after.</summary>
+    private void ShowFocus(bool value, bool instant)
     {
-        if (focused == value)
+        if (focused == value && !instant)
             return;
         focused = value;
-        if (focused)
-            SetActiveFocusedCard(this);
-        else if (ActiveFocusedCard == this)
-            SetActiveFocusedCard(null);
+        ApplyFocusLook();
         if (focused || IsAlarmState())
         {
             fadingConnectionToRest = false;
             SetConnectionEmphasis(1f);
+        }
+        else if (instant)
+        {
+            fadingConnectionToRest = false;
+            SetConnectionEmphasis(0f);
         }
         else
         {
@@ -578,93 +542,33 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
             connectionFadeStartedAt = Time.unscaledTime;
             connectionFadeStartEmphasis = connectionEmphasis;
         }
-        FocusChanged?.Invoke(this, focused);
     }
 
-    private static void SetActiveFocusedCard(PerformanceStatCardView card)
+    /// <summary>
+    /// The focused card is lit like an alarm card, in the accent: its glow
+    /// tells it apart from a hovered one, which only lights faintly.
+    /// </summary>
+    private void ApplyFocusLook()
     {
-        if (ActiveFocusedCard == card)
-            return;
-
-        // Only one card is ever focused. Without this, clicking a second card
-        // left the first one focused (full-opacity trail and leader line) with
-        // nothing left to release it.
-        PerformanceStatCardView previous = ActiveFocusedCard;
-        ActiveFocusedCard = card;
-        if (previous != null && card != null && previous.focused)
-        {
-            previous.tapFocusUntil = 0f;
-            previous.SetFocused(false);
-        }
-        ActiveFocusChanged?.Invoke(card);
-    }
-
-    private void HandleActiveFocusChanged(PerformanceStatCardView activeCard)
-    {
-        BeginPeerPresentation(ResolvePeerPresentationAlpha(activeCard));
-    }
-
-    private float ResolvePeerPresentationAlpha(PerformanceStatCardView activeCard)
-    {
-        if (activeCard == null || activeCard == this || IsAlarmState())
-            return 1f;
-
-        return unfocusedPeerOpacity;
-    }
-
-    private void BeginPeerPresentation(float target)
-    {
-        target = Mathf.Clamp01(target);
-        if (Mathf.Approximately(peerPresentationTargetAlpha, target) &&
-            (!peerPresentationTransitioning ||
-             Mathf.Approximately(peerPresentationAlpha, target)))
-        {
-            return;
-        }
-
-        peerPresentationStartAlpha = peerPresentationAlpha;
-        peerPresentationTargetAlpha = target;
-        peerPresentationTransitionStartedAt = Time.unscaledTime;
-        peerPresentationTransitioning = true;
-    }
-
-    private void UpdatePeerPresentation()
-    {
-        if (!peerPresentationTransitioning)
-            return;
-
-        float progress = Mathf.Clamp01(
-            (Time.unscaledTime - peerPresentationTransitionStartedAt) /
-            Mathf.Max(0.02f, peerFocusTransitionDuration));
-        float eased = Mathf.SmoothStep(0f, 1f, progress);
-        ApplyPeerPresentationAlpha(Mathf.Lerp(
-            peerPresentationStartAlpha,
-            peerPresentationTargetAlpha,
-            eased));
-
-        if (progress >= 1f)
-            peerPresentationTransitioning = false;
+        if (backgroundImage is UIShape shape)
+            shape.Emphasised = focused;
     }
 
     private void ApplyPeerPresentationInstant(float alpha)
     {
-        peerPresentationAlpha = Mathf.Clamp01(alpha);
-        peerPresentationStartAlpha = peerPresentationAlpha;
-        peerPresentationTargetAlpha = peerPresentationAlpha;
-        peerPresentationTransitioning = false;
-        ApplyPeerPresentationAlpha(peerPresentationAlpha);
+        peerFade.Snap(alpha);
+        ApplyPeerPresentationAlpha(peerFade.Value);
     }
 
     private void ApplyPeerPresentationAlpha(float alpha)
     {
-        peerPresentationAlpha = Mathf.Clamp01(alpha);
         if (focusGraphics.Length == 0)
             CacheFocusGraphics();
 
         foreach (Graphic graphic in focusGraphics)
         {
             if (graphic != null)
-                graphic.canvasRenderer.SetAlpha(peerPresentationAlpha);
+                graphic.canvasRenderer.SetAlpha(alpha);
         }
     }
 

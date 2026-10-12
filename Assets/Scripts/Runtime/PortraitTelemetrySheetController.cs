@@ -5,8 +5,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// The telemetry sheet on a phone held upright. A tap on a card focuses it; a
-/// second tap on the focused card (see
-/// <see cref="PerformanceStatCardView.DetailRequested"/>) brings that sensor's
+/// second tap on the focused card (as <see cref="CardFocus"/> rules it) brings that sensor's
 /// detail panel up from the bottom of the screen as a sheet, the same panel
 /// the wide layout shows beside its rails, drawn larger for a thumb, without
 /// the pin and with a large close button. While it is open every other piece
@@ -24,7 +23,7 @@ using UnityEngine.UI;
 /// </summary>
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(45)]
-public sealed class PortraitTelemetrySheetController : MonoBehaviour
+public sealed class PortraitTelemetrySheetController : MonoBehaviour, ICardDetailPresenter
 {
     private const string HintLearnedKey = "DigitalTwin.TelemetrySheetTapLearned";
 
@@ -151,16 +150,12 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour
 
     private void OnEnable()
     {
-        PerformanceStatCardView.DetailRequested += HandleDetailRequested;
-        PerformanceStatCardView.Clicked += HandleClicked;
-        TelemetryCardFocusReleaser.Dismissed += Close;
+        CardFocus.Register(this);
     }
 
     private void OnDisable()
     {
-        PerformanceStatCardView.DetailRequested -= HandleDetailRequested;
-        PerformanceStatCardView.Clicked -= HandleClicked;
-        TelemetryCardFocusReleaser.Dismissed -= Close;
+        CardFocus.Unregister(this);
 
         // The wide layout takes over: nothing of the sheet stays behind.
         open = false;
@@ -185,11 +180,19 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour
         card != null && cardRoot != null && card.transform.IsChildOf(cardRoot) &&
         (visibility == null || visibility.CurrentMode == DigitalTwinMode.Telemetry);
 
-    private void HandleDetailRequested(PerformanceStatCardView card)
-    {
-        if (!featureEnabled || !IsOwnCard(card) || panelPrefab == null || History == null || !History.IsReady)
-            return;
+    // Any pointer: this layout is a phone's, so a first press only focuses the
+    // card, mouse or finger alike, and the second opens the sheet.
+    CardDetailOpening ICardDetailPresenter.Opening => CardDetailOpening.SecondPress;
 
+    bool ICardDetailPresenter.ShowsDetail => open;
+
+    bool ICardDetailPresenter.Presents(PerformanceStatCardView card) =>
+        featureEnabled && IsOwnCard(card) && panelPrefab != null && History != null && History.IsReady;
+
+    void ICardDetailPresenter.Dismiss() => Close();
+
+    void ICardDetailPresenter.ShowDetail(PerformanceStatCardView card)
+    {
         Open(card);
         // Learned: the hint never shows again.
         hintUntil = 0f;
@@ -204,11 +207,9 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour
         }
     }
 
-    private void HandleClicked(PerformanceStatCardView card)
+    void ICardDetailPresenter.FocusedWithoutDetail(PerformanceStatCardView card)
     {
-        // Any pointer: this layout is a phone's, and the hint must not hang on
-        // telling a finger from a mouse.
-        if (!featureEnabled || !IsOwnCard(card) || !card.IsFocused || open || hintShownThisVisit)
+        if (open || hintShownThisVisit)
             return;
         if (PlayerPrefs.GetInt(HintLearnedKey, 0) == 1)
             return;

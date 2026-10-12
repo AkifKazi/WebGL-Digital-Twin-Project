@@ -112,7 +112,7 @@ public class StatRailManager : MonoBehaviour
     [SerializeField, Min(100f)] private float minimumRowHeight = 150f;
 
     [Header("Cards")]
-    [SerializeField, Min(1f)] private float cardHeight = 119f;
+    [SerializeField, Min(1f)] private float cardHeight = 113f;
     [SerializeField, Range(0.05f, 0.5f)] private float smoothTime = 0.18f;
     [SerializeField, Min(1f)] private float maximumSpeed = 1500f;
     [SerializeField, Min(1)] private int maximumCardsPerRail = 32;
@@ -120,11 +120,19 @@ public class StatRailManager : MonoBehaviour
     [Tooltip("Cards keep their order along a rail so they never pass through each other.")]
     [SerializeField] private bool preserveCardOrder = true;
 
+    [Header("Detail Connectors")]
+    [Tooltip("While the detail panel has its rail, a connector runs from a card to its open panel, " +
+             "across the rails nearer the model. Their cards keep this far clear of it on each side. " +
+             "Those rails also hold one card fewer than the outermost one, so there is room to.")]
+    [SerializeField, Min(0f)] private float connectorClearance = 10f;
+
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs;
 
     // Each source's alarm level when the layout was last built.
     private readonly Dictionary<PerformanceStatSource, int> subscribedAlarmRanks = new();
+    private readonly List<PresentationPosition> alarmRefill = new();
+    private readonly List<PresentationPosition> normalRefill = new();
     private readonly Dictionary<PerformanceStatSource, PerformanceStatCardView> activeCards = new();
     private readonly Stack<PerformanceStatCardView> cardPool = new();
 
@@ -153,6 +161,9 @@ public class StatRailManager : MonoBehaviour
     private float[] spreadDesired;
     private float[] spreadExtents;
     private float[] spreadTargets;
+    private float[] keepOutStarts = new float[4];
+    private float[] keepOutEnds = new float[4];
+    private static readonly Vector3[] ConnectorPoints = new Vector3[2];
 
     // -----------------------------------------------------------------------
     // The layout
@@ -738,6 +749,7 @@ public class StatRailManager : MonoBehaviour
 
             if (page.Count > 0)
             {
+                PlaceAlarmsInnermost(page);
                 pages.Add(page);
                 page = new PageAllocation(railCount);
             }
@@ -749,9 +761,96 @@ public class StatRailManager : MonoBehaviour
         }
 
         if (page.Count > 0)
+        {
+            PlaceAlarmsInnermost(page);
             pages.Add(page);
+        }
         return pages;
     }
+
+    /// <summary>
+    /// Warning and critical cards move to the innermost rail shown on their
+    /// side, nearest the model: their lines are always drawn, so they should be
+    /// the shortest and run across no other card. Normal cards then fill
+    /// outward first, as they were allocated. No rail opens for this: a side
+    /// with one rail shown is left alone, and so is a side whose cards would
+    /// not all fit, or would leave a shown rail empty, placed this way.
+    /// </summary>
+    private void PlaceAlarmsInnermost(PageAllocation page)
+    {
+        for (int edge = 0; edge < 2; edge++)
+        {
+            int innermost = 0;
+            for (int depth = railCount - 1; depth > 0; depth--)
+            {
+                if (page.Lists[edge, depth].Count > 0)
+                {
+                    innermost = depth;
+                    break;
+                }
+            }
+            if (innermost == 0)
+                continue;
+
+            alarmRefill.Clear();
+            normalRefill.Clear();
+            for (int depth = 0; depth <= innermost; depth++)
+            {
+                foreach (PresentationPosition candidate in page.Lists[edge, depth])
+                    (IsAlarm(candidate) ? alarmRefill : normalRefill).Add(candidate);
+            }
+            if (alarmRefill.Count == 0 || AlarmsAlreadyInnermost(page, edge, innermost))
+                continue;
+
+            PageAllocation trial = new(railCount);
+            bool fits = true;
+            foreach (PresentationPosition alarm in alarmRefill)
+                fits &= PlaceFrom(alarm, trial, edge, innermost, inward: false);
+            foreach (PresentationPosition normal in normalRefill)
+                fits &= PlaceFrom(normal, trial, edge, innermost, inward: true);
+            for (int depth = 0; depth <= innermost && fits; depth++)
+                fits = trial.Lists[edge, depth].Count > 0;
+            if (!fits)
+                continue;
+
+            for (int depth = 0; depth <= innermost; depth++)
+            {
+                page.Lists[edge, depth].Clear();
+                page.Lists[edge, depth].AddRange(trial.Lists[edge, depth]);
+                page.Used[edge, depth] = trial.Used[edge, depth];
+            }
+        }
+    }
+
+    /// <summary>
+    /// Allocates on one side only: outward from the innermost rail, or inward
+    /// from the outermost one up to it.
+    /// </summary>
+    private bool PlaceFrom(PresentationPosition candidate, PageAllocation page, int edge, int innermost, bool inward)
+    {
+        for (int i = 0; i <= innermost; i++)
+        {
+            if (TryAllocate(candidate, page, edge, inward ? i : innermost - i))
+                return true;
+        }
+        return false;
+    }
+
+    private static bool AlarmsAlreadyInnermost(PageAllocation page, int edge, int innermost)
+    {
+        for (int depth = 0; depth < innermost; depth++)
+        {
+            foreach (PresentationPosition candidate in page.Lists[edge, depth])
+            {
+                if (IsAlarm(candidate))
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    private static bool IsAlarm(PresentationPosition candidate) =>
+        candidate.Presentation.Source != null && AlarmRank(candidate.Presentation.Source) > 0;
 
     /// <summary>
     /// The sensor's own side first, then the other side, one depth at a time,
@@ -779,7 +878,7 @@ public class StatRailManager : MonoBehaviour
 
         float extent = EstimateExtent(candidate.Presentation, rail);
         float required = extent + (list.Count > 0 ? Gap : 0f);
-        if (page.Used[edge, depth] + required > AvailableLength(rail.Container))
+        if (page.Used[edge, depth] + required > AvailableLength(rail.Container) - ConnectorRoom(rail, depth))
             return false;
 
         page.Used[edge, depth] += required;
@@ -850,6 +949,23 @@ public class StatRailManager : MonoBehaviour
         float length = AvailableLength(container);
         return length > 1f ? Mathf.Min(rowCardWidth, length) : rowCardWidth;
     }
+
+    /// <summary>
+    /// Room an inner rail keeps free, about one card's worth, while detail
+    /// panels have their rail: the cards on it can then always step aside for
+    /// a connector from an outer card to its panel. The outermost rail keeps
+    /// none, so it holds as many cards as fit and the inner ones one fewer.
+    /// </summary>
+    private float ConnectorRoom(Rail rail, int depth)
+    {
+        if (!detailRail || depth == 0)
+            return 0f;
+        float nominal = rows ? RowCardWidthFor(rail.Container) : cardHeight;
+        return nominal + Gap + ConnectorWidth;
+    }
+
+    /// <summary>The stretch of a rail a connector keeps clear: the line and the clearance on both sides.</summary>
+    private float ConnectorWidth => connectorClearance * 2f + 1f;
 
     /// <summary>The length of a rail cards can occupy, less its padding at each end.</summary>
     private float AvailableLength(RectTransform container)
@@ -1108,13 +1224,90 @@ public class StatRailManager : MonoBehaviour
             spreadExtents[i] = bindings[i].Extent;
         }
 
+        int keepOuts = CollectConnectorKeepOuts(rail);
         RailCardSpread.Solve(
             spreadDesired, spreadExtents, count, Gap,
-            -RailStart(container), -RailEnd(container), spreadTargets);
+            -RailStart(container), -RailEnd(container),
+            keepOutStarts, keepOutEnds, keepOuts, rail.Split, spreadTargets);
 
         for (int i = 0; i < count; i++)
             bindings[i].Target = -spreadTargets[i];
     }
+
+    /// <summary>
+    /// Where connectors cross this rail: one from each card on a rail outside
+    /// it, on the same side, whose detail panel is open beside the rails. In
+    /// the spread's positions (the negated distance along the rail). Returns
+    /// how many there are.
+    /// </summary>
+    private int CollectConnectorKeepOuts(Rail rail)
+    {
+        if (!detailRail)
+            return 0;
+        List<Rail> edgeRails = rails[rail.Edge];
+        int depth = edgeRails.IndexOf(rail);
+        if (depth <= 0)
+            return 0;
+
+        RectTransform container = rail.Container;
+        Rect rect = container.rect;
+        float crossMin = rows ? rect.yMin : rect.xMin;
+        float crossMax = rows ? rect.yMax : rect.xMax;
+        Camera uiCamera = GetUICamera();
+        int count = 0;
+
+        for (int outer = 0; outer < depth; outer++)
+        {
+            Rail outerRail = edgeRails[outer];
+            if (!outerRail.Shown)
+                continue;
+            foreach (RailCardBinding binding in outerRail.Bindings)
+            {
+                PerformanceStatCardView card = binding.Card;
+                if (card == null || !card.isActiveAndEnabled ||
+                    !CardFocus.TryGetDetailLink(card, out ICardDetailLink link) ||
+                    link.CardSidePoint == null || card.OwnConnectionPoint == null)
+                    continue;
+
+                ConnectorPoints[0] = card.OwnConnectionPoint.position;
+                ConnectorPoints[1] = link.CardSidePoint.position;
+                if (!TryGetLocal(container, ConnectorPoints[0], uiCamera, out Vector2 from) ||
+                    !TryGetLocal(container, ConnectorPoints[1], uiCamera, out Vector2 to))
+                    continue;
+
+                // The connector runs across the rail; where it is not square
+                // to it (a panel pushed along by another), it sweeps a stretch.
+                float alongFrom = rows ? -from.x : from.y;
+                float alongTo = rows ? -to.x : to.y;
+                float crossFrom = rows ? from.y : from.x;
+                float crossTo = rows ? to.y : to.x;
+                float a = alongFrom;
+                float b = alongTo;
+                if (!Mathf.Approximately(crossFrom, crossTo))
+                {
+                    float t0 = Mathf.Clamp01((crossMin - crossFrom) / (crossTo - crossFrom));
+                    float t1 = Mathf.Clamp01((crossMax - crossFrom) / (crossTo - crossFrom));
+                    a = Mathf.Lerp(alongFrom, alongTo, t0);
+                    b = Mathf.Lerp(alongFrom, alongTo, t1);
+                }
+
+                if (count == keepOutStarts.Length)
+                {
+                    System.Array.Resize(ref keepOutStarts, count * 2);
+                    System.Array.Resize(ref keepOutEnds, count * 2);
+                }
+                float half = ConnectorWidth * 0.5f;
+                keepOutStarts[count] = -Mathf.Max(a, b) - half;
+                keepOutEnds[count] = -Mathf.Min(a, b) + half;
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static bool TryGetLocal(RectTransform container, Vector3 worldPoint, Camera uiCamera, out Vector2 local) =>
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            container, RectTransformUtility.WorldToScreenPoint(uiCamera, worldPoint), uiCamera, out local);
 
     private void ResolveCurrentPositionCollisions(Rail rail)
     {
@@ -1288,6 +1481,8 @@ public class StatRailManager : MonoBehaviour
         public readonly RectTransform Container;
         public readonly int Edge;
         public readonly List<RailCardBinding> Bindings = new();
+        /// <summary>How many of its cards sit before each connector crossing it, kept so they stay on their side.</summary>
+        public readonly List<int> Split = new();
         /// <summary>Its size across the screen: a column's width, a row's height.</summary>
         public float Thickness;
         public bool Shown;

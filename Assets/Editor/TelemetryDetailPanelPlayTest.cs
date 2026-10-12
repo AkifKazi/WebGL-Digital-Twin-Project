@@ -50,6 +50,7 @@ public static class TelemetryDetailPanelPlayTest
     private static Button section;
     private static int failures;
     private static StatLeaderLineView reversalLine;
+    private static PerformanceStatCardView connectorCard;
     private static Vector3 reversalAnchorHome;
 
     // Entering play mode reloads scripts; this re-attaches the test afterwards.
@@ -135,7 +136,7 @@ public static class TelemetryDetailPanelPlayTest
                 // real click is checked in the browser build instead.
                 releaser.HandlePointerGesture(OutsidePoint, OutsidePoint);
                 Expect(controller.OpenPanels.Count == 0, "an outside click closed the panel");
-                Expect(PerformanceStatCardView.ActiveFocusedCard == null && AllCards().All(card => !card.IsFocused),
+                Expect(CardFocus.Focused == null && AllCards().All(card => !card.IsFocused),
                     "an outside click released every card (none left in the focused state)");
                 Next(1f);
                 break;
@@ -272,6 +273,24 @@ public static class TelemetryDetailPanelPlayTest
 
             case 17:
             {
+                // An outer card level with a card on the inner column: its
+                // connector to the panel must find that column clear.
+                FindCards();
+                connectorCard = OuterCardBesideInnerCard();
+                Debug.Log($"DETAIL_PANEL_TEST connector card={(connectorCard != null ? connectorCard.BoundSource.MetricName : "none")}");
+                if (connectorCard != null)
+                    Click(connectorCard);
+                Next(1.6f);
+                break;
+            }
+
+            case 18:
+            {
+                Capture("15-connector-to-panel");
+                if (connectorCard != null)
+                    ExpectConnectorClear(connectorCard);
+                releaser.HandlePointerGesture(OutsidePoint, OutsidePoint);
+
                 FindCards();
                 Expect(rails.RailsPerSide == 2 && rails.DetailRailActive, "two columns a side and the detail rail");
                 ExpectNoCardOnDetailRails();
@@ -284,7 +303,7 @@ public static class TelemetryDetailPanelPlayTest
                 break;
             }
 
-            case 18:
+            case 19:
             {
                 Capture("15-two-columns-with-panel");
                 TelemetryDetailPanel panel = controller.FloatingPanel;
@@ -302,7 +321,7 @@ public static class TelemetryDetailPanelPlayTest
                 break;
             }
 
-            case 19:
+            case 20:
             {
                 // The capture's canvas took its new size after the first rebuild.
                 rails.RebuildLayout();
@@ -320,7 +339,7 @@ public static class TelemetryDetailPanelPlayTest
                 break;
             }
 
-            case 20:
+            case 21:
             {
                 Capture("16-rows-with-panel");
                 TelemetryDetailPanel panel = controller.FloatingPanel;
@@ -337,7 +356,7 @@ public static class TelemetryDetailPanelPlayTest
                 break;
             }
 
-            case 21:
+            case 22:
             {
                 Capture("17-rows-panel-off");
                 PerformanceStatCardView top = AllCards().FirstOrDefault(card =>
@@ -354,7 +373,7 @@ public static class TelemetryDetailPanelPlayTest
                 break;
             }
 
-            case 22:
+            case 23:
                 rails.RebuildLayout();
                 FindCards();
                 Expect(!rails.RailsAreRows && rails.RailsPerSide == 2,
@@ -364,7 +383,7 @@ public static class TelemetryDetailPanelPlayTest
                 Next(1.5f);
                 break;
 
-            case 23:
+            case 24:
             {
                 Capture("18-reversed-lines");
                 StatLeaderLineView[] lines = Object.FindObjectsByType<StatLeaderLineView>()
@@ -375,9 +394,9 @@ public static class TelemetryDetailPanelPlayTest
                           string.Join(", ", lines.Where(line => line.IsReversed).Select(line => line.Source.MetricName)));
                 Expect(lines.Where(line => line.IsReversed).All(line => line.DirectionOpacity <= line.FadedDirectionOpacity + 0.001f),
                     "lines turning back across their card fade");
-                foreach (StatLeaderLineView line in lines.Where(line => !line.IsReversed && !line.IsCrossingCard && line.DirectionOpacity < 0.999f))
+                foreach (StatLeaderLineView line in lines.Where(line => !line.IsReversed && !line.IsCrossingUi && line.DirectionOpacity < 0.999f))
                     Debug.Log($"DETAIL_PANEL_TEST faded but clear: '{line.Source.MetricName}' opacity={line.DirectionOpacity:F3}");
-                Expect(lines.Where(line => !line.IsReversed && !line.IsCrossingCard).All(line => line.DirectionOpacity >= 0.999f),
+                Expect(lines.Where(line => !line.IsReversed && !line.IsCrossingUi).All(line => line.DirectionOpacity >= 0.999f),
                     "lines leaving their card, clear of other cards, keep their opacity");
 
                 // Pull a left-rail sensor behind its card (play mode only; the
@@ -393,7 +412,7 @@ public static class TelemetryDetailPanelPlayTest
                 break;
             }
 
-            case 24:
+            case 25:
                 Debug.Log($"DETAIL_PANEL_TEST reversing '{reversalLine.Source.MetricName}' state={reversalLine.Card.VisualState} " +
                           $"reversed={reversalLine.IsReversed} opacity={reversalLine.DirectionOpacity:F3}");
                 Expect(reversalLine.IsReversed && reversalLine.DirectionOpacity < 0.95f &&
@@ -402,7 +421,7 @@ public static class TelemetryDetailPanelPlayTest
                 Next(0.6f);
                 break;
 
-            case 25:
+            case 26:
                 Capture("19-reversed-line-faded");
                 Expect(reversalLine.IsReversed && Mathf.Abs(reversalLine.DirectionOpacity - reversalLine.FadedDirectionOpacity) < 0.001f,
                     $"after 0.7 s the reversed line is at its faded opacity ({reversalLine.FadedDirectionOpacity:P0})");
@@ -410,13 +429,13 @@ public static class TelemetryDetailPanelPlayTest
                 Next(1f);
                 break;
 
-            case 26:
+            case 27:
                 Capture("20-reversed-line-restored");
                 Expect(!reversalLine.IsReversed && reversalLine.DirectionOpacity >= 0.999f,
                     "back in front of its card the line returns to its usual opacity");
                 Debug.Log("DETAIL_PANEL_TEST crossing at rest: " + string.Join(", ",
                     Object.FindObjectsByType<StatLeaderLineView>()
-                        .Where(line => line.Card != null && line.IsCrossingCard)
+                        .Where(line => line.Card != null && line.IsCrossingUi)
                         .Select(line => line.Source.MetricName)));
 
                 // As in the reported case: a left card's sensor just past a right
@@ -431,20 +450,20 @@ public static class TelemetryDetailPanelPlayTest
                 Next(1f);
                 break;
 
-            case 27:
+            case 28:
                 Capture("21-line-across-card-faded");
-                Debug.Log($"DETAIL_PANEL_TEST across '{reversalLine.Source.MetricName}' crossing={reversalLine.IsCrossingCard} " +
+                Debug.Log($"DETAIL_PANEL_TEST across '{reversalLine.Source.MetricName}' crossing={reversalLine.IsCrossingUi} " +
                           $"reversed={reversalLine.IsReversed} opacity={reversalLine.DirectionOpacity:F3}");
-                Expect(reversalLine.IsCrossingCard && !reversalLine.IsReversed &&
+                Expect(reversalLine.IsCrossingUi && !reversalLine.IsReversed &&
                        Mathf.Abs(reversalLine.DirectionOpacity - reversalLine.FadedDirectionOpacity) < 0.001f,
                     "a line running across another card fades");
                 reversalLine.Card.WorldAnchor.position = reversalAnchorHome;
                 Next(1f);
                 break;
 
-            case 28:
+            case 29:
                 Capture("22-line-across-card-restored");
-                Expect(!reversalLine.IsCrossingCard && reversalLine.DirectionOpacity >= 0.999f,
+                Expect(!reversalLine.IsCrossingUi && reversalLine.DirectionOpacity >= 0.999f,
                     "clear of the card the line returns to its usual opacity");
                 Finish(failures == 0 ? "passed" : $"failed={failures}");
                 break;
@@ -486,6 +505,59 @@ public static class TelemetryDetailPanelPlayTest
             rails.RebuildLayout();
         Debug.Log($"DETAIL_PANEL_TEST screen={Screen.width}x{Screen.height} controller={(controller != null)} " +
                   $"ready={(controller != null && controller.IsReady)} releaser={(releaser != null)}");
+    }
+
+    private static bool OnRail(PerformanceStatCardView card, int depth)
+    {
+        RectTransform rail = rails.GetRail(card.RailSide, depth);
+        return rail != null && rails.OwnsCard(card) && card.transform.IsChildOf(rail);
+    }
+
+    /// <summary>The outer-column card most nearly level with a card on the inner column of its side.</summary>
+    private static PerformanceStatCardView OuterCardBesideInnerCard()
+    {
+        List<PerformanceStatCardView> cards = AllCards().Where(card => rails.OwnsCard(card)).ToList();
+        PerformanceStatCardView best = null;
+        float bestDistance = float.MaxValue;
+        foreach (PerformanceStatCardView outer in cards.Where(card => OnRail(card, 0)))
+        {
+            foreach (PerformanceStatCardView inner in cards.Where(card => card.RailSide == outer.RailSide && OnRail(card, 1)))
+            {
+                float distance = Mathf.Abs(outer.transform.position.y - inner.transform.position.y);
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = outer;
+                }
+            }
+        }
+        return best;
+    }
+
+    /// <summary>
+    /// The card's panel is open beside the rails, its leader line draws the
+    /// connector to it, the inner column has stepped clear of that connector,
+    /// and the inner column holds fewer cards than the outer one.
+    /// </summary>
+    private static void ExpectConnectorClear(PerformanceStatCardView card)
+    {
+        Expect(card.ConnectsFromPanel, "the outer card's panel opened beside the rails");
+        StatLeaderLineView line = Object.FindObjectsByType<StatLeaderLineView>().FirstOrDefault(l => l.Card == card);
+        RectTransform connector = line != null
+            ? line.GetComponentsInChildren<RectTransform>(true).FirstOrDefault(t => t.name == "Panel Connector")
+            : null;
+        Expect(connector != null && connector.gameObject.activeInHierarchy && connector.rect.width > 4f,
+            "a connector runs from the card to its panel");
+
+        float lineY = RectTransformUtility.WorldToScreenPoint(captureCamera, card.OwnConnectionPoint.position).y;
+        List<PerformanceStatCardView> inner = AllCards()
+            .Where(other => other.RailSide == card.RailSide && OnRail(other, 1)).ToList();
+        List<PerformanceStatCardView> crossed = inner
+            .Where(other => { Rect rect = LayerRect((RectTransform)other.transform); return lineY > rect.yMin + 1f && lineY < rect.yMax - 1f; })
+            .ToList();
+        Debug.Log($"DETAIL_PANEL_TEST connector y={lineY:0} inner={inner.Count} outer={AllCards().Count(other => other.RailSide == card.RailSide && OnRail(other, 0))} " +
+                  $"crossed=[{string.Join(",", crossed.Select(other => other.BoundSource.MetricName))}]");
+        Expect(crossed.Count == 0, "the cards on the inner column stepped clear of the connector");
     }
 
     private static void FindCards()

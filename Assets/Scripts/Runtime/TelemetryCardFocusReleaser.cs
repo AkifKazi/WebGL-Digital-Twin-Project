@@ -9,15 +9,12 @@ using UnityEngine.InputSystem;
 /// Releases the focused telemetry card when the user clicks (or taps) anything
 /// that is not a card or a detail panel, or presses Esc. A press that travels
 /// is a camera drag and releases nothing. Lives on the EventSystem so it works
-/// in every layout; the detail panel listens to <see cref="Dismissed"/> to
-/// close its unpinned panel at the same moment.
+/// in every layout; card focus then has the detail panels close their
+/// unpinned panel, and the sheet close, at the same moment.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class TelemetryCardFocusReleaser : MonoBehaviour
 {
-    /// <summary>Raised after an outside click or Esc has released the focused card.</summary>
-    public static event Action Dismissed;
-
     private readonly List<RaycastResult> raycastResults = new();
     private InputAction pointerPress;
     private InputAction escape;
@@ -54,7 +51,13 @@ public sealed class TelemetryCardFocusReleaser : MonoBehaviour
         pressActive = false;
     }
 
-    private void HandleEscape(InputAction.CallbackContext context) => Dismiss();
+    private void HandleEscape(InputAction.CallbackContext context)
+    {
+        // An open modal (the settings) takes Esc for itself.
+        if (KeyboardNavigator.Scope != null)
+            return;
+        Dismiss();
+    }
 
     private void HandlePointerPress(InputAction.CallbackContext context)
     {
@@ -104,11 +107,7 @@ public sealed class TelemetryCardFocusReleaser : MonoBehaviour
         Dismiss();
     }
 
-    public void Dismiss()
-    {
-        PerformanceStatCardView.ClearActiveFocus();
-        Dismissed?.Invoke();
-    }
+    public void Dismiss() => CardFocus.Dismiss();
 
     private bool IsOverCardOrPanel(Vector2 screenPosition)
     {

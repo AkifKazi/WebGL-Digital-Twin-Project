@@ -40,6 +40,8 @@ public static class PortraitPaginationUISetup
         // Missing before Set Up Service Mode has run; that wires the pagers to it.
         ConfigurePortrait(portraitBottom, portraitManager, LayoutVisibility("Portrait layout"));
         ConfigureWide(wideBottom, wideTop, wideManager, LayoutVisibility("Wide layout"));
+        // The page buttons were rebuilt: lines fade over them again.
+        LeaderLineObstacleSetup.MarkAll();
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);

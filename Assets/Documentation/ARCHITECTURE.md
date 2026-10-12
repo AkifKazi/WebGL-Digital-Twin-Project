@@ -19,8 +19,11 @@ The following classes are machine-independent and should not contain hopper tag 
 - `ConnectionHealthMonitor` — provider and aggregate data-health state.
 - `StatRailManager` and `StatLeaderLineManager` — responsive presentation: one of each per layout, the portrait one set to always run rows.
 - `TelemetryVisibility` — one per layout: owns the Telemetry / Service view and is the only thing that fades the layout's telemetry regions. It combines the view, the inspection view and the portrait sheet's cover; its rules live in the plain `TelemetryVisibilityState`, covered by edit-mode tests. `WideServiceView` and `PortraitServiceView` only place the service panel from its blend.
+- `CardFocus` — the one card focus for the whole twin: which card is focused, which cards have their detail open, and what a press on a card does. Its rules live in the plain `CardFocusState`, covered by edit-mode tests. Cards report presses to it; `TelemetryDetailPanelController` and `PortraitTelemetrySheetController` register as `ICardDetailPresenter`s; leader lines, the rails and the model highlights ask it.
+- `RailCardSpread` — places a rail's cards near their sensors without overlapping, and clear of the connectors from outer cards to their detail panels. Covered by edit-mode tests.
 - `IInspectionView` — what generic telemetry needs from the machine's inspection view: whether the view on show displays telemetry.
 - Card, leader-line, responsive-shell, camera, and text-fitting components.
+- `UIShape`, `UIComponentStyle`, `UIShapeStyle`, `UIDesignTokens`, `UIControlState`, `UITextStyle`, `UITheme` and `UITextLegibility` — the UI design system: tokens, components and their states, drawn procedurally. See [`UI_DESIGN_SYSTEM.md`](UI_DESIGN_SYSTEM.md).
 
 ## Machine-specific responsibilities
 
@@ -110,6 +113,7 @@ The browser receives only authorized, normalized state through HTTPS or secure W
 - Do not add machine sensor IDs, categories, or simulator types to `DigitalTwinSceneSetup`.
 - Do not let cards or layouts parse API payloads.
 - Do not let providers manipulate UI elements directly.
+- Do not track card focus, or which cards have a detail open, outside `CardFocus`; ask it.
 - Do not fade or hide telemetry outside a layout's `TelemetryVisibility`, and do not read machine view controllers from generic telemetry; go through `IInspectionView`.
 - Keep simulation visibly separate from live data.
 - Preserve source timestamp and quality whenever the upstream system supplies them.

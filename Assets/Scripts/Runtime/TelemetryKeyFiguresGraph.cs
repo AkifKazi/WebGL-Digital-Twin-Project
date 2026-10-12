@@ -105,7 +105,7 @@ public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
 
         RectTransform highlightRect = CreateRect("Highlight", column.Link);
         Stretch(highlightRect);
-        Image highlight = highlightRect.gameObject.AddComponent<Image>();
+        Image highlight = highlightRect.gameObject.AddComponent<UIShape>();
         highlight.raycastTarget = false;
         if (Style.hoverSprite != null)
         {
