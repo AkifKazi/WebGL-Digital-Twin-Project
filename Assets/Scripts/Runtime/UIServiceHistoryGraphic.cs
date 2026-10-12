@@ -75,22 +75,23 @@ public sealed class UIServiceHistoryGraphic : MaskableGraphic
         {
             float centre = r.xMin + columnWidth * (i + 0.5f);
             Color fill = plan > 0f && past[i] < plan * shortShare ? shortColor : pastColor;
-            UIMesh.AddRect(vh, new Vector2(centre - half, r.yMin), new Vector2(centre + half, r.yMin + past[i] * scale), fill * color);
+            AddColumn(vh, centre - half, centre + half, r.yMin, r.yMin + past[i] * scale, fill, 0.18f, 0.5f);
         }
 
-        // The current interval: the estimate hatched and outlined, the hours
+        // The current interval: the estimate outlined and hatched, the hours
         // run so far filled in, past the outline once overdue.
         float x = r.xMin + columnWidth * (columns - 0.5f);
         float top = r.yMin + estimate * scale;
         float runTop = r.yMin + run * scale;
         Color edge = currentColor * color;
-        Color hatch = new Color(currentColor.r, currentColor.g, currentColor.b, currentColor.a * 0.45f) * color;
         if (runTop < top)
-            UIServiceBarGraphic.AddHatch(vh, x - half, x + half, runTop, top, hatch);
-        UIMesh.AddRect(vh, new Vector2(x - half, r.yMin), new Vector2(x + half, runTop),
-            new Color(currentColor.r, currentColor.g, currentColor.b, currentColor.a * 0.85f) * color);
-        const float Line = 2f;
-        UIMesh.AddRect(vh, new Vector2(x - half, top - Line), new Vector2(x + half, top), edge);
+        {
+            UIMesh.AddRect(vh, new Vector2(x - half, runTop), new Vector2(x + half, top), Fade(currentColor, 0.08f));
+            UIServiceBarGraphic.AddHatch(vh, x - half, x + half, runTop, top, Fade(currentColor, 0.4f), 10f, 2f);
+        }
+        AddColumn(vh, x - half, x + half, r.yMin, runTop, currentColor, 0.3f, 0.85f);
+        const float Line = 1f;
+        UIMesh.AddRect(vh, new Vector2(x - half, top - 2f), new Vector2(x + half, top), edge);
         UIMesh.AddRect(vh, new Vector2(x - half, r.yMin), new Vector2(x - half + Line, top), edge);
         UIMesh.AddRect(vh, new Vector2(x + half - Line, r.yMin), new Vector2(x + half, top), edge);
 
@@ -105,6 +106,25 @@ public sealed class UIServiceHistoryGraphic : MaskableGraphic
         // The baseline.
         UIMesh.AddRect(vh, new Vector2(r.xMin, r.yMin), new Vector2(r.xMax, r.yMin + 1.5f), new Color(1f, 1f, 1f, 0.2f) * color);
     }
+
+    /// <summary>
+    /// A column lit from its top: brighter towards the value, with a full
+    /// strength cap on it.
+    /// </summary>
+    private void AddColumn(VertexHelper vh, float x0, float x1, float y0, float y1, Color tint,
+        float bottomAlpha, float topAlpha)
+    {
+        if (y1 - y0 < 0.5f)
+            return;
+        Color bottom = Fade(tint, bottomAlpha);
+        Color top = Fade(tint, topAlpha);
+        UIMesh.AddQuad(vh,
+            new Vector2(x0, y0), new Vector2(x0, y1), new Vector2(x1, y1), new Vector2(x1, y0),
+            bottom, top, top, bottom);
+        UIMesh.AddRect(vh, new Vector2(x0, Mathf.Max(y0, y1 - 2f)), new Vector2(x1, y1), tint * color);
+    }
+
+    private Color Fade(Color tint, float share) => new Color(tint.r, tint.g, tint.b, tint.a * share) * color;
 
     private static float Max(List<float> values)
     {

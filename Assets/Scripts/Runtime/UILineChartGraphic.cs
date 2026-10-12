@@ -4,9 +4,14 @@ using UnityEngine.UI;
 
 /// <summary>
 /// A single-series line chart in the Apple Health manner: faint solid
-/// gridlines, dotted vertical guides, a smooth line that never overshoots its
+/// gridlines and vertical guides, a smooth line that never overshoots its
 /// data, an optional soft fill, limit lines, and the latest value marked by a
 /// ringed dot with a thin line down to the axis.
+///
+/// With alarm bands set, the stretch beyond each limit is faintly shaded in
+/// its tone, and the line takes the tone of the band it is in, changing
+/// colour exactly where it crosses a limit. The line can carry a soft glow in
+/// its own colour, under it; it is off by default, as a crisp line reads better.
 /// </summary>
 [RequireComponent(typeof(CanvasRenderer))]
 public sealed class UILineChartGraphic : MaskableGraphic
@@ -14,13 +19,18 @@ public sealed class UILineChartGraphic : MaskableGraphic
     public Color lineColor = new(0.08f, 0.9f, 1f, 1f);
     public Color areaColor = new(0.08f, 0.9f, 1f, 0.16f);
     public Color gridColor = new(1f, 1f, 1f, 0.1f);
-    public Color guideColor = new(1f, 1f, 1f, 0.16f);
+    public Color guideColor = new(1f, 1f, 1f, 0.08f);
     public Color nowLineColor = new(1f, 1f, 1f, 0.3f);
     public Color markerRingColor = new(0.06f, 0.12f, 0.16f, 1f);
-    public float lineWidth = 3f;
+    public float lineWidth = 2.5f;
     public float markerRadius = 5.5f;
     public float ringWidth = 2.5f;
     public bool fillArea = true;
+    [Tooltip("The glow under the line: its width beyond the line's, and its strength.")]
+    public float glowWidth = 10f;
+    [Range(0f, 1f)] public float glowStrength;
+    [Tooltip("Strength of the shading beyond each limit, at the limit; it fades out towards the edge.")]
+    [Range(0f, 0.3f)] public float bandStrength = 0.06f;
 
     private const int CurveSteps = 6;
 
@@ -31,6 +41,23 @@ public sealed class UILineChartGraphic : MaskableGraphic
     private readonly List<Color> limitColors = new();
     private readonly List<Vector2> run = new();
     private readonly List<Vector2> curve = new();
+    private readonly List<Band> bands = new();
+    private readonly List<float> crossings = new();
+
+    /// <summary>Values beyond <see cref="Limit"/> (above it, or below it) are in this band's tone.</summary>
+    private readonly struct Band
+    {
+        public readonly float Limit;
+        public readonly bool Above;
+        public readonly Color Tone;
+
+        public Band(float limit, bool above, Color tone)
+        {
+            Limit = limit;
+            Above = above;
+            Tone = tone;
+        }
+    }
     // Reused by MonotoneCurve. The mesh is rebuilt whenever the panel resizes,
     // so the smoothing must not allocate a pair of arrays each time.
     private float[] slopeBuffer = System.Array.Empty<float>();
@@ -61,6 +88,42 @@ public sealed class UILineChartGraphic : MaskableGraphic
         SetVerticesDirty();
     }
 
+    /// <summary>
+    /// The alarm bands: from the warning limit on, then from the critical one.
+    /// NaN leaves a band out. Call after <see cref="SetData"/>.
+    /// </summary>
+    public void SetBands(float warningAbove, float criticalAbove, float warningBelow, float criticalBelow,
+        Color warning, Color critical)
+    {
+        bands.Clear();
+        // Order matters: a value past the critical limit is critical even
+        // though it is past the warning limit too.
+        AddBand(warningAbove, true, warning);
+        AddBand(criticalAbove, true, critical);
+        AddBand(warningBelow, false, warning);
+        AddBand(criticalBelow, false, critical);
+        SetVerticesDirty();
+    }
+
+    private void AddBand(float limit, bool above, Color tone)
+    {
+        if (!float.IsNaN(limit))
+            bands.Add(new Band(limit, above, tone));
+    }
+
+    /// <summary>The line's colour at a value: its most severe band's tone, else the line colour.</summary>
+    private Color ColorAt(float value)
+    {
+        // Bands are added warning first, so a critical band it is also in wins.
+        Color result = lineColor;
+        foreach (Band band in bands)
+        {
+            if (band.Above ? value >= band.Limit : value <= band.Limit)
+                result = band.Tone;
+        }
+        return result;
+    }
+
     /// <summary>Where a value sits, as a fraction of the height (0 bottom, 1 top).</summary>
     public float ValueFraction(float value) => (value - minimum) / (maximum - minimum);
 
@@ -80,8 +143,25 @@ public sealed class UILineChartGraphic : MaskableGraphic
         foreach (float fraction in guideFractions)
         {
             float x = rect.xMin + fraction * rect.width;
-            for (float y = rect.yMin; y < rect.yMax; y += 6f)
-                UIMesh.AddRect(vh, new Vector2(x - 1f, y), new Vector2(x + 1f, Mathf.Min(y + 2f, rect.yMax)), guideColor * color);
+            UIMesh.AddRect(vh, new Vector2(x - 0.5f, rect.yMin), new Vector2(x + 0.5f, rect.yMax), guideColor * color);
+        }
+
+        // The bands beyond the limits, shaded from the limit outwards.
+        foreach (Band band in bands)
+        {
+            float y = Mathf.Clamp(rect.yMin + ValueFraction(band.Limit) * rect.height, rect.yMin, rect.yMax);
+            float edge = band.Above ? rect.yMax : rect.yMin;
+            if (Mathf.Abs(edge - y) < 0.5f)
+                continue;
+            Color strong = band.Tone * color;
+            strong.a *= bandStrength;
+            Color faint = strong;
+            faint.a = 0f;
+            // Strongest at the limit, fading outwards; the critical band adds to the warning one.
+            UIMesh.AddQuad(vh,
+                new Vector2(rect.xMin, y), new Vector2(rect.xMin, edge),
+                new Vector2(rect.xMax, edge), new Vector2(rect.xMax, y),
+                strong, faint, faint, strong);
         }
 
         // Fill first so the limit lines and the curve sit on top of it.
@@ -93,19 +173,29 @@ public sealed class UILineChartGraphic : MaskableGraphic
             float y = rect.yMin + ValueFraction(limitValues[i]) * rect.height;
             if (y < rect.yMin - 0.5f || y > rect.yMax + 0.5f)
                 continue;
-            // Dashed: a limit, not data and not a gridline.
-            for (float x = rect.xMin; x < rect.xMax; x += 7f)
-                UIMesh.AddRect(vh, new Vector2(x, y - 0.6f), new Vector2(Mathf.Min(x + 4f, rect.xMax), y + 0.6f), limitColors[i] * color);
+            // A thin line in the limit's tone, so it reads as a limit and not a gridline.
+            UIMesh.AddRect(vh, new Vector2(rect.xMin, y - 0.5f), new Vector2(rect.xMax, y + 0.5f), limitColors[i] * color);
         }
 
+        // The glow under the whole line, then the line over it.
+        if (glowStrength > 0f)
+            ForEachRun(vh, rect, RunPass.Glow);
         ForEachRun(vh, rect, RunPass.Line);
 
         if (TryGetLastPoint(out Vector2 last))
         {
             Vector2 marker = ToLocal(last, rect);
+            Color tone = ColorAt(last.y);
             UIMesh.AddRect(vh, new Vector2(marker.x - 0.5f, rect.yMin), new Vector2(marker.x + 0.5f, marker.y), nowLineColor * color);
+            // A halo with the glow, so the latest reading reads first.
+            if (glowStrength > 0f)
+            {
+                Color halo = tone * color;
+                halo.a *= glowStrength * 1.4f;
+                UIMesh.AddDisc(vh, marker, markerRadius + ringWidth + 6f, halo);
+            }
             UIMesh.AddDisc(vh, marker, markerRadius + ringWidth, markerRingColor * color);
-            UIMesh.AddDisc(vh, marker, markerRadius, lineColor * color);
+            UIMesh.AddDisc(vh, marker, markerRadius, tone * color);
         }
     }
 
@@ -125,6 +215,7 @@ public sealed class UILineChartGraphic : MaskableGraphic
     private enum RunPass
     {
         Area,
+        Glow,
         Line
     }
 
@@ -153,23 +244,112 @@ public sealed class UILineChartGraphic : MaskableGraphic
                 MonotoneCurve(run, curve);
                 if (pass == RunPass.Area)
                     AddArea(vh, curve, rect.yMin);
+                else if (pass == RunPass.Glow)
+                    AddGlowRibbon(vh, curve, rect);
                 else
-                    AddLineRun(vh, curve);
+                    AddLineRun(vh, curve, rect);
                 run.Clear();
             }
         }
     }
 
-    private void AddLineRun(VertexHelper vh, List<Vector2> r)
+    /// <summary>
+    /// One unbroken stretch of the line, or its glow. Each piece takes the
+    /// colour of its band; a piece that crosses a limit is split where it
+    /// crosses, so the colour changes exactly at the limit line.
+    /// </summary>
+    private void AddLineRun(VertexHelper vh, List<Vector2> r, Rect rect)
     {
+        float width = lineWidth;
+        const float alpha = 1f;
         if (r.Count == 1)
         {
-            UIMesh.AddDisc(vh, r[0], lineWidth * 0.75f, lineColor * color);
+            float value = ToValue(r[0].y, rect);
+            UIMesh.AddDisc(vh, r[0], width * 0.75f, Tint(ColorAt(value), alpha));
             return;
         }
+
         for (int i = 0; i < r.Count - 1; i++)
-            UIMesh.AddLine(vh, r[i], r[i + 1], lineWidth, lineColor * color);
+        {
+            Vector2 a = r[i];
+            Vector2 b = r[i + 1];
+            float va = ToValue(a.y, rect);
+            float vb = ToValue(b.y, rect);
+
+            crossings.Clear();
+            foreach (Band band in bands)
+            {
+                if ((va - band.Limit) * (vb - band.Limit) < 0f)
+                    crossings.Add((band.Limit - va) / (vb - va));
+            }
+            if (crossings.Count == 0)
+            {
+                UIMesh.AddLine(vh, a, b, width, Tint(ColorAt((va + vb) * 0.5f), alpha));
+                continue;
+            }
+
+            crossings.Sort();
+            float from = 0f;
+            for (int c = 0; c <= crossings.Count; c++)
+            {
+                float to = c < crossings.Count ? crossings[c] : 1f;
+                if (to - from > 1e-4f)
+                {
+                    float mid = Mathf.Lerp(va, vb, (from + to) * 0.5f);
+                    UIMesh.AddLine(vh, Vector2.Lerp(a, b, from), Vector2.Lerp(a, b, to), width, Tint(ColorAt(mid), alpha));
+                }
+                from = to;
+            }
+        }
     }
+
+    /// <summary>
+    /// The glow: one continuous strip along the line, brightest on it and
+    /// fading to nothing at its edges. Built as one strip rather than a quad
+    /// per piece, so where pieces meet the glow does not double up into blots.
+    /// Its colour follows the line's band at each point.
+    /// </summary>
+    private void AddGlowRibbon(VertexHelper vh, List<Vector2> r, Rect rect)
+    {
+        if (r.Count < 2)
+            return;
+        float half = (lineWidth + glowWidth) * 0.5f;
+        int start = vh.currentVertCount;
+        for (int i = 0; i < r.Count; i++)
+        {
+            Vector2 before = r[Mathf.Max(i - 1, 0)];
+            Vector2 after = r[Mathf.Min(i + 1, r.Count - 1)];
+            Vector2 direction = (after - before).normalized;
+            Vector2 normal = new(-direction.y, direction.x);
+            // Keep the strip's width across sharp turns, within reason.
+            Vector2 offset = normal * half;
+            Color centre = Tint(ColorAt(ToValue(r[i].y, rect)), glowStrength);
+            Color edge = centre;
+            edge.a = 0f;
+            vh.AddVert(r[i] + offset, edge, Vector4.zero);
+            vh.AddVert(r[i], centre, Vector4.zero);
+            vh.AddVert(r[i] - offset, edge, Vector4.zero);
+        }
+        for (int i = 0; i < r.Count - 1; i++)
+        {
+            int a = start + i * 3;
+            int b = a + 3;
+            vh.AddTriangle(a, b, a + 1);
+            vh.AddTriangle(a + 1, b, b + 1);
+            vh.AddTriangle(a + 1, b + 1, a + 2);
+            vh.AddTriangle(a + 2, b + 1, b + 2);
+        }
+    }
+
+    private Color Tint(Color c, float alpha)
+    {
+        c *= color;
+        c.a *= alpha;
+        return c;
+    }
+
+    private float ToValue(float localY, Rect rect) =>
+        minimum + (localY - rect.yMin) / Mathf.Max(rect.height, 1e-4f) * (maximum - minimum);
 
     private bool TryGetLastPoint(out Vector2 last)
     {

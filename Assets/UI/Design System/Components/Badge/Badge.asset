@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4f6a01e49f1d4b11baba83f2f3903bc, type: 3}
+  m_Name: Badge
+  m_EditorClassIdentifier: Assembly-CSharp::UIComponentStyle
+  description: 'Controls. A short status label, such as ON TRACK: text in the state''s colour, not a control.'
+  idle: {fileID: 11400000, guid: 6a8c102e7849f4ee2b0b50de90622c25, type: 2}
+  hover: {fileID: 0}
+  pressed: {fileID: 0}
+  selected: {fileID: 0}
+  selectedHover: {fileID: 0}
+  disabled: {fileID: 0}
+  warning: {fileID: 11400000, guid: df3daaff0171d476e924d007e68f27f1, type: 2}
+  warningHover: {fileID: 0}
+  critical: {fileID: 11400000, guid: 2556293b35f074191a6503ef20ee376d, type: 2}
+  criticalHover: {fileID: 0}
+  unavailable: {fileID: 11400000, guid: b465498ff93c54071879784d8a4f9ea7, type: 2}

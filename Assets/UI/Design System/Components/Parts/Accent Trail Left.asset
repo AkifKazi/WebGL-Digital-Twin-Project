@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4f6a01e49f1d4b11baba83f2f3903bc, type: 3}
+  m_Name: Accent Trail Left
+  m_EditorClassIdentifier: Assembly-CSharp::UIComponentStyle
+  description: Parts. The fade behind a card's connection bar.
+  idle: {fileID: 11400000, guid: ee287e2e8adf643e98c4f58c7d652767, type: 2}
+  hover: {fileID: 0}
+  pressed: {fileID: 0}
+  selected: {fileID: 0}
+  selectedHover: {fileID: 0}
+  disabled: {fileID: 0}
+  warning: {fileID: 0}
+  warningHover: {fileID: 0}
+  critical: {fileID: 0}
+  criticalHover: {fileID: 0}
+  unavailable: {fileID: 0}

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4f6a01e49f1d4b11baba83f2f3903bc, type: 3}
+  m_Name: Card
+  m_EditorClassIdentifier: Assembly-CSharp::UIComponentStyle
+  description: Telemetry. A sensor reading. Alarm states breathe gently and still answer the pointer.
+  idle: {fileID: 11400000, guid: 333d71f1b14a747edb09b710bc8e2ec1, type: 2}
+  hover: {fileID: 11400000, guid: cad07ff1f894f48568ec89d7832a109e, type: 2}
+  pressed: {fileID: 0}
+  selected: {fileID: 11400000, guid: 1f063b600395e42588829e603b8ee4eb, type: 2}
+  selectedHover: {fileID: 11400000, guid: 9a056b2a4741b426a9fcfaf3cb8a50c2, type: 2}
+  disabled: {fileID: 0}
+  warning: {fileID: 11400000, guid: 770a806bef42c412da08a34b443dbfe0, type: 2}
+  warningHover: {fileID: 11400000, guid: 1b895ff58bfba43cdb56b0b469d471ce, type: 2}
+  critical: {fileID: 11400000, guid: 5400407e0b0ef4dd1b41d8ea2f2c7a08, type: 2}
+  criticalHover: {fileID: 11400000, guid: aee085a580c2c410aae7e317240562c6, type: 2}
+  unavailable: {fileID: 11400000, guid: 32c02ef753ed546e99cccf8935b4a190, type: 2}

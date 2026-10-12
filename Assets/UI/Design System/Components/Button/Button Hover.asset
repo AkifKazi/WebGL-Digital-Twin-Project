@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2df46e3efa784545b2fed57a3d2031c, type: 3}
+  m_Name: Button Hover
+  m_EditorClassIdentifier: Assembly-CSharp::UIShapeStyle
+  kind: 0
+  cornerRadius: 0
+  chamfer: 0
+  chamferCorners: 0
+  fill:
+    token: Surface Hover
+    alpha: 0.82
+    custom: {r: 0, g: 0, b: 0, a: 0}
+  gradientStart: 0
+  gradientEnd: 1
+  hatch: 0
+  stroke:
+    token: Accent
+    alpha: 0.36
+    custom: {r: 0, g: 0, b: 0, a: 0}
+  strokeWidth: 1
+  glow:
+    token: Accent
+    alpha: 1
+    custom: {r: 0, g: 0, b: 0, a: 0}
+  glowSize: 8
+  glowStrength: 0.08
+  innerGlow: 0.05
+  highlight: 0
+  bottomLight: 0.3
+  bottomLightHeight: 0.55
+  shadow:
+    token: Shadow
+    alpha: 0.3
+    custom: {r: 0, g: 0, b: 0, a: 0}
+  shadowOffset: {x: 0, y: -1}
+  shadowSoftness: 3
+  transition: 0.18
+  fadeIn: 1
+  pulse: 0
+  pulseSpeed: 0.6

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4f6a01e49f1d4b11baba83f2f3903bc, type: 3}
+  m_Name: Segment
+  m_EditorClassIdentifier: Assembly-CSharp::UIComponentStyle
+  description: Controls. One choice in a segmented control or tab bar. Idle shows the frame behind it.
+  idle: {fileID: 11400000, guid: 486b0d26d9a784081a15b632a3365f3a, type: 2}
+  hover: {fileID: 11400000, guid: 7c5b9323ea42e43e2b1d6c3fe17aa25a, type: 2}
+  pressed: {fileID: 11400000, guid: c3e83ee9a7ea2449599de38fd273105e, type: 2}
+  selected: {fileID: 11400000, guid: f7206d6d0fb2c440f839a79911481766, type: 2}
+  selectedHover: {fileID: 0}
+  disabled: {fileID: 0}
+  warning: {fileID: 0}
+  warningHover: {fileID: 0}
+  critical: {fileID: 0}
+  criticalHover: {fileID: 0}
+  unavailable: {fileID: 0}

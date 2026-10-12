@@ -1,0 +1,161 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2233fa242c3cf4e3585f8a7e367fe860, type: 3}
+  m_Name: UI Tokens
+  m_EditorClassIdentifier: Assembly-CSharp::UIDesignTokens
+  colors:
+  - name: Accent
+    color: {r: 0.21176471, g: 0.92941177, b: 1, a: 1}
+    use: Interactive edges, selected text, normal readings.
+  - name: Accent Bright
+    color: {r: 0.54901963, g: 0.9647059, b: 1, a: 1}
+    use: The edge of what is selected or pressed.
+  - name: Accent Deep
+    color: {r: 0.08627451, g: 0.34901962, b: 0.41568628, a: 1}
+    use: The fill of what is selected, hovered or pressed.
+  - name: Warning
+    color: {r: 1, g: 0.7019608, b: 0.101960786, a: 1}
+    use: Readings and services that need attention soon.
+  - name: Critical
+    color: {r: 1, g: 0.21960784, b: 0.2, a: 1}
+    use: Readings and services that need attention now.
+  - name: Neutral
+    color: {r: 0.4509804, g: 0.5019608, b: 0.54901963, a: 1}
+    use: Unavailable or disabled.
+  - name: Surface
+    color: {r: 0.015686275, g: 0.07058824, b: 0.105882354, a: 1}
+    use: Panels over the scene.
+  - name: Surface Raised
+    color: {r: 0.023529412, g: 0.09019608, b: 0.13333334, a: 1}
+    use: Cards, rows and sections on a panel.
+  - name: Surface Hover
+    color: {r: 0.047058824, g: 0.16470589, b: 0.21960784, a: 1}
+    use: A hovered card or row.
+  - name: Surface Inset
+    color: {r: 0.007843138, g: 0.02745098, b: 0.039215688, a: 1}
+    use: 'Wells for graphs, detail text and list rows: near black, so content reads on it.'
+  - name: Accent Surface
+    color: {r: 0.023529412, g: 0.16470589, b: 0.21176471, a: 1}
+    use: The focused card.
+  - name: Warning Surface
+    color: {r: 0.14509805, g: 0.09411765, b: 0.015686275, a: 1}
+    use: A warning card or row.
+  - name: Critical Surface
+    color: {r: 0.16470589, g: 0.023529412, b: 0.023529412, a: 1}
+    use: A critical card or row.
+  - name: Unavailable Surface
+    color: {r: 0.0627451, g: 0.08627451, b: 0.101960786, a: 1}
+    use: An unavailable card.
+  - name: Shadow
+    color: {r: 0, g: 0.023529412, b: 0.03137255, a: 1}
+    use: Shadows that keep edges and text readable on bright scenes.
+  - name: Text
+    color: {r: 0.91764706, g: 0.99215686, b: 1, a: 1}
+    use: Values and primary text.
+  - name: Label
+    color: {r: 0, g: 0.92156863, b: 1, a: 1}
+    use: Section labels and headings.
+  - name: White
+    color: {r: 1, g: 1, b: 1, a: 1}
+    use: 'Marks tinted by their owner: lines, bars, icons.'
+  spacing:
+  - name: XS
+    value: 4
+    use: Inside a segmented control; icon to its label.
+  - name: S
+    value: 8
+    use: Between related items.
+  - name: M
+    value: 12
+    use: Between cards and rows.
+  - name: L
+    value: 16
+    use: Padding inside a control.
+  - name: XL
+    value: 24
+    use: Padding inside a card or section.
+  - name: XXL
+    value: 32
+    use: Between groups; a panel's margin.
+  textStyles:
+  - name: Display
+    font: {fileID: 11400000, guid: 3a1642aa745994ff387407a731b3c8ac, type: 2}
+    size: 40
+    letterSpacing: 1
+    uppercase: 0
+    color:
+      token: Text
+      alpha: 1
+      custom: {r: 0, g: 0, b: 0, a: 0}
+    use: 'The headline figure: hours to service, a reading.'
+  - name: Value
+    font: {fileID: 11400000, guid: 3a1642aa745994ff387407a731b3c8ac, type: 2}
+    size: 32
+    letterSpacing: 1
+    uppercase: 0
+    color:
+      token: Text
+      alpha: 1
+      custom: {r: 0, g: 0, b: 0, a: 0}
+    use: A reading on a card.
+  - name: Title
+    font: {fileID: 11400000, guid: 3a1642aa745994ff387407a731b3c8ac, type: 2}
+    size: 24
+    letterSpacing: 3
+    uppercase: 1
+    color:
+      token: Text
+      alpha: 1
+      custom: {r: 0, g: 0, b: 0, a: 0}
+    use: A card's or part's name.
+  - name: Label
+    font: {fileID: 11400000, guid: a957a584c7c194375ba4ce263540e876, type: 2}
+    size: 20
+    letterSpacing: 6
+    uppercase: 1
+    color:
+      token: Label
+      alpha: 1
+      custom: {r: 0, g: 0, b: 0, a: 0}
+    use: Section labels and headings.
+  - name: Button
+    font: {fileID: 11400000, guid: a957a584c7c194375ba4ce263540e876, type: 2}
+    size: 20
+    letterSpacing: 2
+    uppercase: 1
+    color:
+      token: Text
+      alpha: 1
+      custom: {r: 0, g: 0, b: 0, a: 0}
+    use: Text on a button or segment.
+  - name: Body
+    font: {fileID: 11400000, guid: a957a584c7c194375ba4ce263540e876, type: 2}
+    size: 20
+    letterSpacing: 1
+    uppercase: 0
+    color:
+      token: Text
+      alpha: 1
+      custom: {r: 0, g: 0, b: 0, a: 0}
+    use: 'Sentences: causes, fixes, notes.'
+  - name: Caption
+    font: {fileID: 11400000, guid: a957a584c7c194375ba4ce263540e876, type: 2}
+    size: 17
+    letterSpacing: 3
+    uppercase: 1
+    color:
+      token: Text
+      alpha: 0.62
+      custom: {r: 0, g: 0, b: 0, a: 0}
+    use: Secondary labels and units.
+  fastMotion: 0.14
+  normalMotion: 0.2

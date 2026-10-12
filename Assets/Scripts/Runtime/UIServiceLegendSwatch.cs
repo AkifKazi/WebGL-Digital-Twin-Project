@@ -35,14 +35,19 @@ public sealed class UIServiceLegendSwatch : MaskableGraphic
                 UIMesh.AddRect(vh, new Vector2(r.xMin, mid - 3f), new Vector2(r.xMax, mid + 3f), c);
                 break;
             case Kind.Estimate:
-                UIMesh.AddRect(vh, new Vector2(r.center.x - 1.5f, r.yMin), new Vector2(r.center.x + 1.5f, r.yMax), c);
+                UIMesh.AddRect(vh, new Vector2(r.center.x - 1f, r.yMin), new Vector2(r.center.x + 1f, r.yMax), c);
                 break;
             case Kind.Plan:
-                for (float y = r.yMin; y < r.yMax; y += 5f)
-                    UIMesh.AddRect(vh, new Vector2(r.center.x - 1f, y), new Vector2(r.center.x + 1f, Mathf.Min(y + 2.5f, r.yMax)), c);
+                for (float y = r.yMin; y < r.yMax; y += 4f)
+                    UIMesh.AddRect(vh, new Vector2(r.center.x - 1f, y), new Vector2(r.center.x + 1f, Mathf.Min(y + 2f, r.yMax)), c);
                 break;
             case Kind.Gap:
-                UIServiceBarGraphic.AddHatch(vh, r.xMin, r.xMax, mid - 4f, mid + 4f, c);
+                // As on the bar: hatched, bracketed above and below.
+                Color edge = new(c.r, c.g, c.b, c.a * 0.55f);
+                UIServiceBarGraphic.AddHatch(vh, r.xMin, r.xMax, mid - 3f, mid + 3f, c,
+                    UIServiceBarGraphic.GapHatchPitch, UIServiceBarGraphic.GapHatchStripe);
+                UIMesh.AddRect(vh, new Vector2(r.xMin, mid + 3f), new Vector2(r.xMax, mid + 4f), edge);
+                UIMesh.AddRect(vh, new Vector2(r.xMin, mid - 4f), new Vector2(r.xMax, mid - 3f), edge);
                 break;
         }
     }

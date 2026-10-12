@@ -24,9 +24,20 @@ public sealed class UIServiceBarGraphic : MaskableGraphic
     [SerializeField] private Color fillColor = new(0f, 0.922f, 1f, 1f);
     [SerializeField] private Color markerColor = Color.white;
     [SerializeField] private Color planColor = new(1f, 1f, 1f, 0.7f);
-    [SerializeField] private Color hatchColor = new(1f, 1f, 1f, 0.55f);
+    [SerializeField] private Color hatchColor = new(1f, 1f, 1f, 0.42f);
 
     private const string RunBarShader = "UI/Service Run Bar";
+    // How far the ticks reach above and below the track.
+    private const float TickReach = 5f;
+
+    // The gap's hatching, shared with the legend's swatch: wide enough apart
+    // that it stays open when the interface is scaled down.
+    public const float GapHatchPitch = 7f;
+    public const float GapHatchStripe = 2f;
+
+    private static readonly Vector2[] stripeCorners = new Vector2[4];
+    private static readonly Vector2[] clipped = new Vector2[8];
+    private static readonly Vector2[] scratch = new Vector2[8];
 
     private float pulsePhase;
     private float run;
@@ -104,17 +115,29 @@ public sealed class UIServiceBarGraphic : MaskableGraphic
         if (run > 0f)
             AddGlowingFill(vh, r.xMin, X(run), y0, y1);
 
+        // The gap between plan and estimate: a bracketed, hatched segment.
         float gapStart = X(Mathf.Min(plan, estimate));
         float gapEnd = X(Mathf.Max(plan, estimate));
-        AddHatch(vh, gapStart, gapEnd, y0, y1, hatchColor * color);
+        if (gapEnd - gapStart >= 1f)
+        {
+            Color hatch = hatchColor * color;
+            Color edge = new Color(hatchColor.r, hatchColor.g, hatchColor.b, hatchColor.a * 0.55f) * color;
+            AddHatch(vh, gapStart, gapEnd, y0, y1, hatch, GapHatchPitch, GapHatchStripe);
+            UIMesh.AddRect(vh, new Vector2(gapStart, y1), new Vector2(gapEnd, y1 + 1f), edge);
+            UIMesh.AddRect(vh, new Vector2(gapStart, y0 - 1f), new Vector2(gapEnd, y0), edge);
+        }
+
+        // Ticks a little taller than the track, ending on whole pixels.
+        float tickBottom = Mathf.Max(r.yMin, y0 - TickReach);
+        float tickTop = Mathf.Min(r.yMax, y1 + TickReach);
 
         // Plan: a dotted tick. Estimate: a solid one, drawn last so it reads first.
-        float planX = X(plan);
-        for (float y = r.yMin; y < r.yMax; y += 5f)
-            UIMesh.AddRect(vh, new Vector2(planX - 2f, y), new Vector2(planX, Mathf.Min(y + 2.5f, r.yMax)), planColor * color);
+        float planX = Mathf.Max(r.xMin + 2f, X(plan));
+        for (float y = tickBottom; y < tickTop; y += 4f)
+            UIMesh.AddRect(vh, new Vector2(planX - 2f, y), new Vector2(planX, Mathf.Min(y + 2f, tickTop)), planColor * color);
 
-        float estimateX = X(estimate);
-        UIMesh.AddRect(vh, new Vector2(estimateX - 3f, r.yMin), new Vector2(estimateX, r.yMax), markerColor * color);
+        float estimateX = Mathf.Max(r.xMin + 2f, X(estimate));
+        UIMesh.AddRect(vh, new Vector2(estimateX - 2f, tickBottom), new Vector2(estimateX, tickTop), markerColor * color);
     }
 
     private void AddGlowingFill(VertexHelper vh, float x0, float x1, float y0, float y1)
@@ -159,28 +182,56 @@ public sealed class UIServiceBarGraphic : MaskableGraphic
             Vector2.zero, Vector3.back, new Vector4(1f, 0f, 0f, -1f));
     }
 
-    /// <summary>Diagonal stripes between two x positions, clipped to the band.</summary>
-    public static void AddHatch(VertexHelper vh, float x0, float x1, float y0, float y1, Color color)
+    /// <summary>
+    /// Diagonal stripes at 45 degrees between two x positions, clipped to the
+    /// band, so every stripe keeps its slant right up to the band's edges.
+    /// </summary>
+    public static void AddHatch(VertexHelper vh, float x0, float x1, float y0, float y1, Color color,
+        float pitch = 5f, float stripe = 1.5f)
     {
-        if (x1 - x0 < 1f)
+        if (x1 - x0 < 1f || y1 - y0 <= 0f)
             return;
 
-        const float Pitch = 5f;
-        const float Stripe = 2f;
         float lean = y1 - y0;
-        for (float x = x0 - lean; x < x1; x += Pitch)
+        // Anchored to the band's start so the stripes stand still as it grows.
+        for (float x = x0 - lean; x < x1; x += pitch)
         {
-            float bottomLeft = Mathf.Clamp(x, x0, x1);
-            float bottomRight = Mathf.Clamp(x + Stripe, x0, x1);
-            float topLeft = Mathf.Clamp(x + lean, x0, x1);
-            float topRight = Mathf.Clamp(x + lean + Stripe, x0, x1);
-            if (bottomRight - bottomLeft <= 0f && topRight - topLeft <= 0f)
+            stripeCorners[0] = new Vector2(x, y0);
+            stripeCorners[1] = new Vector2(x + lean, y1);
+            stripeCorners[2] = new Vector2(x + lean + stripe, y1);
+            stripeCorners[3] = new Vector2(x + stripe, y0);
+
+            int count = ClipX(stripeCorners, 4, scratch, x0, true);
+            count = ClipX(scratch, count, clipped, x1, false);
+            if (count < 3)
                 continue;
-            // Same winding as UIMesh.AddRect: bottom left, top left, top right, bottom right.
-            UIMesh.AddQuad(vh,
-                new Vector2(bottomLeft, y0), new Vector2(topLeft, y1),
-                new Vector2(topRight, y1), new Vector2(bottomRight, y0),
-                color, color, color, color);
+
+            int first = vh.currentVertCount;
+            for (int i = 0; i < count; i++)
+                vh.AddVert(clipped[i], color, Vector4.zero);
+            for (int i = 1; i < count - 1; i++)
+                vh.AddTriangle(first, first + i, first + i + 1);
         }
+    }
+
+    /// <summary>Clips a convex polygon to one side of a vertical line (Sutherland-Hodgman).</summary>
+    private static int ClipX(Vector2[] polygon, int count, Vector2[] output, float edge, bool keepRight)
+    {
+        int written = 0;
+        for (int i = 0; i < count; i++)
+        {
+            Vector2 a = polygon[i];
+            Vector2 b = polygon[(i + 1) % count];
+            bool aIn = keepRight ? a.x >= edge : a.x <= edge;
+            bool bIn = keepRight ? b.x >= edge : b.x <= edge;
+            if (aIn)
+                output[written++] = a;
+            if (aIn != bIn)
+            {
+                float t = (edge - a.x) / (b.x - a.x);
+                output[written++] = new Vector2(edge, Mathf.Lerp(a.y, b.y, t));
+            }
+        }
+        return written;
     }
 }

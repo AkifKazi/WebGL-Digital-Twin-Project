@@ -8,6 +8,11 @@ using UnityEngine.UI;
 /// only ever replaces the idle one, so a selected, pressed or unavailable
 /// control never shows it. Touch never hovers: a finger has no hover, and a
 /// hover left behind after a tap reads as a stuck state.
+///
+/// The control's <see cref="UIShape"/>s are told whenever the pointer is over
+/// an interactable control, whatever it shows, so their components answer
+/// with a hover look for their state: an icon glows, and a warning or critical
+/// card, which never takes the hover sprite, still lights up a little.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class UIHoverSprite : MonoBehaviour,
@@ -34,6 +39,7 @@ public sealed class UIHoverSprite : MonoBehaviour,
     private bool pointerInside;
     private bool pressed;
     private bool showing;
+    private bool reportedHover;
 
     /// <summary>True while the hover sprite is actually on screen.</summary>
     public bool IsShowingHover =>
@@ -77,6 +83,7 @@ public sealed class UIHoverSprite : MonoBehaviour,
         pointerInside = false;
         pressed = false;
         Apply(false);
+        ReportHover(false);
     }
 
     public void OnPointerEnter(PointerEventData eventData)
@@ -96,9 +103,20 @@ public sealed class UIHoverSprite : MonoBehaviour,
     // settled once per frame after both.
     private void LateUpdate()
     {
-        if (!initialised || (!pointerInside && !showing))
+        if (!initialised || (!pointerInside && !showing && !reportedHover))
             return;
         Apply(pointerInside && !pressed && IsIdle());
+        ReportHover(pointerInside && !pressed && (selectable == null || selectable.IsInteractable()));
+    }
+
+    private void ReportHover(bool hovered)
+    {
+        if (hovered == reportedHover)
+            return;
+        reportedHover = hovered;
+        // Read on each change: views add a control's children after it wakes.
+        foreach (UIShape shape in GetComponentsInChildren<UIShape>(true))
+            shape.SetOwnerPointer(hovered, false);
     }
 
     private bool IsIdle()
