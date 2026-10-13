@@ -12,9 +12,8 @@ using UnityEngine.UI;
 /// What it shows, first match wins:
 ///   1. its own <see cref="Style"/>, a single look;
 ///   2. its <see cref="Component"/> in its <see cref="State"/>;
-///   3. for UI authored with sprites, the <see cref="UITheme"/>'s component and
-///      state for the sprite it shows, so a sprite swap made for a state
-///      (selected, hovered, warning) changes the look.
+///   3. for an authored icon sprite, the <see cref="UITheme"/>'s component for
+///      it (the Icon).
 /// The control that owns it (<see cref="UIControlState"/> or
 /// <see cref="UIHoverSprite"/>) reports hover and press, and the component
 /// answers with its hover look for the state. Changes blend over the new
@@ -28,7 +27,7 @@ using UnityEngine.UI;
 public sealed class UIShape : Image
 {
     [Tooltip("The design-system component this shape shows, such as Button or Card. " +
-             "Empty: the theme's component for the sprite shown.")]
+             "Empty: the theme's component for the icon sprite shown.")]
     [SerializeField] private UIComponentStyle component;
 
     [Tooltip("The component's state. A UI Control State on the control sets it for you.")]
@@ -116,6 +115,40 @@ public sealed class UIShape : Image
                 return;
             emphasised = value;
             SetVerticesDirty();
+        }
+    }
+
+    /// <summary>
+    /// Shows a segment's or tab's shape chosen (the component's Selected look)
+    /// or at rest; a plain graphic is left as it is. For the segmented controls
+    /// that choose by script rather than through a <see cref="UIControlState"/>.
+    /// </summary>
+    public static void ShowChosen(Graphic graphic, bool chosen)
+    {
+        if (graphic is UIShape shape)
+            shape.State = chosen ? UIState.Selected : UIState.Idle;
+    }
+
+    /// <summary>
+    /// Gives <paramref name="to"/> the look of <paramref name="from"/>: for
+    /// shapes, its component, state and style; for any image, its sprite (an
+    /// icon's), fill and colour. Used where one surface borrows another's look,
+    /// such as a launcher framed like the switch beside it.
+    /// </summary>
+    public static void CopyLook(Image from, Image to)
+    {
+        if (from == null || to == null)
+            return;
+        to.sprite = from.sprite;
+        to.type = from.type;
+        to.color = from.color;
+        to.pixelsPerUnitMultiplier = from.pixelsPerUnitMultiplier;
+        if (from is UIShape source && to is UIShape copy)
+        {
+            copy.Component = source.Component;
+            copy.State = source.State;
+            copy.Style = source.Style;
+            copy.Variant = source.Variant;
         }
     }
 
@@ -292,17 +325,25 @@ public sealed class UIShape : Image
 
         Vector2 half = r.size * 0.5f;
         float pixel = 1f / Mathf.Max(canvas != null ? canvas.scaleFactor : 1f, 0.01f);
-        float reach = Mathf.Max(look.glowSize, look.shadowOffset.magnitude + look.shadowSoftness) + pixel * 2f + 1f;
+        // A box's tail, if it has one, reaches past its rect: the quad grows to hold it.
+        bool hasTail = icon == null && target.tail != UIShapeTail.None && look.tailSize > 0f;
+        float tailReach = hasTail ? look.tailSize : 0f;
+        float reach = Mathf.Max(look.glowSize, look.shadowOffset.magnitude + look.shadowSoftness) + tailReach +
+                      pixel * 2f + 1f;
         Vector2 grown = half + new Vector2(reach, reach);
 
         Color glowColor = look.glow;
         float glowStrength = look.glowStrength * glowColor.a;
         Vector2 offset = look.shadowOffset + new Vector2(128f, 128f);
-        int corners = (int)target.chamferCorners & 15;
+        // The chamfer's byte carries the tail's size instead when there is a tail;
+        // the side rides in the two bits above the gradient direction.
+        int corners = hasTail ? 0 : (int)target.chamferCorners & 15;
+        int tailSide = hasTail ? (int)target.tail : 0;
+        float cut = hasTail ? look.tailSize : look.chamfer;
         // The kind's byte also carries the highlight, in 127 steps above the kind's bit.
         int highlight = Mathf.RoundToInt(Mathf.Clamp01(look.highlight) * 127f);
-        float flags = Byte3((int)target.kind + highlight * 2, Mathf.RoundToInt(Mathf.Clamp(look.chamfer, 0f, 255f)),
-            corners + (int)target.gradientStart * 16);
+        float flags = Byte3((int)target.kind + highlight * 2, Mathf.RoundToInt(Mathf.Clamp(cut, 0f, 255f)),
+            corners + (int)target.gradientStart * 16 + tailSide * 64);
 
         Vector4 shape;
         Vector4 colors;

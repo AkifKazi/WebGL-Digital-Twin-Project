@@ -16,6 +16,8 @@ MonoBehaviour:
   cornerRadius: 2
   chamfer: 0
   chamferCorners: 0
+  tail: 0
+  tailSize: 12
   fill:
     token: Accent Deep
     alpha: 0.1

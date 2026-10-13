@@ -20,8 +20,8 @@ An interactive version, with live components and a style inspector, is in `docs/
 | --- | --- | --- |
 | Tokens | `Assets/UI/Design System/UI Tokens.asset` | change a colour, the spacing scale, a text style or motion time everywhere at once |
 | Components | `Assets/UI/Design System/Components/<Name>/<Name>.asset` | choose which style each state uses |
-| State styles | `Assets/UI/Design System/Components/<Name>/<Name> <State>.asset` | change one state's fill, stroke, glow, bottom light, shadow, corners or motion |
-| Theme | `Assets/Resources/UI Theme.asset` | list the components; map sprite-authored UI to components; switch the text shadow |
+| State styles | `Assets/UI/Design System/Components/<Name>/<Name> <State>.asset` | change one state's fill, stroke, glow, bottom light, shadow, corners, tail or motion |
+| Theme | `Assets/Resources/UI Theme.asset` | list the components; map the icon sprites to the Icon component; switch the text shadow |
 | Catalog | `Assets/UI/Design System/UI Design System Catalog.unity` | see every component in every state; play it to hover the live row |
 
 Edits show immediately in the Scene and Game views.
@@ -34,11 +34,13 @@ that uses it.
 
 - **Colours.** Accent, Accent Bright, Accent Deep; Warning, Critical, Neutral; Surface, Surface
   Raised, Surface Hover, Surface Inset, and a surface per alarm tone; Shadow; Text, Label;
-  White for marks tinted by their owner. Each token says what it is for.
+  Control and Control Selected for controls' labels and icons; White for marks tinted by their
+  owner. Each token says what it is for.
 - **Spacing.** XS 4, S 8, M 12, L 16, XL 24, XXL 32 canvas units at 1920 x 1080. The component
   menu pads and spaces with these.
 - **Text styles.** Display, Value, Title, Label, Button, Body, Caption: font, size, letter
-  spacing, case and colour token. Put a **UI Text Style** on a text to use one.
+  spacing, case and colour token. Put a **UI Text Style** on a text to use one. Button is a
+  control's label: on a control with a **UI Control State** it follows the control colours below.
 - **Motion.** Fast (hover) and normal (selection, alarms) transition times.
 
 ## Components and states
@@ -54,6 +56,7 @@ that uses it.
 | | Badge | Idle, Warning, Critical, Unavailable |
 | Telemetry | Card | Idle, Hover, Selected, Selected Hover, Warning, Warning Hover, Critical, Critical Hover, Unavailable |
 | | List Row | Idle, Hover, Warning, Warning Hover, Critical, Critical Hover |
+| Conversation | Message Sent | Idle |
 | Marks | Leader Line, Leader Anchor, Accent Bar, Underline | Idle |
 
 A state left empty falls back to Idle, so a component only defines what it needs. Two states
@@ -73,10 +76,20 @@ can share a style (Button's Selected is Segment's Selected).
 - *Keyboard focus* shows the hover look plus the **Focus Ring**, a near-white outline a gap
   outside the control. It shows only while the keyboard is in use; moving or pressing the
   pointer hides it.
+- *Control colours.* A control's own label and icon are **Control Selected** (near white) when it
+  is chosen (the selected segment, tab, range or option, a toggle that is on, a pinned pin, a
+  launcher whose panel is open) and **Control** (a quiet cyan) at rest: unselected segments,
+  buttons, icon buttons, close and back. A control that cannot be used now is **Neutral**. The
+  accent is for edges, glows and marks, never a selected label. Content (readings, titles,
+  sentences, headings) keeps its text style's colour. In code, use `UIControlColors`.
 - A *Badge* is text alone, in the state's colour: no box, so it never reads as a button.
 - *Warning* and *Critical* colour the edge and surface and breathe gently. They still answer the
   pointer, with a brighter edge and a higher light.
 - *Unavailable* is grey with diagonal hatching.
+- A *message* (the Ask window's speech bubble) is text, not a control: a flat fill, a faint
+  edge and a **tail** at a bottom corner, with no hover. Only what the viewer sent is a bubble,
+  on the right in the accent's deep fill, its tail pointing right; replies are plain text, so
+  the two sides read apart at a glance.
 - An icon glows only faintly, and only while its control is hovered.
 - Glow and shadow fade faster than the body, so dimmed things lose their halo first.
 
@@ -97,16 +110,26 @@ To make a component of your own, create a **Digital Twin > UI Component** asset 
 Style** per state, add it to the theme's Components list, and set it on a UI Shape. Set the
 shape's State yourself, or add a UI Control State to the control.
 
+UI built in code at run time (the settings panel, the Ask window) uses `UIBuilder`: the same
+components, icons and text styles, by name.
+
+A style's **Tail** gives a box a speech tail at its bottom right or bottom left, **Tail Size**
+long. It is part of the shape, so the fill, stroke, glow and shadow follow it, but it reaches
+outside the rect: leave that much room beside it. A shape with a tail has no chamfer.
+
 A segmented control is a Panel holding Segments that are Toggles in a Toggle Group; the one
 that is on shows Selected, with no code.
 
 ## How it works
 
 `UIShape` is an `Image`, so Buttons, layouts, masks and scripts work with it unchanged. It shows,
-first match wins: its own single **Style**; its **Component** in its **State**; or, for UI
-authored with sprites, the theme's component and state for the sprite it shows. That last rule
-lets older code that swaps sprites for a state (the mode switch, the view-mode control, the
-telemetry cards) drive procedural looks with no change.
+first match wins: its own single **Style**; its **Component** in its **State**; or, for an icon
+sprite, the theme's Icon component. Code that shows a state sets the shape's state: a telemetry
+card's background is a Card in Warning or Critical, the mode switch and view-mode control show
+their chosen Segment as Selected (`UIShape.ShowChosen`). Hover and press come from the
+component too: `UIHoverSprite` (or `UIControlState` on new controls) reports the pointer, and the
+component answers with its hover or pressed look. No background is a sprite; icons are the only
+sprites left (`Assets/UI/Sprites`).
 
 The shape's rect is its body: glow and shadow are drawn outside it, so layouts never allow for
 an effect margin. Edges are anti-aliased per pixel and strokes never fall below one screen pixel,
@@ -141,13 +164,13 @@ Selectable joins in by implementing `IKeyboardTarget`.
 ## Tools
 
 - **Tools > Digital Twin > UI Skin > Apply Procedural Skin** creates any missing design-system
-  assets, turns every Image in SampleScene and the UI prefabs into a UIShape in place, and removes
-  the room the sprites left for baked glow. Run it again after any setup tool that rebuilds a UI
-  prefab, such as **Set Up Telemetry Detail Panel**.
+  assets, turns every Image in SampleScene and the UI prefabs into a UIShape in place, and sets the
+  insets and styles the old sprite skin did not have. Run it again after any setup tool that
+  rebuilds a UI prefab, such as **Set Up Telemetry Detail Panel**. Setup tools build shapes with
+  their component named (`UIRoleShape`), never from a background sprite.
 - **Reset Design System To Defaults** rewrites every token, component and style from
   `UIDesignSystemDefaults`, the readable source of the defaults.
 - **Open Design System Catalog** rebuilds the catalog scene from the live assets.
-- **Compare With Sprite Skin** switches the theme's Procedural Shapes off and on.
 - Batch: `UIDesignSystemCatalog.BuildAndCapture` renders the catalog to the image above;
   `ProceduralUISkinCapture.Run` (without `-quit`) checks the shapes, hover and alarm states, the
   service panel and both layouts, and saves captures to `Logs/ProceduralUISkin`.

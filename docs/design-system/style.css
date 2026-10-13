@@ -8,7 +8,7 @@
   --pad: clamp(16px, 4vw, 48px);
   /* Replaced by the design tokens at start-up. */
   --c-accent: #36edff; --c-label: #00ebff; --c-text: #eafdff; --c-warning: #ffb31a;
-  --c-critical: #ff3833; --c-neutral: #73808c;
+  --c-critical: #ff3833; --c-neutral: #73808c; --c-control: #cee3e6; --c-control-selected: #eafdff;
 }
 @media (max-width: 1099px) { :root { --u: 0.85px; } }
 @media (max-width: 760px) { :root { --u: 0.72px; } }

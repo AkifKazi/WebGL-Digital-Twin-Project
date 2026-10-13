@@ -24,8 +24,8 @@ SITE = ROOT / "docs/design-system"
 
 STATE_FIELDS = ["idle", "hover", "pressed", "selected", "selectedHover", "disabled",
                 "warning", "warningHover", "critical", "criticalHover", "unavailable"]
-GROUP_ORDER = ["Containers", "Controls", "Telemetry", "Marks"]
-ICONS = ["Arrow Left Icon", "Arrow Right Icon", "Close Icon", "Configure Icon", "Cross Section Icon",
+GROUP_ORDER = ["Containers", "Controls", "Telemetry", "Conversation", "Marks"]
+ICONS = ["Arrow Left Icon", "Arrow Right Icon", "Ask Icon", "Close Icon", "Configure Icon", "Cross Section Icon",
          "Full Model Icon", "HD Icon", "Pin Icon", "XRay Icon", "Zoom In Icon", "Zoom Out Icon"]
 
 
@@ -169,6 +169,7 @@ def main():
             styles[name] = {
                 "kind": style["kind"], "cornerRadius": style["cornerRadius"], "chamfer": style["chamfer"],
                 "chamferCorners": style["chamferCorners"],
+                "tail": style.get("tail", 0), "tailSize": style.get("tailSize", 0),
                 "fill": color_ref(style["fill"]), "gradientStart": style["gradientStart"],
                 "gradientEnd": style["gradientEnd"], "hatch": style["hatch"],
                 "stroke": color_ref(style["stroke"]), "strokeWidth": style["strokeWidth"],

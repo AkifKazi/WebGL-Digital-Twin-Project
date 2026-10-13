@@ -57,7 +57,7 @@
 
   // ---- looks ---------------------------------------------------------------------------------
 
-  const NUM = ['cornerRadius', 'chamfer', 'chamferCorners', 'strokeWidth', 'glowSize', 'glowStrength', 'innerGlow',
+  const NUM = ['cornerRadius', 'chamfer', 'chamferCorners', 'tail', 'tailSize', 'strokeWidth', 'glowSize', 'glowStrength', 'innerGlow',
     'highlight', 'bottomLight', 'bottomLightHeight', 'shadowSoftness', 'gradientStart', 'gradientEnd', 'hatch',
     'pulse', 'pulseSpeed'];
 
@@ -74,7 +74,7 @@
   const lerpArr = (a, b, t) => a.map((v, i) => lerp(v, b[i], t));
 
   function lerpLook(a, b, t) {
-    const out = { kind: b.kind, gradientStart: b.gradientStart, chamferCorners: b.chamferCorners };
+    const out = { kind: b.kind, gradientStart: b.gradientStart, chamferCorners: b.chamferCorners, tail: b.tail };
     for (const k of ['fill', 'stroke', 'glow', 'shadow', 'shadowOffset']) out[k] = lerpArr(a[k], b[k], t);
     for (const k of NUM) if (!(k in out)) out[k] = lerp(a[k], b[k], t);
     return out;
@@ -101,7 +101,8 @@
 
   function scaled(look, s) {
     return Object.assign({}, look, {
-      cornerRadius: look.cornerRadius * s, chamfer: look.chamfer * s, strokeWidth: look.strokeWidth * s,
+      cornerRadius: look.cornerRadius * s, chamfer: look.chamfer * s, tailSize: (look.tailSize || 0) * s,
+      strokeWidth: look.strokeWidth * s,
       glowSize: look.glowSize * s, shadowSoftness: look.shadowSoftness * s,
       shadowOffset: [look.shadowOffset[0] * s, look.shadowOffset[1] * s], hatchSpacing: 9 * s
     });
@@ -320,7 +321,7 @@
   const SIZE = {
     'Leader Line': [140, 2], 'Leader Anchor': [12, 12], 'Accent Bar': [4, 64], Underline: [40, 2], Icon: [28, 28],
     'Icon Button': [44, 44], Badge: [124, 34], Segment: [150, 44], Button: [150, 44], Card: [200, 96],
-    'List Row': [224, 72], 'Focus Ring': [180, 88]
+    'List Row': [224, 72], 'Focus Ring': [180, 88], 'Message Sent': [220, 52]
   };
   const STATE_LABELS = {
     idle: 'Idle', hover: 'Hover', pressed: 'Pressed', selected: 'Selected', selectedHover: 'Selected hover',
@@ -338,16 +339,24 @@
   };
   const accent = () => tokenRgb('Accent');
   const textTint = () => tokenRgb('Text');
+  // A control's label and icon: Control at rest, Control Selected when chosen (UIControlColors).
+  const controlTint = () => tokenRgb('Control');
+  const CONTROL_SELECTED = 'var(--c-control-selected)';
 
   function specimenText(comp, key) {
     if (comp.name === 'Segment' || comp.name === 'Button') return 'LABEL';
     if (comp.name === 'Badge') return { warning: 'DUE SOON', critical: 'OVERDUE', unavailable: 'NO DATA' }[key] || 'ON TRACK';
     if (comp.name === 'Card') return 'READING';
     if (comp.name === 'List Row') return 'PART NAME';
+    if (comp.name === 'Message Sent') return 'Why is belt slip red?';
     return null;
   }
 
   function textColor(comp, key) {
+    if (comp.name === 'Segment' || comp.name === 'Button') {
+      if (key === 'disabled') return 'var(--c-neutral)';
+      return key.startsWith('selected') ? CONTROL_SELECTED : 'var(--c-control)';
+    }
     const tone = STATE_TONE[key];
     if (tone) return `var(--c-${tone.toLowerCase()})`;
     return ['Card', 'List Row', 'Badge'].includes(comp.name) ? 'var(--c-label)' : 'var(--c-text)';
@@ -366,9 +375,10 @@
     });
     const text = specimenText(comp, key);
     if (text) {
-      const left = comp.name === 'Card' || comp.name === 'List Row';
+      const message = comp.group === 'Conversation';
+      const left = comp.name === 'Card' || comp.name === 'List Row' || message;
       box.append(h('span', {
-        class: `ts-${left ? 'label' : comp.name === 'Badge' ? 'label' : 'button'} fill-text ${left ? 'left' : ''}`,
+        class: `ts-${message ? 'body' : left ? 'label' : comp.name === 'Badge' ? 'label' : 'button'} fill-text ${left ? 'left' : ''}`,
         style: `color:${textColor(comp, key)}`
       }, text));
     }
@@ -376,7 +386,7 @@
       const icon = h('div', { class: 'glyph' });
       sized(icon, 20, 20);
       makeShape(icon, {
-        tint: accent, sprite: 'Close Icon',
+        tint: controlTint, sprite: 'Close Icon',
         style: key === 'idle' ? compByName.Icon.states.idle : compByName.Icon.states.hover
       });
       box.append(icon);
@@ -398,8 +408,9 @@
       case 'Button': {
         el = sized(h('div', { class: 'live' }), 150, 44);
         makeShape(el, { component: 'Button' });
-        el.append(h('span', { class: 'ts-button fill-text' }, 'CLICK ME'));
-        interactive(el, (s) => { s.selected = !s.selected; });
+        const label = h('span', { class: 'ts-button fill-text' }, 'CLICK ME');
+        el.append(label);
+        interactive(el, (s) => { s.selected = !s.selected; label.style.color = s.selected ? CONTROL_SELECTED : ''; });
         const off = sized(h('div', { class: 'live' }), 150, 44);
         makeShape(off, { component: 'Button' });
         off.__shape.disabled = true;
@@ -416,8 +427,8 @@
           makeShape(seg, { component: 'Segment' });
           seg.append(h('span', { class: 'ts-button fill-text' }, label));
           seg.__shape.selected = i === 0;
-          interactive(seg, () => items.forEach((o) => { o.__shape.selected = o === seg; o.querySelector('span').style.color = o === seg ? 'var(--c-accent)' : ''; }));
-          if (i === 0) seg.querySelector('span').style.color = 'var(--c-accent)';
+          interactive(seg, () => items.forEach((o) => { o.__shape.selected = o === seg; o.querySelector('span').style.color = o === seg ? CONTROL_SELECTED : ''; }));
+          if (i === 0) seg.querySelector('span').style.color = CONTROL_SELECTED;
           return seg;
         });
         frame.append(...items);
@@ -428,7 +439,7 @@
         const b = sized(h('div', { class: 'live' }), 44, 44);
         makeShape(b, { component: 'Icon Button' });
         const g = sized(h('div', { class: 'glyph' }), 20, 20);
-        makeShape(g, { component: 'Icon', tint: accent, sprite: 'Pin Icon', owner: b });
+        makeShape(g, { component: 'Icon', tint: controlTint, sprite: 'Pin Icon', owner: b });
         b.append(g);
         interactive(b);
         wrap.append(b);
@@ -639,8 +650,8 @@
       const s = sized(h('div', { class: 'live seg' }), 130, 44);
       makeShape(s, { component: 'Segment' });
       s.__shape.selected = i === 0;
-      s.append(h('span', { class: 'ts-button fill-text', style: i === 0 ? 'color:var(--c-accent)' : '' }, label));
-      wireInteractive(s, () => segs.forEach((o) => { o.__shape.selected = o === s; o.querySelector('span').style.color = o === s ? 'var(--c-accent)' : ''; }));
+      s.append(h('span', { class: 'ts-button fill-text', style: i === 0 ? `color:${CONTROL_SELECTED}` : '' }, label));
+      wireInteractive(s, () => segs.forEach((o) => { o.__shape.selected = o === s; o.querySelector('span').style.color = o === s ? CONTROL_SELECTED : ''; }));
       return s;
     });
     seg.append(...segs);

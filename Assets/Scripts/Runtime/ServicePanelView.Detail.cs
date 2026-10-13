@@ -235,10 +235,17 @@ public sealed partial class ServicePanelView
         SetText(detailCause, string.IsNullOrWhiteSpace(plan.likelyCause)
             ? DefaultCause(difference)
             : UIText.Get(partKey + ".cause", plan.likelyCause));
-        SetText(detailFix, string.IsNullOrWhiteSpace(plan.suggestedFix)
-            ? DefaultFix(status.Task)
-            : UIText.Get(partKey + ".fix", plan.suggestedFix));
+        SetText(detailFix, SuggestedFix(partKey, plan, status.Task));
     }
+
+    /// <summary>
+    /// What to do at a part's service: the plan's authored fix, keyed by part
+    /// (part.bearings.fix) so it translates, or the task's own wording.
+    /// </summary>
+    public static string SuggestedFix(string partKey, in TelemetryServiceSchedule.ServicePlan plan, ServiceTask task) =>
+        string.IsNullOrWhiteSpace(plan.suggestedFix)
+            ? DefaultFix(task)
+            : UIText.Get(partKey + ".fix", plan.suggestedFix);
 
     private void RefreshHistory(in ServiceItemStatus status, in TelemetryServiceSchedule.ServicePlan plan, Color state)
     {
@@ -394,7 +401,7 @@ public sealed partial class ServicePanelView
         RectTransform arrowRect = CreateRect("Arrow", face);
         Stretch(arrowRect, 0f, 0f, 0f, 0f);
         UIBackArrowGraphic arrow = arrowRect.gameObject.AddComponent<UIBackArrowGraphic>();
-        arrow.color = normal;
+        arrow.color = UIControlColors.Idle;
         arrow.raycastTarget = false;
 
         backButton = back.gameObject.AddComponent<Button>();

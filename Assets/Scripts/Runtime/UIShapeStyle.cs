@@ -18,6 +18,16 @@ public enum UIGradientStart
     Right
 }
 
+/// <summary>Where a speech tail leaves a box, like a chat message's.</summary>
+public enum UIShapeTail
+{
+    None,
+    /// <summary>A message sent: the tail leaves the bottom edge past the right corner.</summary>
+    BottomRight,
+    /// <summary>A reply: the tail leaves the bottom edge past the left corner.</summary>
+    BottomLeft
+}
+
 [Flags]
 public enum UIShapeCorners
 {
@@ -48,6 +58,12 @@ public sealed class UIShapeStyle : ScriptableObject
     [Tooltip("Cut corners, in units. Clamped to the shape's size.")]
     [Min(0f)] public float chamfer;
     public UIShapeCorners chamferCorners = UIShapeCorners.None;
+    [Tooltip("A speech tail on the bottom edge, running out past a corner, as a chat message has. It is " +
+             "part of the shape, so fill, stroke, glow and shadow follow it. It reaches outside the rect: " +
+             "leave room for it. A shape with a tail has no chamfer.")]
+    public UIShapeTail tail = UIShapeTail.None;
+    [Tooltip("How far the tail reaches past the corner, and how high it starts up the side, in units.")]
+    [Min(0f)] public float tailSize = 12f;
 
     [Header("Fill")]
     [Tooltip("A colour token with its alpha, or a custom colour. An icon's fill tints its sprite.")]
@@ -108,6 +124,7 @@ public sealed class UIShapeStyle : ScriptableObject
         shadow = shadow.Resolve(),
         cornerRadius = cornerRadius,
         chamfer = chamfer,
+        tailSize = tail == UIShapeTail.None ? 0f : tailSize,
         strokeWidth = strokeWidth,
         glowSize = glowSize,
         glowStrength = glowStrength,
@@ -126,11 +143,11 @@ public sealed class UIShapeStyle : ScriptableObject
     private void OnValidate() => Edited?.Invoke(this);
 }
 
-/// <summary>A style's numbers. Kind, corners and gradient direction are not blended.</summary>
+/// <summary>A style's numbers. Kind, corners, tail side and gradient direction are not blended.</summary>
 public struct UIShapeLook
 {
     public Color fill, stroke, glow, shadow;
-    public float cornerRadius, chamfer, strokeWidth;
+    public float cornerRadius, chamfer, tailSize, strokeWidth;
     public float glowSize, glowStrength, innerGlow, highlight, bottomLight, bottomLightHeight;
     public Vector2 shadowOffset;
     public float shadowSoftness, gradientEnd, hatch, pulse, pulseSpeed;
@@ -143,6 +160,7 @@ public struct UIShapeLook
         shadow = Color.Lerp(a.shadow, b.shadow, t),
         cornerRadius = Mathf.Lerp(a.cornerRadius, b.cornerRadius, t),
         chamfer = Mathf.Lerp(a.chamfer, b.chamfer, t),
+        tailSize = Mathf.Lerp(a.tailSize, b.tailSize, t),
         strokeWidth = Mathf.Lerp(a.strokeWidth, b.strokeWidth, t),
         glowSize = Mathf.Lerp(a.glowSize, b.glowSize, t),
         glowStrength = Mathf.Lerp(a.glowStrength, b.glowStrength, t),

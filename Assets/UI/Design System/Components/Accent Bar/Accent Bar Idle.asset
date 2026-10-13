@@ -16,6 +16,8 @@ MonoBehaviour:
   cornerRadius: 1
   chamfer: 0
   chamferCorners: 0
+  tail: 0
+  tailSize: 12
   fill:
     token: White
     alpha: 1

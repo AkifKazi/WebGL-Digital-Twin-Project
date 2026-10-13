@@ -218,8 +218,8 @@ public static class TelemetryDetailPanelPlayTest
 
             case 13:
                 Capture("11-hover-xray");
-                Expect(IsHovering(xray.gameObject) && Shown(xray) == HoverSprite(xray),
-                    "hovering the idle X-Ray segment shows the hover sprite");
+                Expect(IsHovering(xray.gameObject) && Look(xray).EndsWith("Hover"),
+                    $"hovering the idle X-Ray segment shows the Segment's hover look ({Look(xray)})");
                 Expect(!IsHovering(section.gameObject), "hovering the selected Cross Section segment shows no hover");
                 Down(xray.gameObject);
                 Next(0.2f);
@@ -227,8 +227,8 @@ public static class TelemetryDetailPanelPlayTest
 
             case 14:
                 Capture("12-pressed-xray");
-                Expect(!IsHovering(xray.gameObject) && Shown(xray) != HoverSprite(xray) && Shown(xray) != IdleSprite(xray),
-                    "pressing a segment swaps the hover for the pressed look");
+                Expect(!IsHovering(xray.gameObject) && Look(xray).EndsWith("Pressed"),
+                    $"pressing a segment swaps the hover for the pressed look ({Look(xray)})");
                 Up(xray.gameObject);
                 Exit(xray.gameObject);
                 Exit(section.gameObject);
@@ -239,7 +239,8 @@ public static class TelemetryDetailPanelPlayTest
 
             case 15:
             {
-                Expect(!IsHovering(xray.gameObject) && Shown(xray) == IdleSprite(xray), "the X-Ray segment is idle again");
+                Expect(!IsHovering(xray.gameObject) && Look(xray).EndsWith("Idle"),
+                    $"the X-Ray segment is idle again ({Look(xray)})");
                 Button zoom = FindControl("Zoom Out Button", required: false);
                 if (zoom != null && zoom.IsInteractable())
                 {
@@ -709,14 +710,9 @@ public static class TelemetryDetailPanelPlayTest
     private static bool IsHovering(GameObject control) =>
         control != null && control.TryGetComponent(out UIHoverSprite hover) && hover.IsShowingHover;
 
-    private static Sprite Shown(Button button) => ((Image)button.targetGraphic).overrideSprite;
-
-    private static Sprite HoverSprite(Button button) => Field<Sprite>(button, "hoverSprite");
-
-    private static Sprite IdleSprite(Button button) => Field<Sprite>(button, "idleSprite");
-
-    private static T Field<T>(Button button, string name) where T : Object =>
-        new SerializedObject(button.GetComponent<UIHoverSprite>()).FindProperty(name).objectReferenceValue as T;
+    /// <summary>The style a control's shape draws now, such as Segment Hover.</summary>
+    private static string Look(Button button) =>
+        button.targetGraphic is UIShape shape && shape.ShownStyle != null ? shape.ShownStyle.name : "none";
 
     private static PointerEventData Pointer() =>
         new(EventSystem.current) { button = PointerEventData.InputButton.Left };

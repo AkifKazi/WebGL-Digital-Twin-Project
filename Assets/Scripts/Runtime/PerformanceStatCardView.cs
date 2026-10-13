@@ -68,11 +68,8 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
     [SerializeField] private Sprite unavailableIcon;
 
     [Header("Background")]
+    [Tooltip("The card's shape: the design system's Card, in the state of the card's reading.")]
     [SerializeField] private Image backgroundImage;
-    [SerializeField] private Sprite normalBackground;
-    [SerializeField] private Sprite warningBackground;
-    [SerializeField] private Sprite criticalBackground;
-    [SerializeField] private Sprite unavailableBackground;
 
     [Header("Tintable Accent Visuals")]
     [SerializeField] private Image leftAccentCore;
@@ -449,10 +446,9 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
 
         if (backgroundImage != null)
         {
-            Sprite background = GetStateBackground();
-
-            if (background != null)
-                backgroundImage.sprite = background;
+            // The Card component's look for the reading's state.
+            if (backgroundImage is UIShape card)
+                card.State = GetStateBackground();
 
             backgroundImage.color = Color.white;
         }
@@ -856,14 +852,14 @@ public sealed class PerformanceStatCardView : MonoBehaviour,
         };
     }
 
-    private Sprite GetStateBackground()
+    private UIState GetStateBackground()
     {
         return visualState switch
         {
-            StatVisualState.Warning => warningBackground != null ? warningBackground : normalBackground,
-            StatVisualState.Critical => criticalBackground != null ? criticalBackground : normalBackground,
-            StatVisualState.Unavailable => unavailableBackground != null ? unavailableBackground : normalBackground,
-            _ => normalBackground
+            StatVisualState.Warning => UIState.Warning,
+            StatVisualState.Critical => UIState.Critical,
+            StatVisualState.Unavailable => UIState.Unavailable,
+            _ => UIState.Idle
         };
     }
 

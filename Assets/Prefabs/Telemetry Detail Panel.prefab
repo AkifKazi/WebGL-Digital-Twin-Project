@@ -243,8 +243,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverSprite
   target: {fileID: 1689185858682282717}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 0}
+  onlyWhileHovered: 1
   selectedIndicator: {fileID: 8244123630861645456}
 --- !u!1 &634417347315193113
 GameObject:
@@ -592,11 +591,6 @@ MonoBehaviour:
   rangeCellWidth: {x: 40, y: 52}
   headerGap: 36
   headerButtonSpacing: 6
-  rangeSelected: {r: 0.918, g: 0.992, b: 1, a: 1}
-  rangeIdle: {r: 0.408, g: 0.651, b: 0.686, a: 1}
-  rangeUnavailable: {r: 0.408, g: 0.651, b: 0.686, a: 0.3}
-  pinIdle: {r: 0.212, g: 0.929, b: 1, a: 1}
-  pinActive: {r: 0.04, g: 0.1, b: 0.13, a: 1}
   pointerColor: {r: 0.08, g: 0.9, b: 1, a: 1}
 --- !u!1 &1532495060997258992
 GameObject:
@@ -762,8 +756,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverSprite
   target: {fileID: 4939178107193750856}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 0}
+  onlyWhileHovered: 1
   selectedIndicator: {fileID: 159667483834283274}
 --- !u!1 &1568710306377893176
 GameObject:
@@ -1108,7 +1101,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 3
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -1177,7 +1170,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: d8b9fb11ea807430982e831aa8f7cc16, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1187,7 +1180,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: b3acf6c7734874feb9f3e34cc2941435, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -1412,7 +1405,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 3
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -1911,8 +1904,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverSprite
   target: {fileID: 1784098945819149995}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 0}
+  onlyWhileHovered: 1
   selectedIndicator: {fileID: 2610992511714712213}
 --- !u!1 &3894462095820372679
 GameObject:
@@ -2078,8 +2070,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverSprite
   target: {fileID: 8206618203562870859}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 0}
+  onlyWhileHovered: 1
   selectedIndicator: {fileID: 180545880806286541}
 --- !u!1 &3950718866693330596
 GameObject:
@@ -2156,7 +2147,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 3
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -2379,8 +2370,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverSprite
   target: {fileID: 7125365169235099445}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 0}
+  onlyWhileHovered: 1
   selectedIndicator: {fileID: 0}
 --- !u!1 &4349580130803379555
 GameObject:
@@ -2457,7 +2447,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 3
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -2625,8 +2615,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverSprite
   target: {fileID: 2103793795762042435}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 0}
+  onlyWhileHovered: 1
   selectedIndicator: {fileID: 5229992587412788590}
 --- !u!1 &5218128786508571234
 GameObject:
@@ -3139,7 +3128,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -8, y: -8}
+  m_SizeDelta: {x: -6, y: -6}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3837919525208953073
 CanvasRenderer:
@@ -3162,7 +3151,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.212, g: 0.929, b: 1, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3179,8 +3168,8 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
-  state: 0
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
+  state: 3
   style: {fileID: 0}
   variant: 
 --- !u!1 &7489654196542766951
@@ -3399,7 +3388,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 3
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -3478,7 +3467,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 3
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -3694,7 +3683,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 3
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -3862,8 +3851,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverSprite
   target: {fileID: 4801362951916132253}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 0}
+  onlyWhileHovered: 1
   selectedIndicator: {fileID: 6108173836955683783}
 --- !u!1 &8672168463422820616
 GameObject:

@@ -61,10 +61,6 @@ public sealed class TelemetryGraphStyle
     [Tooltip("A soft fill under the line chart's line. Off matches the reference charts.")]
     public bool fillLineArea;
 
-    [Tooltip("The other controls' hover look, shown behind the Time To Service figure while it is " +
-             "hovered or pressed. Empty: a faint fill in the normal colour.")]
-    public Sprite hoverSprite;
-
     [Header("Type")]
     [Min(8f)] public float labelSize = 15f;
     [Min(12f)] public float valueSize = 30f;

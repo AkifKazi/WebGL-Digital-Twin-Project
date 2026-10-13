@@ -20,8 +20,6 @@ public static class TelemetryDetailPanelSetup
 {
     private const string ScenePath = "Assets/Scenes/SampleScene.unity";
     private const string PrefabPath = "Assets/Prefabs/Telemetry Detail Panel.prefab";
-    private const string PanelSpritePath = "Assets/UI/Sprites/Detail Panel Background.png";
-    private const string HoverSpritePath = "Assets/UI/Sprites/Button Hover Background.png";
     private const string PinIconPath = "Assets/UI/Sprites/Pin Icon.png";
     private const string CloseIconPath = "Assets/UI/Sprites/Close Icon.png";
     private const string MediumFontPath = "Assets/UI/Fonts/Rajdhani-Medium SDF.asset";
@@ -105,8 +103,6 @@ public static class TelemetryDetailPanelSetup
 
     private static TelemetryDetailPanel BuildPrefab()
     {
-        Sprite panelSprite = LoadSprite(PanelSpritePath);
-        Sprite hoverSprite = LoadSprite(HoverSpritePath);
         TMP_FontAsset medium = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(MediumFontPath);
 
         GameObject root = new("Telemetry Detail Panel", typeof(RectTransform));
@@ -119,9 +115,9 @@ public static class TelemetryDetailPanelSetup
         CanvasGroup group = root.AddComponent<CanvasGroup>();
         TelemetryDetailPanel panel = root.AddComponent<TelemetryDetailPanel>();
 
-        Image background = CreateImage("Background", rect, panelSprite, Color.white);
+        Image background = CreateImage("Background", rect, null, Color.white);
+        UIRoleShape.Set(background, "Detail Panel");
         Stretch(background.rectTransform, 0f);
-        background.type = Image.Type.Sliced;
         background.raycastTarget = true; // clicks on the panel never reach the scene
 
         // Header: range buttons on the left, pin and close on the right, all on
@@ -187,16 +183,17 @@ public static class TelemetryDetailPanelSetup
             underline.enabled = false;
 
             // The selected range shows its underline and never the hover.
-            AddHover(hit.gameObject, hover, hoverSprite, null, underline);
+            AddHover(hit.gameObject, hover, true, underline);
             rangeButtons.Add(button);
             rangeLabels.Add(label);
             rangeUnderlines.Add(underline);
         }
 
-        // Close and pin in the same cyan; a pinned panel shows a dark pin on a cyan square.
+        // Close and pin in the same cyan; a pinned panel shows a dark pin on a cyan square
+        // (the procedural skin draws it as a selected segment, as the selected range).
         Button closeButton = CreateIconButton("Close", header, -(CloseCentre - HeaderButton * 0.5f),
             LoadIcon(CloseIconPath), IconCyan, out _, out Image closeHover);
-        AddHover(closeButton.gameObject, closeHover, hoverSprite, null, null);
+        AddHover(closeButton.gameObject, closeHover, true, null);
 
         Button pinButton = CreateIconButton("Pin", header, -(PinCentre - HeaderButton * 0.5f),
             LoadIcon(PinIconPath), IconCyan, out Image pinIcon, out Image pinHover);
@@ -205,7 +202,7 @@ public static class TelemetryDetailPanelSetup
         pinBackground.transform.SetAsFirstSibling();
         pinBackground.enabled = false;
         // A pinned panel shows the filled square and never the hover.
-        AddHover(pinButton.gameObject, pinHover, hoverSprite, null, pinBackground);
+        AddHover(pinButton.gameObject, pinHover, true, pinBackground);
 
         Image graphSection = CreateImage("Graph Section", rect, null, Section);
         RectTransform graphs = CreateUIObject("Graphs", graphSection.rectTransform);
@@ -248,7 +245,6 @@ public static class TelemetryDetailPanelSetup
         data.FindProperty("frameInset").floatValue = Frame;
         data.FindProperty("headerHeight").floatValue = PanelHeaderHeight;
         data.FindProperty("sectionInset").floatValue = PanelSectionInset;
-        data.FindProperty("pinIdle").colorValue = IconCyan;
         data.FindProperty("pointerColor").colorValue = Teal;
         data.ApplyModifiedPropertiesWithoutUndo();
 
@@ -289,28 +285,26 @@ public static class TelemetryDetailPanelSetup
 
     /// <summary>
     /// A hidden hover backdrop for a header control, drawn under its label or
-    /// icon. It has no sprite of its own: idle is nothing, and UIHoverSprite
-    /// lays the hover sprite on while the control is hovered.
+    /// icon: a Segment, which UIHoverSprite shows only while the control is
+    /// hovered, in the Segment's hover look.
     /// </summary>
     private static Image CreateHoverImage(RectTransform control, float inset)
     {
         Image hover = CreateImage("Hover", control, null, Color.white);
-        hover.type = Image.Type.Sliced;
-        hover.pixelsPerUnitMultiplier = 3f; // the sprite's 16 px border at the size of a small control
+        UIRoleShape.Set(hover, "Segment");
         Stretch(hover.rectTransform, inset);
         hover.transform.SetAsFirstSibling();
         hover.enabled = false;
         return hover;
     }
 
-    private static void AddHover(GameObject control, Image target, Sprite hover, Sprite idle, Graphic selectedIndicator)
+    private static void AddHover(GameObject control, Image target, bool onlyWhileHovered, Graphic selectedIndicator)
     {
         if (!control.TryGetComponent(out UIHoverSprite component))
             component = control.AddComponent<UIHoverSprite>();
         SerializedObject data = new(component);
         data.FindProperty("target").objectReferenceValue = target;
-        data.FindProperty("hoverSprite").objectReferenceValue = hover;
-        data.FindProperty("idleSprite").objectReferenceValue = idle;
+        data.FindProperty("onlyWhileHovered").boolValue = onlyWhileHovered;
         data.FindProperty("selectedIndicator").objectReferenceValue = selectedIndicator;
         data.ApplyModifiedPropertiesWithoutUndo();
     }
@@ -462,12 +456,12 @@ public static class TelemetryDetailPanelSetup
     }
 
     /// <summary>
-    /// Gives every bottom control and pagination button its three looks: idle,
-    /// the hover sprite, and the pressed or selected sprite, never two at once.
+    /// Gives every bottom control and pagination button its looks: idle, and
+    /// its component's hover and pressed looks, which UIHoverSprite reports.
+    /// No sprites are swapped: a chosen segment shows its Selected state.
     /// </summary>
     private static int ConfigureControlHoverStates()
     {
-        Sprite hover = LoadSprite(HoverSpritePath);
         int configured = 0;
         foreach (Button button in UnityEngine.Object.FindObjectsByType<Button>(
                      FindObjectsInactive.Include))
@@ -481,34 +475,13 @@ public static class TelemetryDetailPanelSetup
                 continue;
             }
 
-            Sprite idle;
-            ViewModeSegmentedControl segments = button.GetComponentInParent<ViewModeSegmentedControl>(true);
-            if (segments != null)
-            {
-                SerializedObject control = new(segments);
-                idle = control.FindProperty("inactiveSprite").objectReferenceValue as Sprite;
-                // A pressed segment shows its selected look, as the other
-                // controls show their pressed sprite.
-                button.transition = Selectable.Transition.SpriteSwap;
-                button.spriteState = new SpriteState
-                {
-                    pressedSprite = control.FindProperty("selectedSprite").objectReferenceValue as Sprite
-                };
-            }
-            else
-            {
-                idle = image.sprite;
-                // The pressed sprite no longer doubles as the hover.
-                SpriteState state = button.spriteState;
-                state.highlightedSprite = null;
-                button.spriteState = state;
-            }
-
-            AddHover(button.gameObject, image, hover, idle, null);
+            button.transition = Selectable.Transition.None;
+            button.spriteState = default;
+            AddHover(button.gameObject, image, false, null);
             EditorUtility.SetDirty(button);
             configured++;
-            Debug.Log($"TELEMETRY_DETAIL_PANEL_SETUP hover '{GetPath(button.transform)}' idle={(idle != null ? idle.name : "none")} " +
-                      $"imageType={image.type} ppu={image.pixelsPerUnitMultiplier}");
+            Debug.Log($"TELEMETRY_DETAIL_PANEL_SETUP hover '{GetPath(button.transform)}' " +
+                      $"shape={(image is UIShape shape && shape.Component != null ? shape.Component.name : "plain")}");
         }
         return configured;
     }
@@ -580,7 +553,8 @@ public static class TelemetryDetailPanelSetup
 
     private static Image CreateImage(string name, RectTransform parent, Sprite sprite, Color color)
     {
-        Image image = CreateUIObject(name, parent).gameObject.AddComponent<Image>();
+        // A design-system shape: unstyled it draws as a plain Image.
+        Image image = CreateUIObject(name, parent).gameObject.AddComponent<UIShape>();
         image.sprite = sprite;
         image.color = color;
         image.raycastTarget = false;

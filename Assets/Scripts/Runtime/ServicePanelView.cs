@@ -86,6 +86,9 @@ public sealed partial class ServicePanelView : MonoBehaviour
 
     // The panel's surface: the Sheet component, its off-screen edges pushed past the screen.
     private RectTransform sheet;
+    private Graphic sheetSurface;
+    private bool frameShown = true;
+    private float frameAlpha = 1f;
     private RectTransform header;
     private RectTransform headerText;
     private TextMeshProUGUI runHoursText;
@@ -188,6 +191,22 @@ public sealed partial class ServicePanelView : MonoBehaviour
     }
 
     private void Awake() => Build();
+
+    /// <summary>
+    /// Draws the panel's own sheet, its fill and edges, or not: the portrait
+    /// view sets the panel on an opaque fill of its own, where an edge would
+    /// only draw a second line under the switch. Hidden, it still catches the
+    /// pointer, so nothing behind the panel answers.
+    /// </summary>
+    public void SetFrameShown(bool shown)
+    {
+        frameShown = shown;
+        if (sheetSurface == null)
+            return;
+        Color color = sheetSurface.color;
+        color.a = shown ? frameAlpha : 0f;
+        sheetSurface.color = color;
+    }
 
     private void OnEnable()
     {
@@ -437,7 +456,9 @@ public sealed partial class ServicePanelView : MonoBehaviour
         Stretch(sheet, 0f, 0f, 0f, 0f);
         // Catches the pointer over the whole panel, so the wheel and drags
         // here never reach the model behind it.
-        AddSurface(sheet, "Sheet", backdrop, true);
+        sheetSurface = AddSurface(sheet, "Sheet", backdrop, true);
+        frameAlpha = sheetSurface.color.a;
+        SetFrameShown(frameShown);
 
         header = CreateRect("Header", root);
         header.anchorMin = new Vector2(0f, 1f);

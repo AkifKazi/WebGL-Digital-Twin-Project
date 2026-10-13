@@ -84,7 +84,8 @@ public static class UIComponentFactory
         ((RectTransform)button.transform).sizeDelta = new Vector2(44f, 44f);
         GameObject image = Shape("Icon", button.transform, "Icon");
         image.GetComponent<UIShape>().sprite = icon;
-        image.GetComponent<UIShape>().color = Token("Accent");
+        // A control's icon at rest (UIControlColors).
+        image.GetComponent<UIShape>().color = Token(UIControlColors.IdleToken);
         RectTransform rect = (RectTransform)image.transform;
         rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
         rect.sizeDelta = new Vector2(20f, 20f);

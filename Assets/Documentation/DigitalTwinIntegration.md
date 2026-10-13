@@ -330,6 +330,43 @@ The in-page history is kept in memory and restarts with the page. For training, 
 `series` table should be stored by the backend, or a backend history service can
 implement `ITelemetryHistoryProvider` and be passed to `UseHistoryProvider`.
 
+## Twin assistant (Ask window)
+
+The **ASK** button opens a conversation about the machine. Questions are answered by
+`TwinAssistant`, on the `Digital Twin Runtime` object:
+
+- **By the twin** (the default): plain rules over the live figures, the same ones the AI data
+  table publishes. It recognises a sensor named in the question, alarms, the machine's state
+  and its services, in English. It quotes values, limits, the last hour's trend and the part's
+  service fix, and never guesses about a reading that is unavailable.
+- **By the page**: with **Page Answers** on (or after `SetAssistantSource("page")`), each
+  question is sent to the page, which can put it to a language model with the AI data table as
+  context and send the answer back. With no answer within **Page Timeout Seconds** (20), the
+  twin answers itself.
+
+```javascript
+unityInstance.SendMessage("Digital Twin Runtime", "SetAssistantSource", "page"); // or "twin"
+
+window.addEventListener("digitaltwin:ask", async event => {
+  const q = JSON.parse(event.detail);          // { id, question, view: "telemetry" | "service" }
+  const context = window.DigitalTwinAi.latestJson; // the sensors and maintenance tables
+  const answer = await askModel(q.question, context);
+  unityInstance.SendMessage("Digital Twin Runtime", "PushAssistantReply", JSON.stringify({
+    id: q.id,
+    text: answer.text,                          // one or two sentences
+    sensorIds: ["FEED-01.SLIP"],                // readings it rests on: shown as cards
+    parts: ["Drive Roller"],                    // parts by name or key (part.drive_roller): shown as rows
+    check: "Re-tension the belt.",              // optional suggested check
+    followUps: ["What needs service next?"]     // up to three suggested questions
+  }));
+});
+```
+
+Reply text is shown as plain text (markup is not interpreted), cut at 1,200 characters. Unknown
+sensor IDs and parts are left out. An empty `text` falls back to the twin's own answer. The
+assistant only advises: nothing it answers changes the machine, and pressing a reading or part
+in an answer does only what the viewer's own press on that card or row would.
+
 ## Card presentation rules
 
 Every visible `PerformanceStatSource` maps to one `TelemetryCardPresentation` and one
@@ -370,13 +407,21 @@ Set Up Telemetry Layout Settings** if the scene does not have it yet):
 | Mobile Rows | phone or tablet held upright |
 | Desktop Detail Panel / Mobile Detail Panel | whether a card opens its history panel |
 
-Each count is **Auto** or 1 to 4 rails per side. Rails are generated beside the two
-authored ones as needed and removed again; a rail other than the outermost shows only
-while it holds a card on the current page, so the model keeps the room. **Auto** adds rails
-while the model keeps **Auto Model Share** of the screen across them (40% by default). A set
-number is kept below that share as long as the rails and the history panel still fit; asking
-for more than fit shows as many as do and logs a warning. Changes made while playing apply
-at once.
+Each count is **Viewer's choice (settings)** (the default), **Auto**, or 1 to 4 rails per
+side. **Viewer's choice** runs what the viewer picked under **Settings › Telemetry › Card
+rails**: 2, 4, 6 or 8 rails in all on a desktop, 2 or 4 on a phone. It starts at 2 (one rail
+each side) and is kept in the browser. A phone or tablet never runs more than
+`TelemetryLayoutSettings.MaximumMobileRailsPerSide` (2) a side, however a count is set, so the
+model and its leader lines stay in sight.
+
+Rails are generated beside the two authored ones as needed and removed again. A rail other
+than the outermost shows only while it holds a card on the current page, so the model keeps
+the room. **Auto** adds rails while the model keeps **Auto Model Share** of the screen across
+them (40% by default). A set number, the viewer's included, is the most a layout runs. Rails
+that would leave the model less than **Minimum Model Share** (30%), or leave no room for the
+history panel, are dropped, and their cards go to the next page. A window that grows gets
+them back, so the cards never crowd the model or overlap each other. Changes made while
+playing apply at once.
 
 The history panel has a **detail rail** of its own, between the card rails and the model,
 and never takes a card rail. Beside card columns it is **Detail Rail Width** times a column's

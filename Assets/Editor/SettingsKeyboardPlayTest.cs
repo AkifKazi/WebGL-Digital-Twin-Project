@@ -247,6 +247,8 @@ public static class SettingsKeyboardPlayTest
                 Release(Key.LeftArrow);
                 Expect(Mathf.Abs(Mathf.DeltaAngle(Yaw(), yawBefore)) < 0.5f, "the camera holds still while the settings are open");
                 Expect(CardTexts().Any(text => text.Contains("mm/s")), "engineering units show on the cards (mm/s)");
+                Expect(StatRailManagers.Wide()?.RailsPerSide == 1,
+                    $"by default the desktop runs one column a side, two in all (now {StatRailManagers.Wide()?.RailsPerSide})");
                 // The interface scale waits for the slider to rest.
                 referenceBefore = mainScaler.referenceResolution;
                 scaleBefore = DigitalTwinSettings.InterfaceScale;
@@ -279,6 +281,8 @@ public static class SettingsKeyboardPlayTest
                 DigitalTwinSettings.InterfaceScale = 1f;
                 DigitalTwinSettings.HighContrast = true;
                 DigitalTwinSettings.EdgeShade = DigitalTwinSettings.EdgeShading.Strong;
+                // Four card rails in all: the shell rebuilds the rails for it.
+                DigitalTwinSettings.RailsPerSide = 2;
                 Next(0.6f);
                 break;
 
@@ -288,6 +292,8 @@ public static class SettingsKeyboardPlayTest
                 break;
 
             case 23:
+                Expect(StatRailManagers.Wide()?.RailsPerSide == 2,
+                    $"four card rails chosen in the settings run two columns a side (now {StatRailManagers.Wide()?.RailsPerSide})");
                 Capture("12-high-contrast-strong-shading");
                 DigitalTwinSettings.ResetToDefaults();
                 modeSwitch.ServiceButton.onClick.Invoke();

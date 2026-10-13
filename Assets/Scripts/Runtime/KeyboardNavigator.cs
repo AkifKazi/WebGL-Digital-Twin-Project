@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -23,6 +24,18 @@ public interface IKeyboardTarget
 }
 
 /// <summary>
+/// A window over the layouts that answers Esc itself while the keyboard is
+/// inside it (the Ask window): Esc then goes to it alone, not to the layouts.
+/// </summary>
+public interface IEscapeHandler
+{
+    /// <summary>The window: Esc is its own while the selected control is inside it.</summary>
+    RectTransform EscapeArea { get; }
+
+    void HandleEscape();
+}
+
+/// <summary>
 /// Keyboard use of the interface, as a web page has it. Tab and Shift+Tab move
 /// through everything that can be used, in the order the interface is built;
 /// the arrow keys move between controls and adjust sliders (the EventSystem's
@@ -35,7 +48,9 @@ public interface IKeyboardTarget
 /// pressing hides it, so a click never leaves a ring behind.
 ///
 /// A modal (the settings panel) sets <see cref="Scope"/> while it is open: Tab
-/// then stays inside it, and the modal handles its own Esc.
+/// then stays inside it, and the modal handles its own Esc. A window that is
+/// not modal (the Ask window) sets <see cref="EscapeHandler"/>: while the
+/// keyboard is inside it, Esc is handed to it and nothing else steps back.
 ///
 /// Lives on the EventSystem.
 /// </summary>
@@ -89,6 +104,24 @@ public sealed class KeyboardNavigator : MonoBehaviour
     /// <summary>While set, Tab only reaches what is inside it, and Esc is left to its owner.</summary>
     public static RectTransform Scope { get; set; }
 
+    /// <summary>A window that answers Esc itself while the keyboard is inside it; see <see cref="IEscapeHandler"/>.</summary>
+    public static IEscapeHandler EscapeHandler { get; set; }
+
+    /// <summary>
+    /// True while Esc is not the layouts' to answer: a modal is open, or the
+    /// keyboard is inside a window that answers it. Whatever else listens
+    /// for Esc (the focused card's release) leaves it alone then.
+    /// </summary>
+    public static bool EscapeTaken => Scope != null || KeyboardInside(EscapeHandler);
+
+    private static bool KeyboardInside(IEscapeHandler handler)
+    {
+        RectTransform area = handler?.EscapeArea;
+        GameObject selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+        return area != null && area.gameObject.activeInHierarchy && selected != null &&
+               selected.transform.IsChildOf(area);
+    }
+
     /// <summary>True while the keyboard, not the pointer, was used last.</summary>
     public static bool KeyboardMode => instance != null && instance.keyboardMode;
 
@@ -104,6 +137,22 @@ public sealed class KeyboardNavigator : MonoBehaviour
             return (events != null && events.currentSelectedGameObject != null &&
                     events.currentSelectedGameObject.activeInHierarchy) ||
                    (instance != null && instance.customTarget != null);
+        }
+    }
+
+    /// <summary>
+    /// True while a text field has the keyboard, such as the Ask window's
+    /// question: letters belong to the field then, so the camera's keys and the
+    /// shortcuts leave them alone.
+    /// </summary>
+    public static bool IsTyping
+    {
+        get
+        {
+            EventSystem events = EventSystem.current;
+            GameObject selected = events != null ? events.currentSelectedGameObject : null;
+            return selected != null && selected.activeInHierarchy &&
+                   selected.TryGetComponent(out TMP_InputField field) && field.isFocused;
         }
     }
 
@@ -190,7 +239,13 @@ public sealed class KeyboardNavigator : MonoBehaviour
         }
 
         if (keyboard.escapeKey.wasPressedThisFrame && Scope == null)
-            StepBack();
+        {
+            // One answer to one Esc: the window the keyboard is in, or the layouts.
+            if (KeyboardInside(EscapeHandler))
+                EscapeHandler.HandleEscape();
+            else
+                StepBack();
+        }
     }
 
     private void LateUpdate()

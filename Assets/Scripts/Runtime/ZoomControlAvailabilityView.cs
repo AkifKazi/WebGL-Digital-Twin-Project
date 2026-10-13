@@ -10,8 +10,6 @@ public sealed class ZoomControlAvailabilityView : MonoBehaviour
     [SerializeField] private Button zoomInButton;
     [SerializeField] private Graphic zoomOutIcon;
     [SerializeField] private Graphic zoomInIcon;
-    [SerializeField] private Color enabledIconColor = Color.white;
-    [SerializeField] private Color disabledIconColor = new(0.48f, 0.52f, 0.55f, 1f);
 
     private void Awake()
     {
@@ -60,7 +58,7 @@ public sealed class ZoomControlAvailabilityView : MonoBehaviour
         if (button != null)
             button.interactable = available;
         if (icon != null)
-            icon.color = available ? enabledIconColor : disabledIconColor;
+            icon.color = UIControlColors.For(false, available);
     }
 
     private static Graphic FindIcon(Button button)

@@ -20,6 +20,30 @@ The first opening can take several minutes because Unity rebuilds the local `Lib
 - The **−** and **+** buttons also control zoom.
 - **FULL BODY** shows the complete machine.
 - **CROSS SECTION** shows the internal process and material flow.
+- **ASK**, beside the gear, opens the Twin Assistant: see below.
+
+### Ask the twin
+
+**ASK** opens a window where you can ask about the machine in plain words: *Why is belt slip
+red?*, *What needs service next?*, *How is the machine doing?* Type a question and press Enter,
+or press one of the suggested questions under the latest answer.
+
+- An answer quotes the live figures: the reading, its limit, its trend over the last hour, and
+  other readings from the same part that need attention.
+- The readings and services an answer rests on appear under it, as **TELEMETRY DATA** and
+  **SERVICE DATA**. A reading's row shows its last hour as a line, its normal band and its trend,
+  so you rarely need its detail panel. Rows end in a chevron: press a reading to show it on the
+  model (its card is focused, and the model goes to Cross Section first if it was showing the
+  outside, where cards are hidden), or a service to open that part in the Service view.
+- The window does not block anything. Drag it by its header (the grip at its top edge) anywhere
+  between the top and bottom controls, over the cards if you like; it stays where you leave it
+  next time. The model does not turn while you drag the window, even if the pointer slips off it. Esc or **×**
+  closes it, and the conversation is kept until the page reloads.
+- On a phone held upright, **ASK** is the third tab beside TELEMETRY and SERVICE and fills the
+  screen below them, as Service does. Pressing a reading or a service in an answer takes you to
+  its tab; TELEMETRY or SERVICE takes you back, and the conversation is kept.
+- Answers are advice only. Without a language model connected (see the integration guide), the
+  twin answers from its own rules and only understands questions in English.
 
 ### Phone or tablet
 
@@ -27,9 +51,11 @@ The first opening can take several minutes because Unity rebuilds the local `Lib
 - Pinch with two fingers to zoom in or out.
 - The interface changes automatically for portrait and landscape screens.
 - Use the left and right arrows beside the zoom controls to visit every portrait telemetry page. An unavailable direction fades out.
-- Tap a card to highlight it, and tap it again to open its detail: on a phone held upright it rises from the bottom as a sheet and every other card hides, leaving the model; tap **×** or the model to close it. In landscape the detail panel opens beside the rails. Tap another card to highlight that one instead, or the model to clear the highlight; the zoom, page and view controls leave it alone.
+- Tap a card to highlight it, and tap it again to open its detail: on a phone held upright it rises from the bottom as a sheet across the screen, at most two thirds of its height, and every other card hides, leaving the model above it; tap **×** or the model to close it. In landscape the detail panel opens beside the rails. Tap another card to highlight that one instead, or the model to clear the highlight; the zoom, page and view controls leave it alone. Cards on the rows nearer the model step aside so a highlighted card's line to its sensor stays in sight, as they do on a desktop for the line to an open detail panel. Lines of cards at rest stay faintly drawn unless they would cross another card.
 - In any detail panel, tap **TIME TO SERVICE ›** to jump to that part's service detail.
 - Held upright, the **TELEMETRY** / **SERVICE** switch sits centred at the top. **SERVICE** fills the screen with the service schedule and hides the model, which would be too small to read beside it. Tap a part for its detail and the arrow to return.
+- The gear opens the settings as a page of their own: every group in one list, each setting's description under its name. Tap anywhere on a toggle's row to flip it, and the arrow to go back.
+- The interface starts at its full designed size on a phone or tablet (100 %), and a little smaller on a desktop (90 %). Change it under **Settings › Display › Interface scale**; **Reset to defaults** returns to your device's size.
 - The scene runs under the notch and the browser's toolbars, while the controls stay clear of them. When Safari or Firefox shrinks or grows its bottom toolbar, nothing on screen moves.
 
 ## 3. Understanding telemetry cards
@@ -43,7 +69,7 @@ Each telemetry card contains:
 
 Every sensor has its own card. Cards do not combine or split when values change.
 
-The layout fills the outside rails first. Extra inside rails appear only when more space is required. On a phone, additional readings are placed on reachable pages; warning and critical readings are ordered onto the first page automatically.
+The cards start on two rails, one each side of the model. **Settings › Telemetry › Card rails** offers 2, 4, 6 or 8 rails in all on a desktop and 2 or 4 on a phone. The layout fills the outside rails first, and inside rails appear only when there are cards for them. If the window is too small for the rails you chose, fewer run and the remaining readings move to the next page, so the cards never crowd the model. Warning and critical readings are ordered onto the first page automatically.
 
 ## 4. Card interaction and alarm states
 

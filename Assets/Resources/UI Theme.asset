@@ -29,6 +29,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: fe9b1cbafb7fb4fc7b58179429d54f26, type: 2}
   - {fileID: 11400000, guid: 1d30b91a762094ebe9364d6a85ee4b3f, type: 2}
   - {fileID: 11400000, guid: 6dfd266796fa84f6aaefced022d563b9, type: 2}
+  - {fileID: 11400000, guid: 9e583b3e02fb54d43a9bb7ea3225a5bb, type: 2}
   - {fileID: 11400000, guid: 8dbecb7b174344631bc7db4eb4906c6a, type: 2}
   - {fileID: 11400000, guid: fa583745d3e0c4f179350c43fa36c8a7, type: 2}
   - {fileID: 11400000, guid: d6aedc7d0cc304408b2c5d8c4bd1b3d5, type: 2}
@@ -38,74 +39,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 66b0af399472e4f2fb61757619d23321, type: 2}
   - {fileID: 11400000, guid: 2d94435af576c4a3fba2d0862475a018, type: 2}
   styles:
-  - sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
-    state: 0
-  - sprite: {fileID: 21300000, guid: d8b9fb11ea807430982e831aa8f7cc16, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: b3acf6c7734874feb9f3e34cc2941435, type: 2}
-    state: 0
-  - sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
-    state: 0
-  - sprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
-    state: 1
-  - sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
-    state: 3
-  - sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-    variant: Card
-    component: {fileID: 11400000, guid: 1d30b91a762094ebe9364d6a85ee4b3f, type: 2}
-    state: 0
-  - sprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-    variant: Card
-    component: {fileID: 11400000, guid: 1d30b91a762094ebe9364d6a85ee4b3f, type: 2}
-    state: 1
-  - sprite: {fileID: 21300000, guid: 753f13e68b4254e55a1cb8fce0210c18, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: 1d30b91a762094ebe9364d6a85ee4b3f, type: 2}
-    state: 5
-  - sprite: {fileID: 21300000, guid: 9d8ea704ed215498e9b6df179ec4ba11, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: 1d30b91a762094ebe9364d6a85ee4b3f, type: 2}
-    state: 6
-  - sprite: {fileID: 21300000, guid: 4dd561af49e584a47b21428f728c2181, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: 1d30b91a762094ebe9364d6a85ee4b3f, type: 2}
-    state: 7
-  - sprite: {fileID: 21300000, guid: 6e244e9db3faa4730ba345cdc1d5311f, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: d6aedc7d0cc304408b2c5d8c4bd1b3d5, type: 2}
-    state: 0
-  - sprite: {fileID: 21300000, guid: 7e28a0954015e4354a279a864322ba38, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: 66b0af399472e4f2fb61757619d23321, type: 2}
-    state: 0
-  - sprite: {fileID: 21300000, guid: 04b8917837797446a8b2d0b1568faf06, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: 2d94435af576c4a3fba2d0862475a018, type: 2}
-    state: 0
-  - sprite: {fileID: 21300000, guid: e286c5e91cce94ba885328204c0cac97, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: f36dcf68884774fbf9b2e5f252c62686, type: 2}
-    state: 0
-  - sprite: {fileID: 21300000, guid: 63fd1579bd66646fdbeb9f7a7518fe9b, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: 8e8ea18ad4e5d4747a77a6a76c3b45d3, type: 2}
-    state: 0
-  - sprite: {fileID: 21300000, guid: 34593822a64164d118b64f29c886151c, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: 8dbecb7b174344631bc7db4eb4906c6a, type: 2}
-    state: 0
-  - sprite: {fileID: 21300000, guid: e7b72683c34c54b86bfc4eb839962c66, type: 3}
-    variant: 
-    component: {fileID: 11400000, guid: fa583745d3e0c4f179350c43fa36c8a7, type: 2}
-    state: 0
   - sprite: {fileID: 21300000, guid: c26354c8b78ec4719913d2abd280712c, type: 3}
     variant: 
     component: {fileID: 11400000, guid: 83d95fb4deb644bd18f261a61f3a80e0, type: 2}
@@ -139,6 +72,14 @@ MonoBehaviour:
     component: {fileID: 11400000, guid: 83d95fb4deb644bd18f261a61f3a80e0, type: 2}
     state: 0
   - sprite: {fileID: 21300000, guid: 676ce13b6a1154ac5833ccc236a31e6f, type: 3}
+    variant: 
+    component: {fileID: 11400000, guid: 83d95fb4deb644bd18f261a61f3a80e0, type: 2}
+    state: 0
+  - sprite: {fileID: 21300000, guid: ea9c122daf3fc4f99925d4ccb9fe56f0, type: 3}
+    variant: 
+    component: {fileID: 11400000, guid: 83d95fb4deb644bd18f261a61f3a80e0, type: 2}
+    state: 0
+  - sprite: {fileID: 21300000, guid: b5cc6e2f0d27b42619c008b538268637, type: 3}
     variant: 
     component: {fileID: 11400000, guid: 83d95fb4deb644bd18f261a61f3a80e0, type: 2}
     state: 0

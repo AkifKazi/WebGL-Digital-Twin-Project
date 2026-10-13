@@ -38,6 +38,9 @@ public class StatLeaderLineManager : MonoBehaviour
     {
         if (railManager != null)
             railManager.LayoutRebuilt += RebuildLines;
+        LeaderLineObstacle.SharedChanged += FindObstacles;
+        // A marker for every layout may have come or gone while this layout was off.
+        FindObstacles();
     }
 
     private IEnumerator Start()
@@ -52,6 +55,7 @@ public class StatLeaderLineManager : MonoBehaviour
     {
         if (railManager != null)
             railManager.LayoutRebuilt -= RebuildLines;
+        LeaderLineObstacle.SharedChanged -= FindObstacles;
         UnwatchSources();
     }
 
@@ -182,12 +186,21 @@ public class StatLeaderLineManager : MonoBehaviour
     // so a burst of readings reorders the lines once rather than per reading.
     private void HandleSourceChanged(PerformanceStatSource source) => drawOrderDirty = true;
 
-    /// <summary>The translucent controls of this manager's layout: everything under its parent marked as a <see cref="LeaderLineObstacle"/>.</summary>
+    /// <summary>
+    /// The translucent controls of this manager's layout: everything under its
+    /// parent marked as a <see cref="LeaderLineObstacle"/>, and the markers for
+    /// every layout. The lines hold this list, so refilling it reaches them.
+    /// </summary>
     private void FindObstacles()
     {
         layoutObstacles.Clear();
         Transform layout = transform.parent != null ? transform.parent : transform;
         layout.GetComponentsInChildren(true, layoutObstacles);
+        foreach (LeaderLineObstacle shared in LeaderLineObstacle.EveryLayoutObstacles)
+        {
+            if (shared != null && !layoutObstacles.Contains(shared))
+                layoutObstacles.Add(shared);
+        }
     }
 
     private void LateUpdate()

@@ -7,14 +7,12 @@ using UnityEngine;
 /// The design system in one asset: its tokens, its components, the material
 /// that draws them and the shadow under on-screen text.
 ///
-/// New UI names its component and state on each <see cref="UIShape"/>. UI
-/// authored with sprites is matched by the sprite it shows, which names its
-/// role (a panel, a selected segment, a hovered control, an alarm card): the
-/// entries below turn each sprite into a component and state, so code that
-/// swaps sprites for a state swaps procedural looks too, with no change of its
-/// own. A variant narrows a match (a card's background uses the same sprite as
-/// a selected button, but the Card variant shows it as a card). Turning
-/// <see cref="proceduralShapes"/> off draws the authored sprites again.
+/// Every <see cref="UIShape"/> names its component and state (a panel, a
+/// segment, a card in warning); code that shows a state sets the shape's
+/// state. Icons are authored sprites: the entries below turn each icon sprite
+/// into the Icon component, so it gets its shadow and hover glow. A variant
+/// narrows a match. Turning <see cref="proceduralShapes"/> off draws every
+/// shape as a plain Image, icons as their sprites.
 ///
 /// Loaded from Resources, so edit mode, play mode and builds find the same theme.
 /// </summary>
@@ -42,7 +40,7 @@ public sealed class UITheme : ScriptableObject
         public Material legibleMaterial;
     }
 
-    [Tooltip("Off draws the authored sprites instead, to compare the two.")]
+    [Tooltip("Off draws every shape as a plain Image (icons as their sprites), for debugging.")]
     public bool proceduralShapes = true;
 
     [Tooltip("Draws every shape. Uses the UI/Digital Twin/Shape shader.")]
@@ -54,7 +52,7 @@ public sealed class UITheme : ScriptableObject
     [Tooltip("The design system's components, in the order the catalog shows them.")]
     public List<UIComponentStyle> components = new();
 
-    [Tooltip("Sprite-authored UI: the component and state each sprite stands for.")]
+    [Tooltip("Authored icon sprites: the component and state each stands for (the Icon).")]
     public List<StyleEntry> styles = new();
 
     [Header("Text")]

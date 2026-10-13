@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,6 +9,11 @@ using UnityEngine.UI;
 /// be pressed again, the other stays idle and shows the hover sprite.
 ///
 /// Drives its layout's <see cref="TelemetryVisibility"/>.
+///
+/// A further tab can join the bar (the portrait layout's Ask): it is styled
+/// through <see cref="ApplyTab"/>, and while it is chosen
+/// (<see cref="OtherTabChosen"/>) neither view shows as chosen and both can be
+/// pressed. Choosing a view raises <see cref="ViewChosen"/>, so that tab gives way.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class DigitalTwinModeSwitch : MonoBehaviour
@@ -17,13 +23,27 @@ public sealed class DigitalTwinModeSwitch : MonoBehaviour
     [SerializeField] private Button telemetryButton;
     [SerializeField] private Button serviceButton;
 
-    [Header("Look")]
-    [SerializeField] private Sprite selectedSprite;
-    [SerializeField] private Sprite idleSprite;
-    [SerializeField] private Color selectedTextColor = new Color32(234, 253, 255, 255);
-    [SerializeField] private Color idleTextColor = new Color32(104, 166, 175, 255);
+
+    private bool otherTabChosen;
 
     private IDigitalTwinModeController Controller => controller as IDigitalTwinModeController;
+
+    /// <summary>Raised when Telemetry or Service is chosen, by a press or a script, even the view already on show.</summary>
+    public event Action<DigitalTwinMode> ViewChosen;
+
+    /// <summary>A further tab in this bar is chosen: neither view shows as chosen, and either can be pressed to go back.</summary>
+    public bool OtherTabChosen
+    {
+        get => otherTabChosen;
+        set
+        {
+            if (otherTabChosen == value)
+                return;
+            otherTabChosen = value;
+            if (Controller != null)
+                Apply(Controller.CurrentMode);
+        }
+    }
 
     public Button TelemetryButton => telemetryButton;
     public Button ServiceButton => serviceButton;
@@ -68,14 +88,23 @@ public sealed class DigitalTwinModeSwitch : MonoBehaviour
             Controller.ModeChanged -= Apply;
     }
 
-    public void SelectTelemetry() => Controller?.SetMode(DigitalTwinMode.Telemetry);
+    public void SelectTelemetry() => Select(DigitalTwinMode.Telemetry);
 
-    public void SelectService() => Controller?.SetMode(DigitalTwinMode.Service);
+    public void SelectService() => Select(DigitalTwinMode.Service);
+
+    private void Select(DigitalTwinMode mode)
+    {
+        Controller?.SetMode(mode);
+        ViewChosen?.Invoke(mode);
+    }
+
+    /// <summary>Styles a further tab in this bar as its own segments are: chosen, or idle.</summary>
+    public void ApplyTab(Button tab, bool chosen) => ApplySegment(tab, chosen);
 
     private void Apply(DigitalTwinMode mode)
     {
-        ApplySegment(telemetryButton, mode == DigitalTwinMode.Telemetry);
-        ApplySegment(serviceButton, mode == DigitalTwinMode.Service);
+        ApplySegment(telemetryButton, !otherTabChosen && mode == DigitalTwinMode.Telemetry);
+        ApplySegment(serviceButton, !otherTabChosen && mode == DigitalTwinMode.Service);
     }
 
     private void ApplySegment(Button button, bool selected)
@@ -83,16 +112,13 @@ public sealed class DigitalTwinModeSwitch : MonoBehaviour
         if (button == null)
             return;
 
-        if (button.targetGraphic is Image background)
-        {
-            background.sprite = selected ? selectedSprite : idleSprite;
-            // Preserve the colours authored into the sprites.
-            background.color = Color.white;
-        }
+        // The segment's shape: the design system's Segment, chosen or at rest.
+        UIShape.ShowChosen(button.targetGraphic, selected);
 
+        // Labels in the design system's control colours (UIControlColors).
         TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
         if (label != null)
-            label.color = selected ? selectedTextColor : idleTextColor;
+            label.color = UIControlColors.For(selected);
 
         // The selected view cannot be selected again.
         button.interactable = !selected;

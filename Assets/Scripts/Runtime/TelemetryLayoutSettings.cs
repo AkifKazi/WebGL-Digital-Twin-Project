@@ -9,7 +9,9 @@ public enum TelemetryRailCount
     [InspectorName("1")] One = 1,
     [InspectorName("2")] Two = 2,
     [InspectorName("3")] Three = 3,
-    [InspectorName("4")] Four = 4
+    [InspectorName("4")] Four = 4,
+    /// <summary>As many as the viewer chose in the settings (<see cref="DigitalTwinSettings.RailsPerSide"/>).</summary>
+    [InspectorName("Viewer's choice (settings)")] Viewer = 5
 }
 
 /// <summary>
@@ -20,6 +22,7 @@ public enum TelemetryRailCount
 public readonly struct TelemetryLayoutProfile : IEquatable<TelemetryLayoutProfile>
 {
     public const float DefaultAutoModelShare = 0.4f;
+    public const float DefaultMinimumModelShare = 0.3f;
     public const float DefaultDetailRailWidth = 1.5f;
     public const float DefaultDetailRailHeight = 470f;
 
@@ -32,6 +35,8 @@ public readonly struct TelemetryLayoutProfile : IEquatable<TelemetryLayoutProfil
     private readonly float autoModelShare;
     private readonly float detailRailWidth;
     private readonly float detailRailHeight;
+    private readonly int maximumRails;
+    private readonly float minimumModelShare;
 
     public TelemetryLayoutProfile(
         bool rows,
@@ -39,7 +44,9 @@ public readonly struct TelemetryLayoutProfile : IEquatable<TelemetryLayoutProfil
         bool detailPanel,
         float autoModelShare = DefaultAutoModelShare,
         float detailRailWidth = DefaultDetailRailWidth,
-        float detailRailHeight = DefaultDetailRailHeight)
+        float detailRailHeight = DefaultDetailRailHeight,
+        int maximumRails = TelemetryLayoutSettings.MaximumRailsPerSide,
+        float minimumModelShare = DefaultMinimumModelShare)
     {
         Rows = rows;
         Rails = rails;
@@ -47,6 +54,8 @@ public readonly struct TelemetryLayoutProfile : IEquatable<TelemetryLayoutProfil
         this.autoModelShare = autoModelShare;
         this.detailRailWidth = detailRailWidth;
         this.detailRailHeight = detailRailHeight;
+        this.maximumRails = maximumRails;
+        this.minimumModelShare = minimumModelShare;
     }
 
     // A default profile (all zeros) falls back to the defaults rather than
@@ -54,6 +63,18 @@ public readonly struct TelemetryLayoutProfile : IEquatable<TelemetryLayoutProfil
 
     /// <summary>Auto adds rails only while the model keeps this share of the screen across them.</summary>
     public float AutoModelShare => autoModelShare > 0f ? autoModelShare : DefaultAutoModelShare;
+
+    /// <summary>Most rails a side, whatever is asked: a phone runs fewer than a desktop.</summary>
+    public int MaximumRails => maximumRails > 0
+        ? Mathf.Min(maximumRails, TelemetryLayoutSettings.MaximumRailsPerSide)
+        : TelemetryLayoutSettings.MaximumRailsPerSide;
+
+    /// <summary>
+    /// A set number of rails is kept only while the model keeps this share of
+    /// the screen across them; past it, rails drop and their cards go to the
+    /// next page rather than crowd the model and each other.
+    /// </summary>
+    public float MinimumModelShare => minimumModelShare > 0f ? minimumModelShare : DefaultMinimumModelShare;
 
     /// <summary>Width of the history panel's rail beside card columns, as a multiple of a column's width.</summary>
     public float DetailRailWidthMultiplier => detailRailWidth > 0f ? detailRailWidth : DefaultDetailRailWidth;
@@ -65,14 +86,17 @@ public readonly struct TelemetryLayoutProfile : IEquatable<TelemetryLayoutProfil
         Rows == other.Rows && Rails == other.Rails && DetailPanel == other.DetailPanel &&
         AutoModelShare.Equals(other.AutoModelShare) &&
         DetailRailWidthMultiplier.Equals(other.DetailRailWidthMultiplier) &&
-        DetailRailHeight.Equals(other.DetailRailHeight);
+        DetailRailHeight.Equals(other.DetailRailHeight) &&
+        MaximumRails == other.MaximumRails && MinimumModelShare.Equals(other.MinimumModelShare);
 
     public override bool Equals(object obj) => obj is TelemetryLayoutProfile other && Equals(other);
 
     public override int GetHashCode() => HashCode.Combine(
-        Rows, Rails, DetailPanel, AutoModelShare, DetailRailWidthMultiplier, DetailRailHeight);
+        Rows, Rails, DetailPanel, AutoModelShare, DetailRailWidthMultiplier, DetailRailHeight, MaximumRails,
+        MinimumModelShare);
 
-    public override string ToString() => $"{(Rows ? "rows" : "columns")}={Rails} detail={DetailPanel}";
+    public override string ToString() =>
+        $"{(Rows ? "rows" : "columns")}={Rails} (most {MaximumRails}) detail={DetailPanel}";
 }
 
 /// <summary>
@@ -80,6 +104,14 @@ public readonly struct TelemetryLayoutProfile : IEquatable<TelemetryLayoutProfil
 /// beside the model on a desktop browser (columns in a wide window, rows in a
 /// window taller than it is wide) and on a phone (columns held sideways, rows
 /// held upright), and whether a card opens its history panel.
+///
+/// By default every layout runs the viewer's choice from the settings
+/// (<see cref="DigitalTwinSettings.RailsPerSide"/>: one rail a side unless they
+/// ask for more); a layout set to a number here runs that instead. Either way
+/// a phone runs at most <see cref="MaximumMobileRailsPerSide"/> a side, so the
+/// model and its leader lines stay in sight, and any layout drops rails that
+/// would leave the model less than its share of the screen: those cards go
+/// to the next page.
 ///
 /// Rails are generated and removed to match: a rail that has no card on the
 /// current page hides, so the model keeps the room. The history panel has a
@@ -94,34 +126,40 @@ public sealed class TelemetryLayoutSettings : MonoBehaviour
 {
     public const int MaximumRailsPerSide = 4;
 
+    /// <summary>Most rails a side on a phone or tablet: four in all.</summary>
+    public const int MaximumMobileRailsPerSide = 2;
+
     [Header("Desktop browser")]
     [Tooltip("Card columns on each side of the model in a window wider than it is tall. Auto adds " +
              "columns, as the cards need them, while the model keeps the share below.")]
-    [SerializeField] private TelemetryRailCount desktopColumns = TelemetryRailCount.Auto;
+    [SerializeField] private TelemetryRailCount desktopColumns = TelemetryRailCount.Viewer;
 
     [Tooltip("Card rows above and below the model in a window taller than it is wide " +
              "(a portrait monitor, or a narrow browser window).")]
-    [SerializeField] private TelemetryRailCount desktopRows = TelemetryRailCount.Auto;
+    [SerializeField] private TelemetryRailCount desktopRows = TelemetryRailCount.Viewer;
 
     [Tooltip("A click on a card opens its history panel beside the cards.")]
     [SerializeField] private bool desktopDetailPanel = true;
 
     [Header("Phone and tablet")]
     [Tooltip("Card columns on each side of the model while the phone is held sideways.")]
-    [SerializeField] private TelemetryRailCount mobileColumns = TelemetryRailCount.Auto;
+    [SerializeField] private TelemetryRailCount mobileColumns = TelemetryRailCount.Viewer;
 
     [Tooltip("Card rows above and below the model while the phone is held upright.")]
-    [SerializeField] private TelemetryRailCount mobileRows = TelemetryRailCount.Auto;
+    [SerializeField] private TelemetryRailCount mobileRows = TelemetryRailCount.Viewer;
 
     [Tooltip("A second tap on a card opens its history: beside the cards held sideways, as a " +
              "sheet from the bottom held upright. The first tap only marks the card.")]
     [SerializeField] private bool mobileDetailPanel = true;
 
-    [Header("Auto")]
+    [Header("Room for the model")]
     [Tooltip("Auto adds rails only while the model keeps at least this share of the screen " +
-             "across them. A set number of rails is kept even below it, as long as the rails " +
-             "and the history panel still fit.")]
+             "across them.")]
     [SerializeField, Range(0.2f, 0.8f)] private float autoModelShare = TelemetryLayoutProfile.DefaultAutoModelShare;
+
+    [Tooltip("A set number of rails, or the viewer's choice, drops rails that would leave the model " +
+             "less than this share of the screen across them; their cards go to the next page.")]
+    [SerializeField, Range(0.1f, 0.6f)] private float minimumModelShare = TelemetryLayoutProfile.DefaultMinimumModelShare;
 
     [Header("History panel rail")]
     [Tooltip("Width of the history panel's rail beside card columns, as a multiple of a card column's width.")]
@@ -135,13 +173,21 @@ public sealed class TelemetryLayoutSettings : MonoBehaviour
     public event Action Changed;
 
     /// <summary>What the rails should do on this device, held this way up.</summary>
-    public TelemetryLayoutProfile Resolve(bool mobile, bool rows) => new(
-        rows,
-        mobile ? (rows ? mobileRows : mobileColumns) : (rows ? desktopRows : desktopColumns),
-        mobile ? mobileDetailPanel : desktopDetailPanel,
-        autoModelShare,
-        detailRailWidth,
-        detailRailHeight);
+    public TelemetryLayoutProfile Resolve(bool mobile, bool rows)
+    {
+        TelemetryRailCount rails = mobile ? (rows ? mobileRows : mobileColumns) : (rows ? desktopRows : desktopColumns);
+        if (rails == TelemetryRailCount.Viewer)
+            rails = (TelemetryRailCount)DigitalTwinSettings.RailsPerSide;
+        return new TelemetryLayoutProfile(
+            rows,
+            rails,
+            mobile ? mobileDetailPanel : desktopDetailPanel,
+            autoModelShare,
+            detailRailWidth,
+            detailRailHeight,
+            mobile ? MaximumMobileRailsPerSide : MaximumRailsPerSide,
+            minimumModelShare);
+    }
 
     /// <summary>Sets one layout's rail count from code (tests, setup tools).</summary>
     public void SetRails(bool mobile, bool rows, TelemetryRailCount count)

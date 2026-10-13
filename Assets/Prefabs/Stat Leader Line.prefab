@@ -65,7 +65,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 34593822a64164d118b64f29c886151c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -75,7 +75,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 8dbecb7b174344631bc7db4eb4906c6a, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -144,7 +144,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: e7b72683c34c54b86bfc4eb839962c66, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -154,7 +154,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: fa583745d3e0c4f179350c43fa36c8a7, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -231,7 +231,7 @@ MonoBehaviour:
   anchorProgress: 0
   matchCardStateColor: 1
   defaultColor: {r: 0, g: 1, b: 1, a: 1}
-  restingLineOpacity: 0.0125
+  restingLineOpacity: 0.25
   emptySecondaryRailsRestingOpacity: 0.2
   restingAnchorOpacity: 0.4
   focusToRestDuration: 0.23
@@ -243,6 +243,7 @@ MonoBehaviour:
   cardCrossingMargin: 6
   reversedDirectionMargin: 12
   keepAlarmLinesOpaqueWhenReversed: 0
+  restingConnectorOpacity: 0.35
 --- !u!1 &7294951810797098089
 GameObject:
   m_ObjectHideFlags: 0
@@ -308,7 +309,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 34593822a64164d118b64f29c886151c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -318,7 +319,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 8dbecb7b174344631bc7db4eb4906c6a, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 

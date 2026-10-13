@@ -6,6 +6,11 @@ using UnityEngine;
 /// <see cref="UIDesignTokens"/>): its font, size, letter spacing, case and
 /// colour. Editing the style in the tokens updates every text that uses it.
 /// The text's own content, alignment and wrapping stay as authored.
+///
+/// A text in the Button style on a control (one with a
+/// <see cref="UIControlState"/>) is that control's label: it takes the
+/// control colours (<see cref="UIControlColors"/>) for the control's state
+/// rather than the style's colour, near white when chosen and a quiet cyan at rest.
 /// </summary>
 [ExecuteAlways]
 [DisallowMultipleComponent]
@@ -18,6 +23,9 @@ public sealed class UITextStyle : MonoBehaviour
 
     [Tooltip("Keep the text's own colour (set by a view for a state) instead of the style's.")]
     [SerializeField] private bool keepColor;
+
+    /// <summary>The text style a control's label is written in.</summary>
+    public const string ControlLabelStyle = "Button";
 
     public string Name
     {
@@ -44,6 +52,7 @@ public sealed class UITextStyle : MonoBehaviour
 
     private void OnValidate() => Apply();
 
+
     public void Apply()
     {
         if (this == null)
@@ -57,7 +66,18 @@ public sealed class UITextStyle : MonoBehaviour
         text.fontSize = style.size;
         text.characterSpacing = style.letterSpacing;
         text.fontStyle = style.uppercase ? text.fontStyle | FontStyles.UpperCase : text.fontStyle & ~FontStyles.UpperCase;
-        if (!keepColor)
+        if (keepColor)
+            return;
+        // A control's label follows the control's state, read now: the label
+        // may be added after the control last changed state.
+        UIControlState control = string.Equals(textStyle, ControlLabelStyle, System.StringComparison.Ordinal)
+            ? GetComponentInParent<UIControlState>(true)
+            : null;
+        if (control == null)
             text.color = style.color.Resolve();
+        else
+            text.color = control.State == UIState.Disabled
+                ? UIControlColors.Disabled
+                : UIControlColors.For(control.State == UIState.Selected);
     }
 }

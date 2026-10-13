@@ -15,7 +15,7 @@ MonoBehaviour:
   colors:
   - name: Accent
     color: {r: 0.21176471, g: 0.92941177, b: 1, a: 1}
-    use: Interactive edges, selected text, normal readings.
+    use: Interactive edges and marks, normal readings.
   - name: Accent Bright
     color: {r: 0.54901963, g: 0.9647059, b: 1, a: 1}
     use: The edge of what is selected or pressed.
@@ -64,6 +64,12 @@ MonoBehaviour:
   - name: Label
     color: {r: 0, g: 0.92156863, b: 1, a: 1}
     use: Section labels and headings.
+  - name: Control
+    color: {r: 0.80784315, g: 0.8901961, b: 0.9019608, a: 1}
+    use: 'A control''s label and icon at rest: an unselected segment, tab or option, a button, an icon button.'
+  - name: Control Selected
+    color: {r: 0.91764706, g: 0.99215686, b: 1, a: 1}
+    use: 'The chosen control''s label and icon: the selected segment, tab or option, an open panel''s launcher.'
   - name: White
     color: {r: 1, g: 1, b: 1, a: 1}
     use: 'Marks tinted by their owner: lines, bars, icons.'
@@ -133,10 +139,10 @@ MonoBehaviour:
     letterSpacing: 2
     uppercase: 1
     color:
-      token: Text
+      token: Control
       alpha: 1
       custom: {r: 0, g: 0, b: 0, a: 0}
-    use: Text on a button or segment.
+    use: 'A control''s label: a button, segment or tab. Near white (Control Selected) when chosen.'
   - name: Body
     font: {fileID: 11400000, guid: a957a584c7c194375ba4ce263540e876, type: 2}
     size: 20

@@ -152,7 +152,6 @@ public class StatRailManager : MonoBehaviour
     private bool detailRail;
     private int railCount = 1;
     private float detailThickness;
-    private int warnedRailRequest = -1;
 
     private bool layoutBuilt;
     private bool rebuildPending;
@@ -163,7 +162,8 @@ public class StatRailManager : MonoBehaviour
     private float[] spreadTargets;
     private float[] keepOutStarts = new float[4];
     private float[] keepOutEnds = new float[4];
-    private static readonly Vector3[] ConnectorPoints = new Vector3[2];
+    // A line's points in world space: a connector's two, or a leader line's three.
+    private static readonly Vector3[] ConnectorPoints = new Vector3[3];
 
     // -----------------------------------------------------------------------
     // The layout
@@ -542,28 +542,31 @@ public class StatRailManager : MonoBehaviour
 
     /// <summary>
     /// Auto: as many rails as fit while the model keeps its share of the screen
-    /// and the history panel's rail still fits between them. A set number is
-    /// kept as long as the rails and that panel fit at all; asking for more
-    /// than fit runs as many as do, with a warning.
+    /// and the history panel's rail still fits between them. A set number (the
+    /// viewer's choice, usually) is a most: rails that would leave the model
+    /// less than <see cref="TelemetryLayoutProfile.MinimumModelShare"/> drop,
+    /// and their cards go to further pages rather than crowd the model and each
+    /// other. A window that grows gets them back. Never more than the profile's
+    /// <see cref="TelemetryLayoutProfile.MaximumRails"/> (fewer on a phone).
     /// </summary>
     private int ResolveRailCount(float thickness)
     {
         float cross = ContentCross();
-        float modelShare = requested.AutoModelShare;
-
-        // At the least, one history panel and a sliver of the model stay clear.
-        int fit = FitCount(cross, Mathf.Max(detailThickness, cross * 0.12f), thickness);
+        int most = requested.MaximumRails;
+        int fit = Mathf.Min(most,
+            FitCount(cross, Mathf.Max(detailThickness, cross * requested.MinimumModelShare), thickness));
         if (requested.Rails == TelemetryRailCount.Auto)
-            return Mathf.Clamp(FitCount(cross, Mathf.Max(detailThickness, cross * modelShare), thickness), 1, fit);
-
-        int asked = (int)requested.Rails;
-        if (asked > fit && warnedRailRequest != asked)
         {
-            warnedRailRequest = asked;
-            Debug.LogWarning(
-                $"{name}: {asked} {(rows ? "rows" : "columns")} per side do not fit on this screen" +
-                (detailRail ? " beside the history panel's rail" : string.Empty) + $"; showing {fit}.", this);
+            int auto = FitCount(cross, Mathf.Max(detailThickness, cross * requested.AutoModelShare), thickness);
+            return Mathf.Clamp(auto, 1, fit);
         }
+
+        int asked = Mathf.Min(requested.Rails == TelemetryRailCount.Viewer
+            ? DigitalTwinSettings.RailsPerSide
+            : (int)requested.Rails, most);
+        if (asked > fit && showDebugLogs)
+            Debug.Log($"{name}: {asked} {(rows ? "rows" : "columns")} per side do not fit beside the model" +
+                      (detailRail ? " and the history panel's rail" : string.Empty) + $"; showing {fit}.", this);
         return Mathf.Clamp(asked, 1, fit);
     }
 
@@ -951,14 +954,15 @@ public class StatRailManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Room an inner rail keeps free, about one card's worth, while detail
-    /// panels have their rail: the cards on it can then always step aside for
-    /// a connector from an outer card to its panel. The outermost rail keeps
-    /// none, so it holds as many cards as fit and the inner ones one fewer.
+    /// Room an inner rail keeps free, about one card's worth: the cards on it
+    /// can then always step aside for a line from a card on a rail outside it,
+    /// the connector to its detail panel or the focused card's leader line.
+    /// The outermost rail keeps none, so it holds as many cards as fit and the
+    /// inner ones one fewer.
     /// </summary>
     private float ConnectorRoom(Rail rail, int depth)
     {
-        if (!detailRail || depth == 0)
+        if (depth == 0)
             return 0f;
         float nominal = rows ? RowCardWidthFor(rail.Container) : cardHeight;
         return nominal + Gap + ConnectorWidth;
@@ -1235,15 +1239,15 @@ public class StatRailManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Where connectors cross this rail: one from each card on a rail outside
-    /// it, on the same side, whose detail panel is open beside the rails. In
-    /// the spread's positions (the negated distance along the rail). Returns
-    /// how many there are.
+    /// Where lines from cards on the rails outside this one, on the same side,
+    /// cross it, so its cards step aside and the line stays in sight: the
+    /// connector from a card to its detail panel open beside the rails, and,
+    /// for the focused card when it has no panel there (a phone's first tap,
+    /// or panels turned off), its leader line to the sensor. In the spread's
+    /// positions (the negated distance along the rail). Returns how many there are.
     /// </summary>
     private int CollectConnectorKeepOuts(Rail rail)
     {
-        if (!detailRail)
-            return 0;
         List<Rail> edgeRails = rails[rail.Edge];
         int depth = edgeRails.IndexOf(rail);
         if (depth <= 0)
@@ -1264,32 +1268,45 @@ public class StatRailManager : MonoBehaviour
             foreach (RailCardBinding binding in outerRail.Bindings)
             {
                 PerformanceStatCardView card = binding.Card;
-                if (card == null || !card.isActiveAndEnabled ||
-                    !CardFocus.TryGetDetailLink(card, out ICardDetailLink link) ||
-                    link.CardSidePoint == null || card.OwnConnectionPoint == null)
+                if (card == null || !card.isActiveAndEnabled)
                     continue;
 
-                ConnectorPoints[0] = card.OwnConnectionPoint.position;
-                ConnectorPoints[1] = link.CardSidePoint.position;
-                if (!TryGetLocal(container, ConnectorPoints[0], uiCamera, out Vector2 from) ||
-                    !TryGetLocal(container, ConnectorPoints[1], uiCamera, out Vector2 to))
-                    continue;
-
-                // The connector runs across the rail; where it is not square
-                // to it (a panel pushed along by another), it sweeps a stretch.
-                float alongFrom = rows ? -from.x : from.y;
-                float alongTo = rows ? -to.x : to.y;
-                float crossFrom = rows ? from.y : from.x;
-                float crossTo = rows ? to.y : to.x;
-                float a = alongFrom;
-                float b = alongTo;
-                if (!Mathf.Approximately(crossFrom, crossTo))
+                int points;
+                if (CardFocus.TryGetDetailLink(card, out ICardDetailLink link) && link.CardSidePoint != null &&
+                    card.OwnConnectionPoint != null)
                 {
-                    float t0 = Mathf.Clamp01((crossMin - crossFrom) / (crossTo - crossFrom));
-                    float t1 = Mathf.Clamp01((crossMax - crossFrom) / (crossTo - crossFrom));
-                    a = Mathf.Lerp(alongFrom, alongTo, t0);
-                    b = Mathf.Lerp(alongFrom, alongTo, t1);
+                    if (!detailRail)
+                        continue;
+                    ConnectorPoints[0] = card.OwnConnectionPoint.position;
+                    ConnectorPoints[1] = link.CardSidePoint.position;
+                    points = 2;
                 }
+                else if (card.IsFocused && StatLeaderLineView.TryGetPath(card, ConnectorPoints))
+                {
+                    points = 3;
+                }
+                else
+                {
+                    continue;
+                }
+
+                // The stretch along the rail the line covers while it is
+                // across the rail: where it runs square to the rail that is a
+                // point, where it slants (a panel pushed along by another, a
+                // leader line's diagonal) it sweeps a stretch.
+                float low = float.MaxValue;
+                float high = float.MinValue;
+                for (int i = 0; i + 1 < points; i++)
+                {
+                    if (!TryGetLocal(container, ConnectorPoints[i], uiCamera, out Vector2 from) ||
+                        !TryGetLocal(container, ConnectorPoints[i + 1], uiCamera, out Vector2 to) ||
+                        !AlongWhileAcross(from, to, crossMin, crossMax, out float a, out float b))
+                        continue;
+                    low = Mathf.Min(low, Mathf.Min(a, b));
+                    high = Mathf.Max(high, Mathf.Max(a, b));
+                }
+                if (low > high)
+                    continue;
 
                 if (count == keepOutStarts.Length)
                 {
@@ -1297,12 +1314,46 @@ public class StatRailManager : MonoBehaviour
                     System.Array.Resize(ref keepOutEnds, count * 2);
                 }
                 float half = ConnectorWidth * 0.5f;
-                keepOutStarts[count] = -Mathf.Max(a, b) - half;
-                keepOutEnds[count] = -Mathf.Min(a, b) + half;
+                keepOutStarts[count] = -high - half;
+                keepOutEnds[count] = -low + half;
                 count++;
             }
         }
         return count;
+    }
+
+    /// <summary>
+    /// The positions along the rail (<paramref name="a"/> to <paramref name="b"/>)
+    /// of the part of the segment that lies across the rail, between
+    /// <paramref name="crossMin"/> and <paramref name="crossMax"/>. False when
+    /// none of it does.
+    /// </summary>
+    private bool AlongWhileAcross(Vector2 from, Vector2 to, float crossMin, float crossMax, out float a, out float b)
+    {
+        float alongFrom = rows ? -from.x : from.y;
+        float alongTo = rows ? -to.x : to.y;
+        float crossFrom = rows ? from.y : from.x;
+        float crossTo = rows ? to.y : to.x;
+        float enter = 0f;
+        float exit = 1f;
+        if (Mathf.Approximately(crossFrom, crossTo))
+        {
+            if (crossFrom < crossMin || crossFrom > crossMax)
+            {
+                a = b = 0f;
+                return false;
+            }
+        }
+        else
+        {
+            float t0 = (crossMin - crossFrom) / (crossTo - crossFrom);
+            float t1 = (crossMax - crossFrom) / (crossTo - crossFrom);
+            enter = Mathf.Max(0f, Mathf.Min(t0, t1));
+            exit = Mathf.Min(1f, Mathf.Max(t0, t1));
+        }
+        a = Mathf.Lerp(alongFrom, alongTo, enter);
+        b = Mathf.Lerp(alongFrom, alongTo, exit);
+        return enter <= exit;
     }
 
     private static bool TryGetLocal(RectTransform container, Vector3 worldPoint, Camera uiCamera, out Vector2 local) =>

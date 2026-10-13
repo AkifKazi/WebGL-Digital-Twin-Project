@@ -55,31 +55,6 @@ public class ViewModeSegmentedControl : MonoBehaviour
     [SerializeField]
     private TMP_Text xrayLabel;
 
-    [Header("Background Sprites")]
-    [SerializeField]
-    private Sprite selectedSprite;
-
-    [SerializeField]
-    private Sprite inactiveSprite;
-
-    [Header("Selected Colours")]
-    [SerializeField]
-    private Color selectedTextColor =
-        new Color32(234, 253, 255, 255);
-
-    [SerializeField]
-    private Color selectedIconColor =
-        new Color32(54, 237, 255, 255);
-
-    [Header("Inactive Colours")]
-    [SerializeField]
-    private Color inactiveTextColor =
-        new Color32(104, 166, 175, 255);
-
-    [SerializeField]
-    private Color inactiveIconColor =
-        new Color32(104, 166, 175, 255);
-
     [Header("Segment copy")]
     [Tooltip("Label for the exterior segment. Portrait layouts use shorter copy so three segments fit.")]
     [SerializeField]
@@ -619,32 +594,17 @@ public class ViewModeSegmentedControl : MonoBehaviour
         Image icon,
         TMP_Text label)
     {
-        if (background != null)
-        {
-            background.sprite =
-                selected
-                    ? selectedSprite
-                    : inactiveSprite;
+        // The segment's shape: the design system's Segment, chosen or at rest.
+        UIShape.ShowChosen(background, selected);
 
-            // Preserve the colours authored into the sprites.
-            background.color = Color.white;
-        }
+        // Icon and label in the design system's control colours (UIControlColors).
+        Color content = UIControlColors.For(selected);
 
         if (icon != null)
-        {
-            icon.color =
-                selected
-                    ? selectedIconColor
-                    : inactiveIconColor;
-        }
+            icon.color = content;
 
         if (label != null)
-        {
-            label.color =
-                selected
-                    ? selectedTextColor
-                    : inactiveTextColor;
-        }
+            label.color = content;
     }
 
     private void ApplyInteractionState(

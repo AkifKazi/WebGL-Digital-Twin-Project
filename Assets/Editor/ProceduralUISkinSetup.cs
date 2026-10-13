@@ -12,12 +12,12 @@ using UnityEngine.UI;
 ///
 /// Creates or updates the design system's assets (UIDesignSystemDefaults),
 /// then turns every Image in SampleScene and the UI prefabs into a UIShape and
-/// removes the room the sprites left for their baked glow. The sprites stay in
-/// the project and on the shapes: they name each sprite-authored shape's role
-/// in the theme, and turning the theme's Procedural Shapes off draws them again.
+/// removes the room the old sprites left for their baked glow. Shapes name
+/// their component and state themselves; only icons are still sprites, drawn
+/// by the theme's Icon component.
 ///
 /// Safe to run again. Run it after any setup tool that rebuilds a UI prefab
-/// (such as Set Up Telemetry Detail Panel), which puts sprite Images back.
+/// (such as Set Up Telemetry Detail Panel), for the insets and styles below.
 /// </summary>
 public static class ProceduralUISkinSetup
 {
@@ -60,22 +60,6 @@ public static class ProceduralUISkinSetup
         Debug.Log("PROCEDURAL_UI_SKIN design system reset to its defaults.");
     }
 
-    [MenuItem("Tools/Digital Twin/UI Skin/Compare With Sprite Skin")]
-    public static void ToggleComparison()
-    {
-        UITheme theme = AssetDatabase.LoadAssetAtPath<UITheme>(ThemePath);
-        if (theme == null)
-        {
-            Debug.LogWarning("Run Tools/Digital Twin/UI Skin/Apply Procedural Skin first.");
-            return;
-        }
-        theme.proceduralShapes = !theme.proceduralShapes;
-        EditorUtility.SetDirty(theme);
-        AssetDatabase.SaveAssets();
-        UITheme.RaiseChanged();
-        Debug.Log(theme.proceduralShapes ? "Showing procedural shapes." : "Showing the sprite skin.");
-    }
-
     // ---- scene and prefabs ------------------------------------------------------
 
     private static int ApplyToPrefabs()
@@ -109,12 +93,11 @@ public static class ProceduralUISkinSetup
             SetFloat(view, "contentPaddingInsideBackground", 22f);
             SetFloat(view, "verticalContentPadding", 14f);
 
-            // Hover lights the card like a control; alarm states keep their own look.
-            Sprite idle = LoadSprite("Compact Button Background");
-            Sprite hover = LoadSprite("Button Hover Background");
+            // Hover lights the card like a control (the Card's hover look);
+            // alarm states keep their own, a little brighter.
             if (!root.TryGetComponent(out UIHoverSprite hoverLook))
                 hoverLook = root.AddComponent<UIHoverSprite>();
-            hoverLook.Configure(background.GetComponent<Image>(), hover, idle, null);
+            hoverLook.Configure(background.GetComponent<Image>(), false, null);
         });
 
         count += EditPrefab(LinePrefabPath, root =>
@@ -138,9 +121,17 @@ public static class ProceduralUISkinSetup
                 shape.color = Color.white;
             }
             SegmentRanges(root);
+            SelectedPin(root);
         });
         return count;
     }
+
+    /// <summary>
+    /// Restyles only the telemetry detail panel's pin (batch: -executeMethod), for
+    /// when the rest of the skin is already applied.
+    /// </summary>
+    public static void ApplyToPin() =>
+        EditPrefab(PanelPrefabPath, SelectedPin);
 
     private static int ApplyToScene()
     {
@@ -288,6 +279,26 @@ public static class ProceduralUISkinSetup
         frame.raycastTarget = false;
         SetRect(ranges, new(0f, 0.5f), new(0f, 0.5f), new(0f, 0.5f),
             new(ranges.anchoredPosition.x, 0f), new(count * Cell + Pad * 2f, CellHeight + Pad * 2f));
+    }
+
+    /// <summary>
+    /// A pinned panel's pin, drawn as the selected range beside it is: a
+    /// Selected segment, set in as far as the ranges sit inside their frame.
+    /// Its icon takes the control colours (TelemetryDetailPanel.SetPinned).
+    /// </summary>
+    private static void SelectedPin(GameObject root)
+    {
+        const float Pad = 3f;
+        RectTransform pinned = Find(root, "Pinned");
+        UIShape shape = Shape(pinned);
+        shape.Component = LoadComponent("Segment");
+        shape.State = UIState.Selected;
+        shape.color = Color.white;
+        shape.raycastTarget = false;
+        pinned.anchorMin = Vector2.zero;
+        pinned.anchorMax = Vector2.one;
+        pinned.offsetMin = new Vector2(Pad, Pad);
+        pinned.offsetMax = new Vector2(-Pad, -Pad);
     }
 
     private static Sprite LoadSprite(string name) =>

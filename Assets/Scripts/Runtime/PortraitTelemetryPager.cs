@@ -24,10 +24,6 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
     [SerializeField] private CanvasGroup nextCanvasGroup;
     [SerializeField] private Graphic nextIcon;
 
-    [Header("Availability colours")]
-    [SerializeField] private Color enabledIconColor = Color.white;
-    [SerializeField] private Color disabledIconColor = new(0.48f, 0.52f, 0.55f, 1f);
-
     private bool listenersAdded;
 
     public StatRailManager RailManager => railManager;
@@ -169,7 +165,7 @@ public sealed class PortraitTelemetryPager : MonoBehaviour
             button.interactable = telemetryVisible && available;
 
         if (icon != null)
-            icon.color = available ? enabledIconColor : disabledIconColor;
+            icon.color = UIControlColors.For(false, available);
 
         if (group == null)
             return;

@@ -13,9 +13,6 @@ public static class PortraitPaginationUISetup
     private const string PortraitRowName = "Telemetry Pagination and Zoom";
     private const string WidePaginationName = "Telemetry Pagination Controls";
     private const string SpacerName = "Bottom Control Spacer";
-    private const string PanelPath = "Assets/UI/Sprites/Panel Background.png";
-    private const string RestingPath = "Assets/UI/Sprites/Solid UI Fill.png";
-    private const string PressedPath = "Assets/UI/Sprites/Compact Button Background.png";
     private const string PreviousIconPath = "Assets/UI/Sprites/Arrow Left Icon.png";
     private const string NextIconPath = "Assets/UI/Sprites/Arrow Right Icon.png";
     private const float PortraitSpacing = 26f;
@@ -221,11 +218,10 @@ public static class PortraitPaginationUISetup
         GameObject buttonObject = CreateUiObject(name, parent);
         RectTransform rect = buttonObject.GetComponent<RectTransform>();
         rect.sizeDelta = new Vector2(MinimumArrowWidth, height);
-        Image panel = buttonObject.AddComponent<Image>();
-        panel.sprite = LoadSprite(PanelPath);
-        panel.type = Image.Type.Sliced;
+        UIRoleShape.Add(buttonObject, "Panel");
         Button button = buttonObject.AddComponent<Button>();
-        button.transition = Selectable.Transition.SpriteSwap;
+        // Hover and press come from the Segment's own looks (UIHoverSprite).
+        button.transition = Selectable.Transition.None;
         button.navigation = new Navigation { mode = Navigation.Mode.None };
         LayoutElement element = buttonObject.AddComponent<LayoutElement>();
         element.minWidth = MinimumArrowWidth;
@@ -239,23 +235,16 @@ public static class PortraitPaginationUISetup
         RectTransform interactionRect = interactionObject.GetComponent<RectTransform>();
         interactionRect.anchorMin = interactionRect.anchorMax = new Vector2(0.5f, 0.5f);
         interactionRect.sizeDelta = new Vector2(InteractionWidth, Mathf.Max(1f, height - 8f));
-        Image interaction = interactionObject.AddComponent<Image>();
-        interaction.sprite = LoadSprite(RestingPath);
-        interaction.type = Image.Type.Sliced;
+        Image interaction = UIRoleShape.Add(interactionObject, "Segment");
         interaction.raycastTarget = false;
         button.targetGraphic = interaction;
-        Sprite pressed = LoadSprite(PressedPath);
-        SpriteState states = button.spriteState;
-        states.highlightedSprite = pressed;
-        states.pressedSprite = pressed;
-        states.selectedSprite = pressed;
-        button.spriteState = states;
+        buttonObject.AddComponent<UIHoverSprite>().Configure(interaction, false, null);
 
         GameObject iconObject = CreateUiObject("Icon", interactionRect);
         RectTransform iconRect = iconObject.GetComponent<RectTransform>();
         iconRect.anchorMin = iconRect.anchorMax = new Vector2(0.5f, 0.5f);
         iconRect.sizeDelta = new Vector2(34f, 34f);
-        Image icon = iconObject.AddComponent<Image>();
+        Image icon = iconObject.AddComponent<UIShape>();
         icon.sprite = iconSprite;
         icon.preserveAspect = true;
         icon.raycastTarget = false;

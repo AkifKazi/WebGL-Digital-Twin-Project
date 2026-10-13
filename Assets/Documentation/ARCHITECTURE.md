@@ -81,6 +81,20 @@ setup. Adding a machine means creating another configuration and, only when phys
 behavior requires it, a small configurator implementing
 `IDigitalTwinMachineSceneConfigurator`. The central setup script remains unchanged.
 
+## Ask window
+
+`AskTwinWindow` is presentation only: it builds its Ask button, the window and, in the portrait
+layout, the ASK tab (a third segment of the `DigitalTwinModeSwitch`, which raises `ViewChosen` so
+the tab gives way) in code from the design system, and asks `TwinAssistant` for answers. `TwinAssistant`
+(on the Digital Twin Runtime object) gathers a snapshot of the registry and the service
+schedule, with each reading's trend from `TelemetryAiDataTable`, and answers with the plain rules
+in `TwinAssistantAnswers`, or hands the question to the hosting page for a language model.
+Neither changes the registry, a sensor or the machine: pressing what an answer refers to only
+focuses a card (`CardFocus`) or opens a part (`ServicePartLink`), as a viewer's own press would.
+
+The window sits on the root canvas, outside both layouts, on a nested canvas sorted above them.
+Its `LeaderLineObstacle` is marked **every layout**, so each layout's leader lines fade under it.
+
 ## Data-provider boundary
 
 Every provider must produce `TelemetryReading` values and submit them through `ITelemetryReadingSink`. Current adapters are:

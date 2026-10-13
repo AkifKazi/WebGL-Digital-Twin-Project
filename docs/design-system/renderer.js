@@ -35,7 +35,7 @@
   uniform vec4 uShape;     // corner radius, stroke width, glow size, shadow softness
   uniform vec4 uExtra;     // shadow offset xy, inner glow, gradient end
   uniform vec4 uAnim;      // hatch, glow multiplier, bottom light, highlight
-  uniform vec4 uCut;       // chamfer, chamfer corner mask, gradient direction, light height
+  uniform vec4 uCut;       // chamfer (or tail size), chamfer corner mask, gradient direction + tail side * 4, light height
   uniform vec4 uFill;
   uniform vec4 uStroke;
   uniform vec4 uGlow;      // rgb premultiplied by strength, strength
@@ -57,6 +57,29 @@
       d = on > 0.5 ? max(d, cutDistance) : d;
     }
     return d;
+  }
+
+  float SdTriangle(vec2 p, vec2 p0, vec2 p1, vec2 p2) {
+    vec2 e0 = p1 - p0, e1 = p2 - p1, e2 = p0 - p2;
+    vec2 v0 = p - p0, v1 = p - p1, v2 = p - p2;
+    vec2 pq0 = v0 - e0 * clamp(dot(v0, e0) / dot(e0, e0), 0.0, 1.0);
+    vec2 pq1 = v1 - e1 * clamp(dot(v1, e1) / dot(e1, e1), 0.0, 1.0);
+    vec2 pq2 = v2 - e2 * clamp(dot(v2, e2) / dot(e2, e2), 0.0, 1.0);
+    float s = sign(e0.x * e2.y - e0.y * e2.x);
+    vec2 d = min(min(vec2(dot(pq0, pq0), s * (v0.x * e0.y - v0.y * e0.x)),
+                     vec2(dot(pq1, pq1), s * (v1.x * e1.y - v1.y * e1.x))),
+                     vec2(dot(pq2, pq2), s * (v2.x * e2.y - v2.y * e2.x)));
+    return -sqrt(d.x) * sign(d.y);
+  }
+
+  // The box with its speech tail, as UIShape.shader draws it (side 1 bottom right, 2 bottom left).
+  float SdShape(vec2 p, vec2 halfSize, float radius, float cut, float cornerMask, float tailSide) {
+    if (tailSide < 0.5) return SdBox(p, halfSize, radius, cut, cornerMask);
+    vec2 q = vec2(tailSide < 1.5 ? p.x : -p.x, p.y);
+    float size = min(cut, min(halfSize.x, halfSize.y));
+    vec2 corner = vec2(halfSize.x, -halfSize.y);
+    float tail = SdTriangle(q, corner + vec2(-size, 0.0), corner + vec2(size, 0.0), corner + vec2(-size, size * 2.0));
+    return min(SdBox(p, halfSize, radius, 0.0, 0.0), tail);
   }
 
   vec4 Sprite(vec2 at) {
@@ -109,12 +132,14 @@
     float thin = clamp(halfSize.x * 2.0 / pixel, 0.0, 1.0) * clamp(halfSize.y * 2.0 / pixel, 0.0, 1.0);
 
     float radius = uShape.x;
-    float d = SdBox(p, drawnHalf, radius, uCut.x, floor(uCut.y + 0.5));
+    float directionAndTail = floor(uCut.z + 0.5);
+    float tailSide = floor(directionAndTail / 4.0);
+    float d = SdShape(p, drawnHalf, radius, uCut.x, floor(uCut.y + 0.5), tailSide);
     float body = clamp(0.5 - d / aa * 0.5, 0.0, 1.0);
     float outside = max(d, 0.0);
 
     float softness = uShape.w;
-    float ds = SdBox(p - uExtra.xy, drawnHalf, radius, uCut.x, floor(uCut.y + 0.5));
+    float ds = SdShape(p - uExtra.xy, drawnHalf, radius, uCut.x, floor(uCut.y + 0.5), tailSide);
     float shadowCover = 1.0 - smoothstep(-softness * 0.5 - aa, softness * 0.5 + aa, ds);
     vec4 color = vec4(uShadow.rgb, 1.0) * (uShadow.a * shadowCover * thin);
 
@@ -128,7 +153,7 @@
     color.rgb += uGlow.rgb * glow * uAnim.y;
     color.rgb += mix(uGlow.rgb, uGlow.aaa, 0.75) * hot * highlight * 0.9 * outsideOnly * uAnim.y;
 
-    float direction = floor(uCut.z + 0.5);
+    float direction = directionAndTail - tailSide * 4.0;
     vec2 uv = p / max(halfSize, vec2(1e-3)) * 0.5 + 0.5;
     float along = direction < 0.5 ? 1.0 - uv.y : direction < 1.5 ? uv.y : direction < 2.5 ? uv.x : 1.0 - uv.x;
     float gradient = mix(1.0, uExtra.w, clamp(along, 0.0, 1.0));
@@ -336,8 +361,9 @@
       const fade = tint[3] * tint[3];
       const glowColor = look.glow;
       const glowStrength = look.glowStrength * glowColor[3] * fade;
+      const tailSize = kind === 0 && look.tail > 0 ? (look.tailSize || 0) : 0;
       const reach = Math.max(look.glowSize, Math.hypot(look.shadowOffset[0], look.shadowOffset[1]) + look.shadowSoftness)
-        + 2 / this.dpr + 1;
+        + tailSize + 2 / this.dpr + 1;
       const hx = rect.width / 2, hy = rect.height / 2;
       if (rect.left > this.cssW + reach || rect.left + rect.width < -reach ||
           rect.top > this.cssH + reach || rect.top + rect.height < -reach) return;
@@ -376,7 +402,8 @@
         gl.bindTexture(gl.TEXTURE_2D, this.white);
         gl.uniform4f(u.uShape, look.cornerRadius, look.strokeWidth, look.glowSize, look.shadowSoftness);
         gl.uniform4f(u.uExtra, look.shadowOffset[0], look.shadowOffset[1], look.innerGlow, look.gradientEnd);
-        gl.uniform4f(u.uCut, look.chamfer, look.chamferCorners, look.gradientStart, look.bottomLightHeight);
+        gl.uniform4f(u.uCut, tailSize > 0 ? tailSize : look.chamfer, tailSize > 0 ? 0 : look.chamferCorners,
+          look.gradientStart + (tailSize > 0 ? look.tail * 4 : 0), look.bottomLightHeight);
         gl.uniform4f(u.uIcon, 0, 0, 0, 0);
       }
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

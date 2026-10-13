@@ -37,6 +37,7 @@ public static class UIDesignSystemDefaults
     public const string Containers = "Containers";
     public const string Controls = "Controls";
     public const string Telemetry = "Telemetry";
+    public const string Conversation = "Conversation";
     public const string Marks = "Marks";
     public const string Parts = "Parts";
 
@@ -85,12 +86,10 @@ public static class UIDesignSystemDefaults
             tokens = ScriptableObject.CreateInstance<UIDesignTokens>();
             AssetDatabase.CreateAsset(tokens, TokensPath);
         }
-        if (!created && !reset)
-            return tokens;
 
-        tokens.colors = new List<UIDesignTokens.ColorToken>
+        List<UIDesignTokens.ColorToken> colors = new()
         {
-            C("Accent", "36EDFF", "Interactive edges, selected text, normal readings."),
+            C("Accent", "36EDFF", "Interactive edges and marks, normal readings."),
             C("Accent Bright", "8CF6FF", "The edge of what is selected or pressed."),
             C("Accent Deep", "16596A", "The fill of what is selected, hovered or pressed."),
             C("Warning", "FFB31A", "Readings and services that need attention soon."),
@@ -107,8 +106,22 @@ public static class UIDesignSystemDefaults
             C("Shadow", "000608", "Shadows that keep edges and text readable on bright scenes."),
             C("Text", "EAFDFF", "Values and primary text."),
             C("Label", "00EBFF", "Section labels and headings."),
+            C("Control", "CEE3E6", "A control's label and icon at rest: an unselected segment, tab or option, a button, an icon button."),
+            C("Control Selected", "EAFDFF", "The chosen control's label and icon: the selected segment, tab or option, an open panel's launcher."),
             C("White", "FFFFFF", "Marks tinted by their owner: lines, bars, icons.")
         };
+        if (!created && !reset)
+        {
+            // Kept as edited; tokens added to the defaults since are added.
+            foreach (UIDesignTokens.ColorToken token in colors)
+            {
+                if (!tokens.colors.Exists(existing => existing.name == token.name))
+                    tokens.colors.Add(token);
+            }
+            EditorUtility.SetDirty(tokens);
+            return tokens;
+        }
+        tokens.colors = colors;
         tokens.spacing = new List<UIDesignTokens.SizeToken>
         {
             S("XS", 4f, "Inside a segmented control; icon to its label."),
@@ -126,7 +139,7 @@ public static class UIDesignSystemDefaults
             T("Value", semiBold, 32f, 1f, false, "Text", 1f, "A reading on a card."),
             T("Title", semiBold, 24f, 3f, true, "Text", 1f, "A card's or part's name."),
             T("Label", medium, 20f, 6f, true, "Label", 1f, "Section labels and headings."),
-            T("Button", medium, 20f, 2f, true, "Text", 1f, "Text on a button or segment."),
+            T("Button", medium, 20f, 2f, true, "Control", 1f, "A control's label: a button, segment or tab. Near white (Control Selected) when chosen."),
             T("Body", medium, 20f, 1f, false, "Text", 1f, "Sentences: causes, fixes, notes."),
             T("Caption", medium, 17f, 3f, true, "Text", 0.62f, "Secondary labels and units.")
         };
@@ -374,6 +387,14 @@ public static class UIDesignSystemDefaults
             c.criticalHover = Style("List Row", "Critical Hover", s => Row(s, "Critical", 0.88f, 0.9f, 0.24f));
         });
 
+        // Conversation ---------------------------------------------------------
+        // Speech bubbles with a tail at a bottom corner: the viewer's messages on
+        // the right in the accent's deep fill, the assistant's replies on the
+        // left in the lighter hover surface, so they stand off the panel. Text,
+        // not controls: no hover, no glow.
+        Component("Message Sent", Conversation, "A message the viewer sent, such as a question to the assistant. Its tail points right.",
+            c => c.idle = Style("Message Sent", "Idle", s => Message(s, "Accent Deep", 0.9f, 0.3f, UIShapeTail.BottomRight)));
+
         // Marks: tinted by their owner, a faint glow and a sharp shadow ----------
         Component("Leader Line", Marks, "The line from a card to its sensor.", c => c.idle = Style("Leader Line", "Idle", s => Mark(s, 5f, 0.3f)));
         Component("Leader Anchor", Marks, "The square on the sensor end of a leader line.", c => c.idle = Style("Leader Anchor", "Idle", s => Mark(s, 6f, 0.35f)));
@@ -511,6 +532,23 @@ public static class UIDesignSystemDefaults
         s.transition = 0.14f;
     }
 
+    /// <summary>A speech bubble: a flat fill, a faint edge, a tail, a sharp shadow so it reads over the scene.</summary>
+    private static void Message(UIShapeStyle s, string surface, float alpha, float edge, UIShapeTail tail)
+    {
+        s.fill = UIColor.Token(surface, alpha);
+        s.gradientEnd = 1f;
+        s.cornerRadius = 2f;
+        s.stroke = UIColor.Token("Accent", edge);
+        s.strokeWidth = 1f;
+        s.glow = UIColor.Token("Accent");
+        NoGlow(s);
+        s.bottomLightHeight = 0f;
+        s.tail = tail;
+        s.tailSize = 12f;
+        Shadow(s, 0.35f, -2f, 0f);
+        s.transition = 0.14f;
+    }
+
     /// <summary>A status shown as its text alone: no box, so it never reads as a button.</summary>
     private static void Badge(UIShapeStyle s, string tone)
     {
@@ -567,7 +605,11 @@ public static class UIDesignSystemDefaults
 
     // ---- sprite-authored roles -------------------------------------------------
 
-    /// <summary>Each authored sprite, the component and state it stands for.</summary>
+    /// <summary>
+    /// The authored icons, drawn by the Icon component. Backgrounds name their
+    /// component and state on the shape itself (the sprite-era backgrounds
+    /// were retired by UISpriteRoleMigration).
+    /// </summary>
     private static List<UITheme.StyleEntry> SpriteRoles()
     {
         var map = new List<UITheme.StyleEntry>();
@@ -583,28 +625,10 @@ public static class UIDesignSystemDefaults
             map.Add(new UITheme.StyleEntry { sprite = asset, variant = variant, component = target, state = state });
         }
 
-        Map("Panel Background", "Panel", UIState.Idle);
-        Map("Detail Panel Background", "Detail Panel", UIState.Idle);
-        Map("Solid UI Fill", "Segment", UIState.Idle);
-        Map("Button Hover Background", "Segment", UIState.Hover);
-        Map("Compact Button Background", "Segment", UIState.Selected);
-        Map("Compact Button Background", "Card", UIState.Idle, CardVariant);
-        Map("Button Hover Background", "Card", UIState.Hover, CardVariant);
-        Map("Telemetry Card - Warning", "Card", UIState.Warning);
-        Map("Telemetry Card - Critical", "Card", UIState.Critical);
-        Map("Telemetry Card - Unavailable", "Card", UIState.Unavailable);
-        Map("Accent Core", "Accent Bar", UIState.Idle);
-        // Each trail sprite is brightest on the side named here.
-        Map("Accent Trail - Fade Left", "Accent Trail Left", UIState.Idle);
-        Map("Accent Trail - Fade Right", "Accent Trail Right", UIState.Idle);
-        Map("Accent Trail - Top", "Accent Trail Bottom", UIState.Idle);
-        Map("Accent Trail - Bottom", "Accent Trail Top", UIState.Idle);
-        Map("White Pixel", "Leader Line", UIState.Idle);
-        Map("Leader Line Anchor", "Leader Anchor", UIState.Idle);
         foreach (string icon in new[]
                  {
                      "Full Model Icon", "Cross Section Icon", "XRay Icon", "Arrow Left Icon", "Arrow Right Icon",
-                     "Zoom In Icon", "Zoom Out Icon", "Close Icon", "Pin Icon"
+                     "Zoom In Icon", "Zoom Out Icon", "Close Icon", "Pin Icon", "Configure Icon", "Ask Icon"
                  })
             Map(icon, "Icon", UIState.Idle);
         return map;

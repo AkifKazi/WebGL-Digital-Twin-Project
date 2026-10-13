@@ -131,6 +131,13 @@ public class OrbitCameraController : MonoBehaviour
 
     private Vector2 lastTouchPosition;
     private bool hasLastTouchPosition;
+
+    // A drag belongs to what it started on, until it ends: one started on a
+    // panel (moving the Ask window, scrolling a list) never turns the camera
+    // when the pointer slips off the panel, and an orbit carries on over one.
+    private bool mouseDragOrbits;
+    private bool mouseDragDecided;
+    private bool touchDragOrbits;
     private float previousPinchDistance;
     private bool pinchActive;
     private bool lastCanZoomIn;
@@ -298,12 +305,12 @@ public class OrbitCameraController : MonoBehaviour
     /// model; the up and down arrows tilt it; W and S, + and -, zoom; R or Home
     /// goes back to the opening view. The arrow keys move between controls
     /// instead while a control has the keyboard's focus, and nothing here
-    /// runs while a modal (the settings) is open.
+    /// runs while a modal (the settings) is open or a text field is being typed in.
     /// </summary>
     private void HandleKeyboardInput()
     {
         Keyboard keyboard = Keyboard.current;
-        if (!enableKeyboardWS || keyboard == null || KeyboardNavigator.Scope != null)
+        if (!enableKeyboardWS || keyboard == null || KeyboardNavigator.Scope != null || KeyboardNavigator.IsTyping)
             return;
 
         float zoomSpeed = keyboardZoomSpeed * DigitalTwinSettings.ZoomSensitivity * Time.deltaTime;
@@ -377,14 +384,21 @@ public class OrbitCameraController : MonoBehaviour
         if (Input.touchCount > 0)
             return;
 
-        if (Input.GetMouseButton(mouseButton))
+        if (!Input.GetMouseButton(mouseButton))
         {
-            if (ignoreMouseWhenPointerOverUI && UnityEngine.EventSystems.EventSystem.current != null)
-            {
-                if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
-                    return;
-            }
+            mouseDragDecided = false;
+            return;
+        }
 
+        if (!mouseDragDecided)
+        {
+            mouseDragDecided = true;
+            mouseDragOrbits = !ignoreMouseWhenPointerOverUI || UnityEngine.EventSystems.EventSystem.current == null ||
+                              !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
+        }
+
+        if (mouseDragOrbits)
+        {
             float mouseX = Input.GetAxis("Mouse X");
             float mouseY = Input.GetAxis("Mouse Y");
 
@@ -408,19 +422,18 @@ public class OrbitCameraController : MonoBehaviour
 
         Touch touch = Input.GetTouch(0);
 
-        if (UnityEngine.EventSystems.EventSystem.current != null)
-        {
-            if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(touch.fingerId))
-            {
-                hasLastTouchPosition = false;
-                return;
-            }
-        }
-
         if (touch.phase == TouchPhase.Began)
         {
+            touchDragOrbits = UnityEngine.EventSystems.EventSystem.current == null ||
+                              !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(touch.fingerId);
             lastTouchPosition = touch.position;
-            hasLastTouchPosition = true;
+            hasLastTouchPosition = touchDragOrbits;
+            return;
+        }
+
+        if (!touchDragOrbits)
+        {
+            hasLastTouchPosition = false;
             return;
         }
 

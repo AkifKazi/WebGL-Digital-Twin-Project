@@ -2,6 +2,49 @@
 # Empty cells fall back to en, then to the copy built into the code. Keep {0} placeholders. Reload the page to see changes.
 key,en,notes
 ai.insight,AI · {0},Telemetry detail panel: AI insight text
+ask.check,SUGGESTED CHECK,Ask window: heading over a suggested check
+ask.greeting,"Ask me about this machine: a reading, an alarm, or what needs service next.",Ask window: an answer
+ask.launcher,ASK,Ask button beside the Telemetry / Service switch
+ask.normal.above,NORMAL > {0},Ask window: a reading's normal band on its row. Keep {0} placeholders
+ask.normal.below,NORMAL < {0},Ask window: a reading's normal band on its row. Keep {0} placeholders
+ask.normal.range,NORMAL {0},Ask window: a reading's normal band on its row. Keep {0} placeholders
+ask.overview.alarms,"Of {0} sensors, {1} are critical and {2} in warning.",Ask window: an answer. Keep {0} placeholders
+ask.overview.calm,All {0} sensors are inside their normal bands.,Ask window: an answer. Keep {0} placeholders
+ask.overview.no_data,"None of the {0} sensors has a usable reading, so I can't tell how the machine is doing. Check the connection first.",Ask window: an answer. Keep {0} placeholders
+ask.overview.none,No sensors are reporting yet.,Ask window: an answer
+ask.overview.unavailable,{0} have no usable reading.,Ask window: an answer. Keep {0} placeholders
+ask.placeholder,Ask about this machine,Ask window: the question field when empty
+ask.section.service,SERVICE DATA,Ask window: heading over the services an answer rests on
+ask.section.telemetry,TELEMETRY DATA,Ask window: heading over the readings an answer rests on
+ask.sensor.critical,{0} is critical at {1}. Its critical limit is {2}.,Ask window: an answer. Keep {0} placeholders
+ask.sensor.normal,"{0} reads {1}, inside its normal band.",Ask window: an answer. Keep {0} placeholders
+ask.sensor.related,{0} on the same part is also {1}.,Ask window: an answer. Keep {0} placeholders
+ask.sensor.unavailable,"{0} has no usable reading right now, so I can't judge it. Check its connection first.",Ask window: an answer. Keep {0} placeholders
+ask.sensor.warning,{0} is in warning at {1}. Its warning limit is {2}.,Ask window: an answer. Keep {0} placeholders
+ask.service.close,{0} follows {1} h later.,Ask window: an answer. Keep {0} placeholders
+ask.service.next,Next up is {0} ({1}) in {2} h.,Ask window: an answer. Keep {0} placeholders
+ask.service.overdue,{0} ({1}) is {2} h overdue.,Ask window: an answer. Keep {0} placeholders
+ask.share.no,"Not without waste: {0} is due in {1} h but {2} only in {3} h, so one stop would service {2} {4} h early.",Ask window: an answer. Keep {0} placeholders
+ask.share.yes,"Yes. {0} and {1} are due {2} h apart, so one stop in {3} h covers both and saves a second shutdown.",Ask window: an answer. Keep {0} placeholders
+ask.state.critical,critical,Ask window: a word used inside answers
+ask.state.normal,normal,Ask window: a word used inside answers
+ask.state.unavailable,without data,Ask window: a word used inside answers
+ask.state.warning,in warning,Ask window: a word used inside answers
+ask.suggest.overview,How is the machine doing?,Ask window: a suggested question
+ask.suggest.service,What needs service next?,Ask window: a suggested question
+ask.suggest.share,Can the next two services share one stop?,Ask window: a suggested question
+ask.suggest.why,Why is {0} {1}?,Ask window: a suggested question
+ask.task.inspect,inspect,Ask window: a word used inside answers
+ask.task.oil_change,oil change,Ask window: a word used inside answers
+ask.task.regrease,regrease,Ask window: a word used inside answers
+ask.task.replace,replace,Ask window: a word used inside answers
+ask.title,TWIN ASSISTANT,Ask window: title
+ask.trend.falling,Over the last hour it has been falling by about {0} an hour.,Ask window: an answer. Keep {0} placeholders
+ask.trend.falling.short,FALLING {0},Ask window: a reading's trend on its row. Keep {0} placeholders
+ask.trend.rising,Over the last hour it has been rising by about {0} an hour.,Ask window: an answer. Keep {0} placeholders
+ask.trend.rising.short,RISING {0},Ask window: a reading's trend on its row. Keep {0} placeholders
+ask.trend.steady,STEADY,Ask window: a reading's trend on its row
+ask.unknown,"I can answer about readings, alarms and services on this machine. Try one of these.",Ask window: an answer
 date.day.fri,FRI,Short day name on the week chart
 date.day.mon,MON,Short day name on the week chart
 date.day.sat,SAT,Short day name on the week chart
@@ -53,6 +96,7 @@ health.mode.simulation,SIMULATION,Connection status bar
 health.quality.all_good,{0} / {1} GOOD,Connection status bar
 health.quality.issues,{0} GOOD · {1} ISSUE,Connection status bar
 health.quality.no_sensors,NO SENSORS,Connection status bar
+hint.tap_again,TAP AGAIN FOR DETAILS,Telemetry sheet on a phone: second-tap hint
 mode.service,SERVICE,Telemetry / Service switch
 mode.telemetry,TELEMETRY,Telemetry / Service switch
 part.bearings,Bearings,Machine part name
@@ -186,17 +230,6 @@ service.state.on_track,ON TRACK,Service panel: part detail
 service.state.overdue,OVERDUE,Service panel: part detail
 service.title,SERVICE SCHEDULE,Service panel: list
 service.was_due,WAS DUE {0},Service panel: part detail
-task.inspect,INSPECT,Service panel: list
-task.oil_change,OIL CHANGE,Service panel: list
-task.regrease,REGREASE,Service panel: list
-task.replace,REPLACE,Service panel: list
-unit.hours,H,Service panel: part detail
-view.cross_section,CROSS SECTION,View mode segment
-view.exterior,EXTERIOR,View mode segment
-view.full_body,FULL BODY,View mode segment
-view.interior,INTERIOR,View mode segment
-view.x_ray,X-RAY,View mode segment
-hint.tap_again,TAP AGAIN FOR DETAILS,Telemetry sheet on a phone: second-tap hint
 settings.breadcrumb,DIGITAL TWIN,SettingsPanel
 settings.contrast,High contrast,SettingsPanel
 settings.contrast.about,"Panels become near opaque and their edges firmer, so the interface reads over a bright scene, on a projector or in a bright room.",SettingsPanel
@@ -214,6 +247,8 @@ settings.off,OFF,SettingsPanel
 settings.on,ON,SettingsPanel
 settings.orbit,Orbit sensitivity,SettingsPanel
 settings.orbit.about,"How far the camera turns for a drag, a swipe or a key held down.",SettingsPanel
+settings.rails,Card rails,SettingsPanel
+settings.rails.about,"How many rails of cards run beside the model, in all. More show more readings at once; fewer keep the model and its leader lines clear. A screen without room for them runs fewer, and the other cards wait on the next page.",SettingsPanel
 settings.rate,Frame rate limit,SettingsPanel
 settings.rate.about,Display matches the screen's refresh rate. A limit uses less power.,SettingsPanel
 settings.rate.display,DISPLAY,SettingsPanel
@@ -235,7 +270,7 @@ settings.tab.display.about,"How the interface is drawn: its size, its contrast a
 settings.tab.graphics,GRAPHICS,SettingsPanel
 settings.tab.graphics.about,Rendering detail and frame rate. A lower limit keeps a laptop cooler and its battery going longer.,SettingsPanel
 settings.tab.telemetry,TELEMETRY,SettingsPanel
-settings.tab.telemetry.about,"How readings are written on the cards, and how the cards behave while one of them is focused.",SettingsPanel
+settings.tab.telemetry.about,"How readings are written on the cards, how many rails they sit on, and how the cards behave while one of them is focused.",SettingsPanel
 settings.title,SETTINGS,SettingsPanel
 settings.units,Units,SettingsPanel
 settings.units.about,"Engineering writes units as they appear on data sheets: mm/s, kW, °C. Capitals matches the rest of the interface: MM/S, KW.",SettingsPanel
@@ -243,3 +278,13 @@ settings.units.capitals,MM/S,SettingsPanel
 settings.units.engineering,mm/s,SettingsPanel
 settings.zoom,Zoom sensitivity,SettingsPanel
 settings.zoom.about,"How far the camera moves in or out for a turn of the wheel, a pinch or a key held down.",SettingsPanel
+task.inspect,INSPECT,Service panel: list
+task.oil_change,OIL CHANGE,Service panel: list
+task.regrease,REGREASE,Service panel: list
+task.replace,REPLACE,Service panel: list
+unit.hours,H,Service panel: part detail
+view.cross_section,CROSS SECTION,View mode segment
+view.exterior,EXTERIOR,View mode segment
+view.full_body,FULL BODY,View mode segment
+view.interior,INTERIOR,View mode segment
+view.x_ray,X-RAY,View mode segment

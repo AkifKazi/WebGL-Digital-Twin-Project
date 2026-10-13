@@ -6,11 +6,16 @@ using UnityEngine.UI;
 /// <summary>
 /// The telemetry sheet on a phone held upright. A tap on a card focuses it; a
 /// second tap on the focused card (as <see cref="CardFocus"/> rules it) brings that sensor's
-/// detail panel up from the bottom of the screen as a sheet, the same panel
-/// the wide layout shows beside its rails, drawn larger for a thumb, without
-/// the pin and with a large close button. While it is open every other piece
-/// of telemetry UI fades away and the model moves up into the space above the
-/// sheet, so only the model and the readings are on screen.
+/// detail panel up from the bottom of the screen as a sheet: the same panel
+/// the wide layout shows beside its rails, without the pin and with a large
+/// close button, laid out as the Service and Ask tabs are. It is drawn at their
+/// scale (<see cref="contentWidth"/> units across the screen), edge to edge on
+/// an opaque fill that runs past the screen's sides and bottom, with a rule
+/// along its top and none of the floating panel's frame or glow: on a phone it
+/// is a sheet, not a window beside the cards. It takes at most
+/// <see cref="maxHeightShare"/> of the room under the top bar. While it is open
+/// every other piece of telemetry UI fades away and the model moves up into the
+/// space above the sheet, so only the model and the readings are on screen.
 ///
 /// The close button, a tap on the model, Esc, or switching to Service closes
 /// the sheet; the cards come back as they were.
@@ -71,12 +76,12 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour, ICardDetai
     [SerializeField] private TelemetryGraphStyle graphStyle = new();
 
     [Header("Sheet")]
-    [Tooltip("Size the panel is drawn at. The portrait canvas is 1080 units across a phone, so 2.4 " +
-             "draws the panel about 440 units wide, a little wider than beside the wide layout's rails.")]
-    [SerializeField, Range(1f, 3f)] private float sheetScale = 2.4f;
+    [Tooltip("The sheet lays its content out this many units wide, then scales to the screen's width, as " +
+             "the Service and Ask tabs do (the portrait canvas is 1080 units across, so 540 draws it at 2).")]
+    [SerializeField, Min(320f)] private float contentWidth = 540f;
 
-    [Tooltip("Space between the sheet and the sides of the screen.")]
-    [SerializeField, Min(0f)] private float sideMargin = 8f;
+    [Tooltip("Most of the room under the top bar the sheet may take; a taller one is drawn smaller.")]
+    [SerializeField, Range(0.3f, 1f)] private float maxHeightShare = 2f / 3f;
 
     [Tooltip("The close button's size in the sheet, and how far its touch area reaches beyond it. " +
              "44 + 2 x 10 units at 2.4 is about 55 points on a phone.")]
@@ -95,6 +100,8 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour, ICardDetai
 
     private readonly List<PerformanceStatCardView> hintCards = new();
     private TelemetryDetailPanel panel;
+    private RectTransform backdrop;
+    private CanvasGroup backdropGroup;
     private RectTransform hint;
     private CanvasGroup hintGroup;
     private float hintUntil;
@@ -164,6 +171,11 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour, ICardDetai
         {
             panel.Unbind();
             panel.SetAlpha(0f);
+        }
+        if (backdropGroup != null)
+        {
+            backdropGroup.alpha = 0f;
+            backdropGroup.blocksRaycasts = false;
         }
         if (hintGroup != null)
             hintGroup.alpha = 0f;
@@ -258,7 +270,37 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour, ICardDetai
         RectTransform rect = panel.RectTransform;
         rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
         rect.pivot = new Vector2(0.5f, 0f);
-        rect.localScale = new Vector3(sheetScale, sheetScale, 1f);
+        BuildBackdrop();
+    }
+
+    /// <summary>
+    /// The sheet's fill, behind the panel: the Service tab's opaque backdrop
+    /// look, and a rule along its top as the Ask tab has under the switch.
+    /// </summary>
+    private void BuildBackdrop()
+    {
+        backdrop = new GameObject("Sheet Backdrop", typeof(RectTransform)).GetComponent<RectTransform>();
+        backdrop.gameObject.layer = gameObject.layer;
+        backdrop.SetParent(Layer, false);
+        backdrop.SetSiblingIndex(panel.transform.GetSiblingIndex());
+        backdropGroup = backdrop.gameObject.AddComponent<CanvasGroup>();
+        backdropGroup.alpha = 0f;
+        backdropGroup.blocksRaycasts = false;
+
+        Image fill = backdrop.gameObject.AddComponent<UIShape>();
+        PortraitServiceView.CopyBackdropLook(fill);
+        // Taps on the sheet's margins stay on the sheet, not the model.
+        fill.raycastTarget = true;
+
+        RectTransform rule = new GameObject("Rule", typeof(RectTransform)).GetComponent<RectTransform>();
+        rule.gameObject.layer = gameObject.layer;
+        rule.SetParent(backdrop, false);
+        rule.anchorMin = new Vector2(0f, 1f);
+        rule.anchorMax = Vector2.one;
+        rule.pivot = new Vector2(0.5f, 1f);
+        Image line = rule.gameObject.AddComponent<Image>();
+        line.color = UIBuilder.Token("Accent", 0.16f, new Color(0.21f, 0.93f, 1f, 0.16f));
+        line.raycastTarget = false;
     }
 
     // -----------------------------------------------------------------------
@@ -289,24 +331,58 @@ public sealed class PortraitTelemetrySheetController : MonoBehaviour, ICardDetai
         UpdateHint();
     }
 
-    /// <summary>Along the bottom of the safe area, the full width less the margins, rising as it fades in.</summary>
+    /// <summary>
+    /// Along the bottom of the safe area, the screen's full width at the tabs'
+    /// scale, rising as it fades in; its fill reaches past the screen's edges.
+    /// </summary>
     private void PlaceSheet(float eased)
     {
-        // Never more than three quarters of the space under the top bar: a
-        // long detail text draws the sheet smaller rather than over the switch.
-        float scale = sheetScale;
+        // At the tabs' scale, unless that would take more than its share of
+        // the room under the top bar: a long detail text draws the sheet
+        // smaller rather than over the switch.
+        float fullScale = Mathf.Max(1f, Layer.rect.width / contentWidth);
+        float scale = fullScale;
         float available = Layer.rect.height - TopBand();
         if (panel.Height > 1f && available > 1f)
-            scale = Mathf.Clamp(available * 0.75f / panel.Height, 1f, sheetScale);
+            scale = Mathf.Clamp(available * maxHeightShare / panel.Height, 1f, fullScale);
         Vector3 scaleVector = new(scale, scale, 1f);
         if (panel.RectTransform.localScale != scaleVector)
             panel.RectTransform.localScale = scaleVector;
 
-        float width = Mathf.Max(1f, (Layer.rect.width - sideMargin * 2f) / scale);
-        panel.SetWidth(width);
+        panel.SetWidth(Mathf.Max(1f, Layer.rect.width / scale));
         float rise = (1f - eased) * panel.Height * scale * 0.25f;
         panel.RectTransform.anchoredPosition = new Vector2(0f, -rise);
         panel.SetAlpha(eased);
+        PlaceBackdrop(eased, scale, -rise + panel.Height * scale);
+    }
+
+    /// <summary>The fill from the sheet's top, past the screen's sides and bottom.</summary>
+    private void PlaceBackdrop(float eased, float scale, float top)
+    {
+        if (backdrop == null)
+            return;
+        backdropGroup.alpha = eased;
+        backdropGroup.blocksRaycasts = eased > 0.5f;
+        if (eased <= 0f)
+            return;
+
+        // The canvas's corners in the layer's space: the screen, safe area or not.
+        Canvas canvas = GetComponentInParent<Canvas>();
+        Rect area = Layer.rect;
+        Vector2 low = new(area.xMin, area.yMin);
+        Vector2 high = new(area.xMax, area.yMax);
+        if (canvas != null)
+        {
+            ((RectTransform)canvas.rootCanvas.transform).GetWorldCorners(Corners);
+            low = Layer.InverseTransformPoint(Corners[0]);
+            high = Layer.InverseTransformPoint(Corners[2]);
+        }
+        backdrop.anchorMin = backdrop.anchorMax = Vector2.zero;
+        backdrop.pivot = Vector2.zero;
+        backdrop.anchoredPosition = new Vector2(low.x - area.xMin, low.y - area.yMin);
+        backdrop.sizeDelta = new Vector2(high.x - low.x, Mathf.Max(0f, area.yMin + top - low.y));
+        if (backdrop.childCount > 0)
+            ((RectTransform)backdrop.GetChild(0)).sizeDelta = new Vector2(0f, scale);
     }
 
     /// <summary>Height from the top of the layer to the bottom of the top bar.</summary>

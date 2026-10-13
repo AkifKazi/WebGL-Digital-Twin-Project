@@ -22,6 +22,9 @@
 //                 under the shape were on. Hover turns it on.
 //   stroke        an inside stroke, never thinner than one screen pixel.
 //
+// A box may have a speech tail at a bottom corner (a chat message). The tail is
+// part of the box's distance, so every layer above follows its outline.
+//
 // An icon (a sprite shape) draws its sprite tinted, a sharp shadow of the
 // sprite's own outline, and a soft glow around it.
 //
@@ -120,7 +123,8 @@ Shader "UI/Digital Twin/Shape"
                                            //                      icon: glow size, shadow softness
                 float4 anim   : TEXCOORD3; // hatch, glow multiplier, bottom light,
                                            // 1 for an icon, else minus the highlight
-                float4 cut    : TEXCOORD4; // chamfer, chamfer corner mask, gradient direction, light height
+                float4 cut    : TEXCOORD4; // chamfer (or tail size), chamfer corner mask,
+                                           // gradient direction + tail side * 4, light height
                 half4 fill    : TEXCOORD5;
                 half4 stroke  : TEXCOORD6;
                 half4 glow    : TEXCOORD7; // rgb premultiplied by strength and fade
@@ -188,7 +192,8 @@ Shader "UI/Digital Twin/Shape"
                     v.color.rgb = UIGammaToLinear(v.color.rgb);
                 half4 tint = v.color * _Color;
 
-                float3 flags = Unpack888(v.uv3.w);              // kind + highlight * 2, chamfer, mask + direction * 16
+                float3 flags = Unpack888(v.uv3.w);              // kind + highlight * 2, chamfer or tail size,
+                                                                // mask + direction * 16 + tail side * 64
                 float kind = fmod(flags.x, 2.0);
                 float highlight = floor(flags.x / 2.0) / 127.0;
                 float3 alphas = Unpack888(v.uv2.y) / 255.0;     // fill, stroke, glow strength / 4
@@ -235,6 +240,21 @@ Shader "UI/Digital Twin/Shape"
 
             // ---- distances -------------------------------------------------
 
+            // Signed distance to a triangle (after Inigo Quilez).
+            float SdTriangle(float2 p, float2 p0, float2 p1, float2 p2)
+            {
+                float2 e0 = p1 - p0, e1 = p2 - p1, e2 = p0 - p2;
+                float2 v0 = p - p0, v1 = p - p1, v2 = p - p2;
+                float2 pq0 = v0 - e0 * saturate(dot(v0, e0) / dot(e0, e0));
+                float2 pq1 = v1 - e1 * saturate(dot(v1, e1) / dot(e1, e1));
+                float2 pq2 = v2 - e2 * saturate(dot(v2, e2) / dot(e2, e2));
+                float s = sign(e0.x * e2.y - e0.y * e2.x);
+                float2 d = min(min(float2(dot(pq0, pq0), s * (v0.x * e0.y - v0.y * e0.x)),
+                                   float2(dot(pq1, pq1), s * (v1.x * e1.y - v1.y * e1.x))),
+                                   float2(dot(pq2, pq2), s * (v2.x * e2.y - v2.y * e2.x)));
+                return -sqrt(d.x) * sign(d.y);
+            }
+
             float SdBox(float2 p, float2 halfSize, float radius, float chamfer, float cornerMask)
             {
                 radius = min(radius, min(halfSize.x, halfSize.y));
@@ -251,6 +271,25 @@ Shader "UI/Digital Twin/Shape"
                     d = on > 0.5 ? max(d, cutDistance) : d;
                 }
                 return d;
+            }
+
+            // The box, with a speech tail when it has one (side 1 bottom right,
+            // 2 bottom left). The tail is a triangle on the bottom edge whose
+            // slope leaves the side `size` above the corner and meets the bottom
+            // edge's line `size` past it; it starts well inside the box, so the
+            // union has no seam where the two meet.
+            float SdShape(float2 p, float2 halfSize, float radius, float cut, float cornerMask, float tailSide)
+            {
+                if (tailSide < 0.5)
+                    return SdBox(p, halfSize, radius, cut, cornerMask);
+                float2 q = float2(tailSide < 1.5 ? p.x : -p.x, p.y);
+                float size = min(cut, min(halfSize.x, halfSize.y));
+                float2 corner = float2(halfSize.x, -halfSize.y);
+                float tail = SdTriangle(q,
+                    corner + float2(-size, 0.0),
+                    corner + float2(size, 0.0),
+                    corner + float2(-size, size * 2.0));
+                return min(SdBox(p, halfSize, radius, 0.0, 0.0), tail);
             }
 
             // ---- icons -----------------------------------------------------
@@ -320,13 +359,15 @@ Shader "UI/Digital Twin/Shape"
                 float thin = saturate(halfSize.x * 2.0 / pixel) * saturate(halfSize.y * 2.0 / pixel);
 
                 float radius = IN.shape.x;
-                float d = SdBox(p, drawnHalf, radius, IN.cut.x, round(IN.cut.y));
+                float directionAndTail = round(IN.cut.z);
+                float tailSide = floor(directionAndTail / 4.0);
+                float d = SdShape(p, drawnHalf, radius, IN.cut.x, round(IN.cut.y), tailSide);
                 float body = saturate(0.5 - d / aa * 0.5);
                 float outside = max(d, 0.0);
 
                 // Shadow: a sharp or softened offset copy, under everything.
                 float softness = IN.shape.w;
-                float ds = SdBox(p - IN.extra.xy, drawnHalf, radius, IN.cut.x, round(IN.cut.y));
+                float ds = SdShape(p - IN.extra.xy, drawnHalf, radius, IN.cut.x, round(IN.cut.y), tailSide);
                 float shadowCover = 1.0 - smoothstep(-softness * 0.5 - aa, softness * 0.5 + aa, ds);
                 half4 color = half4(IN.shadow.rgb, 1.0) * (IN.shadow.a * shadowCover * thin);
 
@@ -344,7 +385,7 @@ Shader "UI/Digital Twin/Shape"
                 color.rgb += lerp(IN.glow.rgb, IN.glow.aaa, 0.75) * hot * highlight * 0.9 * outsideOnly * IN.anim.y;
 
                 // Fill, with its gradient: 0 down, 1 up, 2 right, 3 left from full.
-                float direction = round(IN.cut.z);
+                float direction = directionAndTail - tailSide * 4.0;
                 float2 uv = p / max(halfSize, 1e-3) * 0.5 + 0.5;
                 float along = direction < 0.5 ? 1.0 - uv.y : direction < 1.5 ? uv.y : direction < 2.5 ? uv.x : 1.0 - uv.x;
                 half gradient = lerp(1.0, IN.extra.w, saturate(along));

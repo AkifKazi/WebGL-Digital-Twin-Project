@@ -5,7 +5,7 @@ window.DESIGN_SYSTEM = {
    {
     "name": "Accent",
     "hex": "36EDFF",
-    "use": "Interactive edges, selected text, normal readings."
+    "use": "Interactive edges and marks, normal readings."
    },
    {
     "name": "Accent Bright",
@@ -86,6 +86,16 @@ window.DESIGN_SYSTEM = {
     "name": "Label",
     "hex": "00EBFF",
     "use": "Section labels and headings."
+   },
+   {
+    "name": "Control",
+    "hex": "CEE3E6",
+    "use": "A control's label and icon at rest: an unselected segment, tab or option, a button, an icon button."
+   },
+   {
+    "name": "Control Selected",
+    "hex": "EAFDFF",
+    "use": "The chosen control's label and icon: the selected segment, tab or option, an open panel's launcher."
    },
    {
     "name": "White",
@@ -205,7 +215,7 @@ window.DESIGN_SYSTEM = {
     "letterSpacing": 2,
     "uppercase": true,
     "color": {
-     "token": "Text",
+     "token": "Control",
      "alpha": 1,
      "custom": [
       0,
@@ -214,7 +224,7 @@ window.DESIGN_SYSTEM = {
       0
      ]
     },
-    "use": "Text on a button or segment."
+    "use": "A control's label: a button, segment or tab. Near white (Control Selected) when chosen."
    },
    {
     "name": "Body",
@@ -389,6 +399,14 @@ window.DESIGN_SYSTEM = {
    }
   },
   {
+   "name": "Message Sent",
+   "group": "Conversation",
+   "description": "A message the viewer sent, such as a question to the assistant. Its tail points right.",
+   "states": {
+    "idle": "Message Sent Idle"
+   }
+  },
+  {
    "name": "Leader Line",
    "group": "Marks",
    "description": "The line from a card to its sensor.",
@@ -427,6 +445,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Surface",
     "alpha": 0.62,
@@ -492,6 +512,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Surface",
     "alpha": 0.92,
@@ -557,6 +579,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Surface Inset",
     "alpha": 0.85,
@@ -622,6 +646,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Surface",
     "alpha": 0.9,
@@ -687,6 +713,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Surface Inset",
     "alpha": 0.85,
@@ -752,6 +780,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Accent Deep",
     "alpha": 0,
@@ -817,6 +847,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Accent Deep",
     "alpha": 0.1,
@@ -882,6 +914,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Accent Deep",
     "alpha": 0.4,
@@ -947,6 +981,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Accent Deep",
     "alpha": 0.45,
@@ -1012,6 +1048,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Surface Raised",
     "alpha": 0.7,
@@ -1077,6 +1115,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Surface Hover",
     "alpha": 0.82,
@@ -1142,6 +1182,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Accent Deep",
     "alpha": 0.5,
@@ -1207,6 +1249,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Surface Raised",
     "alpha": 0.4,
@@ -1272,6 +1316,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Accent Deep",
     "alpha": 0,
@@ -1337,6 +1383,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Accent Deep",
     "alpha": 0.1,
@@ -1402,6 +1450,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Accent Deep",
     "alpha": 0.35,
@@ -1467,6 +1517,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "White",
     "alpha": 1,
@@ -1532,6 +1584,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "White",
     "alpha": 1,
@@ -1597,6 +1651,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "White",
     "alpha": 0.35,
@@ -1662,6 +1718,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 3,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Accent",
     "alpha": 0,
@@ -1727,6 +1785,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Accent",
     "alpha": 0,
@@ -1792,6 +1852,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Warning",
     "alpha": 0,
@@ -1857,6 +1919,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Critical",
     "alpha": 0,
@@ -1922,6 +1986,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Neutral",
     "alpha": 0,
@@ -1987,6 +2053,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Surface Raised",
     "alpha": 0.74,
@@ -2052,6 +2120,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Surface Hover",
     "alpha": 0.76,
@@ -2117,6 +2187,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Accent Surface",
     "alpha": 0.82,
@@ -2182,6 +2254,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Accent Surface",
     "alpha": 0.86,
@@ -2247,6 +2321,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Warning Surface",
     "alpha": 0.78,
@@ -2312,6 +2388,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Warning Surface",
     "alpha": 0.84,
@@ -2377,6 +2455,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Critical Surface",
     "alpha": 0.8,
@@ -2442,6 +2522,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Critical Surface",
     "alpha": 0.86,
@@ -2507,6 +2589,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Unavailable Surface",
     "alpha": 0.74,
@@ -2572,6 +2656,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Surface Inset",
     "alpha": 0.85,
@@ -2637,6 +2723,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Surface Hover",
     "alpha": 0.8,
@@ -2702,6 +2790,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Warning Surface",
     "alpha": 0.85,
@@ -2767,6 +2857,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Warning Surface",
     "alpha": 0.88,
@@ -2832,6 +2924,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Critical Surface",
     "alpha": 0.85,
@@ -2897,6 +2991,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 2,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "Critical Surface",
     "alpha": 0.88,
@@ -2957,11 +3053,80 @@ window.DESIGN_SYSTEM = {
    "pulse": 0,
    "pulseSpeed": 0.6
   },
+  "Message Sent Idle": {
+   "kind": 0,
+   "cornerRadius": 2,
+   "chamfer": 0,
+   "chamferCorners": 0,
+   "tail": 1,
+   "tailSize": 12,
+   "fill": {
+    "token": "Accent Deep",
+    "alpha": 0.9,
+    "custom": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "gradientStart": 0,
+   "gradientEnd": 1,
+   "hatch": 0,
+   "stroke": {
+    "token": "Accent",
+    "alpha": 0.3,
+    "custom": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "strokeWidth": 1,
+   "glow": {
+    "token": "Accent",
+    "alpha": 1,
+    "custom": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "glowSize": 0,
+   "glowStrength": 0,
+   "innerGlow": 0,
+   "highlight": 0,
+   "bottomLight": 0,
+   "bottomLightHeight": 0,
+   "shadow": {
+    "token": "Shadow",
+    "alpha": 0.35,
+    "custom": [
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "shadowOffset": [
+    0,
+    -2
+   ],
+   "shadowSoftness": 0,
+   "transition": 0.14,
+   "fadeIn": false,
+   "pulse": 0,
+   "pulseSpeed": 0.6
+  },
   "Leader Line Idle": {
    "kind": 0,
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "White",
     "alpha": 1,
@@ -3027,6 +3192,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 0,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "White",
     "alpha": 1,
@@ -3092,6 +3259,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 1,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "White",
     "alpha": 1,
@@ -3157,6 +3326,8 @@ window.DESIGN_SYSTEM = {
    "cornerRadius": 1,
    "chamfer": 0,
    "chamferCorners": 0,
+   "tail": 0,
+   "tailSize": 12,
    "fill": {
     "token": "White",
     "alpha": 1,
@@ -3222,11 +3393,13 @@ window.DESIGN_SYSTEM = {
   "Containers",
   "Controls",
   "Telemetry",
+  "Conversation",
   "Marks"
  ],
  "icons": {
   "Arrow Left Icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAAAZpJREFUeAHt2uFNwlAUBeBT4wBuYEdwhI7ABrABbECdADbADRwBN8ANwAnQCa73xvL3nYdRkp7eL2kgaUNyLu3rfa8FUkoppZRS+ndmtrayJ6iqCL+CKg83J+F7qIrTmoTfQtUQ/lwI/wpVHq717VgIH/seoKgyfAtF8a+S8Gf18Acrm0FVDGokfA9VHm4z5fBrEl76Xs/CH6DKwy1J+KMJj/izKYdnLW7QnNoa7/LCAooqw/cYkab2wOF63vvWFg779O0ddU74nY9rDm6api/uRwX7mbVF+NFd116AYsY71Il5u+SgRgvg//7OPzqIqjkDrrrmxoYWYBhEniHqmrtATGiWGBk2CN6j/odWXoRH/8oWNN7AnXAbX/hLVrfis4Yy42t+QfcpT6hsiTsoG4pQmhHqrv5eGJ8WH6dQhIWVxaCp+QToIgY9UoQd1HnInhRhA3UeckuKoN0jBA/5QoowhzLj3WLcNXTfBQrGu8XY10KZTfkFiYuKIuyhzni3OIkeobOySdweWcusPYUOxrvFDimllFJKKd3ENw0zPGlVIJpvAAAAAElFTkSuQmCC",
   "Arrow Right Icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAAAY9JREFUeAHtmt1Nw0AQhMc0QDrAJaSE0EGogHRAOoipIKEC0kHogBJMBwkVQAfLrswrNxcEkTzeTzrlwStFM5b27wwkSZIkSZIkyUUws7mfD/uZDdRxkSsrMwkTOmLCPdRxkTtiwgLquMjXggGRK+ZQxgXO/BwLJsSzFsqEwDSBl8cwYQZlIulZmX4KJqyJCc9Qx3iPsIU6LnJPTNDuFm0oj32aUC6PgXbLbLxHCJZQxniPMImWmY3QYUILZYyXx+O5JjQsIP4U53GD3zH7PowFeX7yc9s0zQkV1BhgGB9vGEz4ZIFX0CQS4qEmUNWAIAYrOjcoGxC8swBlAx49B3QsSDUJPrn4dU1gjQE7/7nGZWgrYiLBlcrli4u/gyL+MjakEdLdGLmwh7/uAkeDDcPQZMXHOMwmwRaKGN8F6I7BVrcNWkEVF3cg4juoYrzcdVBl6uKXRPweqhhffPZQxequx2Vb3Gl/G2Dl6y958duCeO3LDuPlTve6y/hoW7XNGSXGP4PpkCRJkiRJkiT/zhcYTjv1EkbO6AAAAABJRU5ErkJggg==",
+  "Ask Icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAAARtJREFUeAHtlw0NwjAQhd8IApBQCeBgUsABKBgOwAESkLA5AAfgAByUa+iSUrqVcNlayH3JZT+vyb6tu6QFhD+ncC+01iUdSqSlKYqiaS+mXlhSVUhP055MkDnZC04j+YbqjGGZU+26wpjg2f1hh4AaszeXf5CLCHIRQS4iyEUEuYggFxHk8vML1iOt1+49+Sq2XrQbsQO+JCY4s9WFeYEFSV5DIWUKTzmFL+FOsZE3km8vYe/VYMgZ/C9opvOKOMo5b/cUK29M5Y2724rxyZh+6Oss9TtrJ6/68lGgB+4DEiXVPHB/ixTQg2tP5GLLpUYqTJcGhHxhhZTYKb11CCrkgGmAgNy4TRFDvzbNFjlim+aEXLFNoyAIn/MApZEndEgyPecAAAAASUVORK5CYII=",
   "Close Icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAAAntJREFUeAHt3O1Nw0AQhGGHCiiFFuiETmmBDigBOliCYgSEjzj2nW92532kiH9od2YlIEaZJgAAAAAAAAAAAAAAAAAAAGCpiLg7vp7fv074oXQ+83IvcfLCEXxXOp+z5YIj+K50Pn8sxxHMSudzYTn7Iyidz8Llci+5Qel8rlwu55IbqOVzM2m4Pb4eo/gRzPs9Tqd961p55V0vfTS7TOwW/odtFraLf2GfgXMA9uV/cAzCced/OQXitOtVHIJx2HGTygFV3q2pikFV3KmrSoFV2mVXFYKrsMNQmQPMPLuUjEFmnFlapkAzzZpKhmAzzJiacsDKs5WiGLTiTKUpBa40ixWF4BVmsDaygKB8DSOKCMrXsmchQfma9igmKF9bz4KC8nPoUVRQfi4tCwvKz6lFcUH5uW0s8CEoP78NR7AG5Sva6QgoX1nnI6D8DDodAeVn0vgIKD+jRkdA+ZltPAKL8lU+Iwhoix8BxoJfAn0Ffwb6Ct4I8hW8FewreBjkK3gc7Csa/DNHi++BAVoWFxxBLj0KC44gh55FBUegbY+CgiPQtGcxwRFoGVFIcAQaRhYRHMFYCgUozGBJKXilWSwoBq44U0nKQSvPVkKGgDPMmFKmYDPNmkLGQDPOLClzkJlnl1AhwAo7DFEpuEq77KJiYBV36qJyUJV3a8IhIIcdV3EKxmnXRRwDcdz5V85B2B+BfQCTcQaU/8kuC7uFF7DJxGbRFRSzUfmMoNfj6/5wODxNhc373U+nfeu68tLt3g+3yGfhkrZPxCzyubCk/TNxi3z+WJJ/iJhZ5HO2JOWfschnXvKZ8n9HPgAAAAAAAAAAAAAAAAAAAFjtDZN5lNCx5ghRAAAAAElFTkSuQmCC",
   "Configure Icon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAAAP1JREFUeAHt1+0NgjAQBuC3xgEcgREcASfRUdgER3ADZQM2gE3qmfCDYOxXbE/wfZLGH5wJpe1dDyAi0mSQmbX2Ij9npOmMMY0rYI/8Khk10oy+gB1WrsQKLD08z48yDghUfAKyp0+u53JmBkRMYPVb6C0LyRewyEhWwJn5phWoQv+/+hXgBDZP9nRjZwLih1l464svnkblpWpPSHAKfdEoZHd8EQ+xthLX6QqOwuQxSt0aQUQfeQ/xVHhqpOnlEN6gaXkViNQiMxYybdF3oYCOKmtHt/R/PbH2CrAn/jXb74kTeloWshjRdaB0nvfhIdYWsoV6GVek6UBEtGlPeqSwsvxw2qgAAAAASUVORK5CYII=",
   "Cross Section Icon": "data:image/png;base64,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",

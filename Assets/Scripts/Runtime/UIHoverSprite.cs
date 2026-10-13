@@ -3,31 +3,31 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// Shows a control's hover sprite while a mouse is over it. A control has three
-/// looks that never mix: idle, hover, and selected or pressed. The hover sprite
-/// only ever replaces the idle one, so a selected, pressed or unavailable
-/// control never shows it. Touch never hovers: a finger has no hover, and a
-/// hover left behind after a tap reads as a stuck state.
+/// Lights a control while a mouse is over it, and while it is pressed. The
+/// control's <see cref="UIShape"/>s are told, and each one's component
+/// answers with its hover or pressed look for its state: a segment or card at
+/// rest lights up, an icon glows, a warning or critical card brightens a
+/// little, and a selected, disabled or unavailable one stays as it is unless
+/// its component has a look for that. Touch never hovers: a finger has no
+/// hover, and one left after a tap reads as stuck.
 ///
-/// The control's <see cref="UIShape"/>s are told whenever the pointer is over
-/// an interactable control, whatever it shows, so their components answer
-/// with a hover look for their state: an icon glows, and a warning or critical
-/// card, which never takes the hover sprite, still lights up a little.
+/// A control can have a hover backdrop that is drawn only while it is
+/// hovered (<see cref="OnlyWhileHovered"/>), such as the square behind the
+/// detail panel's pin and close icons.
+///
+/// (Named for the sprite it used to swap in; the look now comes from the
+/// design system's components.)
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class UIHoverSprite : MonoBehaviour,
     IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
 {
-    [Tooltip("The image that shows the control's idle, hover and selected sprites. " +
-             "Empty uses the Selectable's target graphic.")]
+    [Tooltip("The control's shape. Empty uses the Selectable's target graphic.")]
     [SerializeField] private Image target;
 
-    [SerializeField] private Sprite hoverSprite;
-
-    [Tooltip("The sprite the target shows while the control is idle; the hover sprite only " +
-             "replaces this one. Empty: whatever the target shows when the control wakes. " +
-             "A target with no idle sprite at all stays hidden until hovered.")]
-    [SerializeField] private Sprite idleSprite;
+    [Tooltip("The target is a hover backdrop: drawn only while the control is hovered, not at rest. " +
+             "A target switched off in the hierarchy is treated the same.")]
+    [SerializeField] private bool onlyWhileHovered;
 
     [Tooltip("Optional. A graphic that marks the control as selected, such as an underline " +
              "or a pinned fill. While it shows, the control never hovers.")]
@@ -40,17 +40,21 @@ public sealed class UIHoverSprite : MonoBehaviour,
     private bool pressed;
     private bool showing;
     private bool reportedHover;
+    private bool reportedPress;
 
-    /// <summary>True while the hover sprite is actually on screen.</summary>
-    public bool IsShowingHover =>
-        showing && target != null && target.isActiveAndEnabled && target.overrideSprite == hoverSprite;
+    /// <summary>True while the control shows its hover look.</summary>
+    public bool IsShowingHover => showing && target != null && target.isActiveAndEnabled;
 
-    /// <summary>Sets the sprites from code (setup tools, runtime-built controls).</summary>
-    public void Configure(Image image, Sprite hover, Sprite idle, Graphic selected)
+    /// <summary>The target is drawn only while hovered.</summary>
+    public bool OnlyWhileHovered => onlyWhileHovered;
+
+    public Image Target => target;
+
+    /// <summary>Sets it up from code (setup tools, runtime-built controls).</summary>
+    public void Configure(Image image, bool drawnOnlyWhileHovered, Graphic selected)
     {
         target = image;
-        hoverSprite = hover;
-        idleSprite = idle;
+        onlyWhileHovered = drawnOnlyWhileHovered;
         selectedIndicator = selected;
         initialised = false;
         Initialise();
@@ -67,12 +71,7 @@ public sealed class UIHoverSprite : MonoBehaviour,
             target = selectable.targetGraphic as Image;
         if (target == null)
             return;
-        // A target that starts switched off is a dedicated hover backdrop: it is
-        // only drawn while hovered, whatever sprite it was authored with.
-        hiddenWhenIdle = !target.enabled;
-        if (idleSprite == null)
-            idleSprite = target.sprite;
-        hiddenWhenIdle |= idleSprite == null;
+        hiddenWhenIdle = onlyWhileHovered || !target.enabled;
         if (hiddenWhenIdle)
             target.enabled = false;
         initialised = true;
@@ -83,7 +82,7 @@ public sealed class UIHoverSprite : MonoBehaviour,
         pointerInside = false;
         pressed = false;
         Apply(false);
-        ReportHover(false);
+        Report(false, false);
     }
 
     public void OnPointerEnter(PointerEventData eventData)
@@ -98,61 +97,48 @@ public sealed class UIHoverSprite : MonoBehaviour,
 
     public void OnPointerUp(PointerEventData eventData) => pressed = false;
 
-    // Selected looks change from other scripts (a mode switch, a pin), and a
-    // Selectable's own sprite swap runs in its event handlers, so the rule is
-    // settled once per frame after both.
+    // Selected looks change from other scripts (a mode switch, a pin), so the
+    // rule is settled once per frame after them.
     private void LateUpdate()
     {
-        if (!initialised || (!pointerInside && !showing && !reportedHover))
+        if (!initialised || (!pointerInside && !pressed && !showing && !reportedHover && !reportedPress))
             return;
+        bool usable = selectable == null || selectable.IsInteractable();
         Apply(pointerInside && !pressed && IsIdle());
-        ReportHover(pointerInside && !pressed && (selectable == null || selectable.IsInteractable()));
+        Report(pointerInside && !pressed && usable, pressed && pointerInside && usable);
     }
 
-    private void ReportHover(bool hovered)
+    private void Report(bool hovered, bool pressing)
     {
-        if (hovered == reportedHover)
+        if (hovered == reportedHover && pressing == reportedPress)
             return;
         reportedHover = hovered;
+        reportedPress = pressing;
         // Read on each change: views add a control's children after it wakes.
         foreach (UIShape shape in GetComponentsInChildren<UIShape>(true))
-            shape.SetOwnerPointer(hovered, false);
+            shape.SetOwnerPointer(hovered, pressing);
+        if (target is UIShape own && !own.transform.IsChildOf(transform))
+            own.SetOwnerPointer(hovered, pressing);
     }
 
+    /// <summary>At rest: usable, not marked selected, and its shape in its idle state.</summary>
     private bool IsIdle()
     {
-        if (hoverSprite == null)
+        if (target == null)
             return false;
         if (selectable != null && !selectable.IsInteractable())
             return false;
         if (selectedIndicator != null && selectedIndicator.enabled && selectedIndicator.gameObject.activeInHierarchy)
             return false;
-        // A different base sprite is a selected look.
-        if (target.sprite != idleSprite)
-            return false;
-        // Another sprite laid over the base (a pressed or selected swap) wins too.
-        Sprite shown = target.overrideSprite;
-        return shown == hoverSprite || shown == target.sprite;
+        return target is not UIShape shape || shape.State is UIState.Idle or UIState.Hover;
     }
 
     private void Apply(bool show)
     {
         if (target == null)
             return;
-        if (show)
-        {
-            target.overrideSprite = hoverSprite;
-            if (hiddenWhenIdle)
-                target.enabled = true;
-        }
-        else if (showing)
-        {
-            // Only undo our own sprite; a swap made since belongs to someone else.
-            if (target.overrideSprite == hoverSprite)
-                target.overrideSprite = null;
-            if (hiddenWhenIdle)
-                target.enabled = false;
-        }
+        if (hiddenWhenIdle && show != showing)
+            target.enabled = show;
         showing = show;
     }
 }

@@ -23,11 +23,6 @@ public sealed class QualityToggleControl : MonoBehaviour
     [Tooltip("The whole control, hidden on phones. Empty hides this object.")]
     [SerializeField] private GameObject controlRoot;
 
-    [Header("Look")]
-    [SerializeField] private Sprite selectedSprite;
-    [SerializeField] private Sprite idleSprite;
-    [SerializeField] private Color selectedTextColor = new Color32(234, 253, 255, 255);
-    [SerializeField] private Color idleTextColor = new Color32(104, 166, 175, 255);
 
     public Button SdButton => sdButton;
     public Button HdButton => hdButton;
@@ -88,16 +83,13 @@ public sealed class QualityToggleControl : MonoBehaviour
         if (button == null)
             return;
 
-        if (button.targetGraphic is Image background)
-        {
-            background.sprite = selected ? selectedSprite : idleSprite;
-            // Preserve the colours authored into the sprites.
-            background.color = Color.white;
-        }
+        // The segment's shape: the design system's Segment, chosen or at rest.
+        UIShape.ShowChosen(button.targetGraphic, selected);
 
+        // Labels in the design system's control colours (UIControlColors).
         TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
         if (label != null)
-            label.color = selected ? selectedTextColor : idleTextColor;
+            label.color = UIControlColors.For(selected);
 
         // The selected preset cannot be selected again.
         button.interactable = !selected;

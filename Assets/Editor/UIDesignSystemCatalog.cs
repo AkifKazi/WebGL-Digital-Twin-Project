@@ -76,7 +76,7 @@ public static class UIDesignSystemCatalog
         foreach (string group in new[]
                  {
                      UIDesignSystemDefaults.Containers, UIDesignSystemDefaults.Controls,
-                     UIDesignSystemDefaults.Telemetry, UIDesignSystemDefaults.Marks
+                     UIDesignSystemDefaults.Telemetry, UIDesignSystemDefaults.Conversation, UIDesignSystemDefaults.Marks
                  })
         {
             List<UIComponentStyle> members = theme.components
@@ -108,9 +108,14 @@ public static class UIDesignSystemCatalog
     {
         RectTransform block = Group("Colour Tokens", root, vertical: true, 12f, 0);
         Label(block, "COLOUR TOKENS", "Label");
-        RectTransform row = Group("Swatches", block, vertical: false, 14f, 0);
-        foreach (UIDesignTokens.ColorToken token in tokens.colors)
+        // Ten to a row, so the swatches stay inside the page.
+        const int PerRow = 10;
+        RectTransform row = null;
+        for (int i = 0; i < tokens.colors.Count; i++)
         {
+            UIDesignTokens.ColorToken token = tokens.colors[i];
+            if (i % PerRow == 0)
+                row = Group("Swatches", block, vertical: false, 14f, 0);
             RectTransform cell = Group(token.name, row, vertical: true, 6f, 0);
             Image swatch = new GameObject("Swatch", typeof(RectTransform)).AddComponent<Image>();
             swatch.transform.SetParent(cell, false);
@@ -190,6 +195,7 @@ public static class UIDesignSystemCatalog
             "Segment" or "Button" => new Vector2(150f, 44f),
             "Card" => new Vector2(200f, 96f),
             "List Row" => new Vector2(224f, 72f),
+            "Message Sent" => new Vector2(220f, 52f),
             _ => new Vector2(180f, 88f)
         };
         // Marks are tinted by their owner; show them in the accent.
@@ -212,6 +218,7 @@ public static class UIDesignSystemCatalog
             "Badge" => state switch { UIState.Warning => "DUE SOON", UIState.Critical => "OVERDUE", UIState.Unavailable => "NO DATA", _ => "ON TRACK" },
             "Card" => "READING",
             "List Row" => "PART NAME",
+            "Message Sent" => "Why is belt slip red?",
             _ => null
         };
         if (text == null)
@@ -220,20 +227,27 @@ public static class UIDesignSystemCatalog
                 Icon(frame.transform, "Close Icon");
             return;
         }
+        bool message = component.name == "Message Sent";
         TextMeshProUGUI content = UIComponentFactory.Text("Text", frame.transform, text,
-            component.name is "Card" or "List Row" ? "Label" : "Button", keepColor: true);
+            component.name is "Card" or "List Row" ? "Label" : message ? "Body" : "Button", keepColor: true);
         RectTransform rect = content.rectTransform;
         rect.anchorMin = Vector2.zero;
         rect.anchorMax = Vector2.one;
-        rect.offsetMin = new Vector2(component.name is "Card" or "List Row" ? 18f : 0f, 0f);
+        rect.offsetMin = new Vector2(component.name is "Card" or "List Row" ? 18f : message ? 14f : 0f, 0f);
         rect.offsetMax = Vector2.zero;
-        content.alignment = component.name is "Card" or "List Row" ? TextAlignmentOptions.MidlineLeft : TextAlignmentOptions.Center;
+        content.alignment = component.name is "Card" or "List Row" || message
+            ? TextAlignmentOptions.MidlineLeft
+            : TextAlignmentOptions.Center;
+        // Controls' labels take the control colours: near white when chosen, a quiet cyan at rest.
+        bool control = component.name is "Segment" or "Button";
         content.color = state switch
         {
             UIState.Warning => UIComponentFactory.Token("Warning"),
             UIState.Critical => UIComponentFactory.Token("Critical"),
             UIState.Unavailable or UIState.Disabled => UIComponentFactory.Token("Neutral"),
+            UIState.Selected when control => UIComponentFactory.Token(UIControlColors.SelectedToken),
             UIState.Selected => UIComponentFactory.Token("Accent"),
+            _ when control => UIComponentFactory.Token(UIControlColors.IdleToken),
             _ => component.name is "Card" or "List Row" or "Badge" ? UIComponentFactory.Token("Label") : UIComponentFactory.Token("Text")
         };
     }
@@ -245,7 +259,7 @@ public static class UIDesignSystemCatalog
         UIShape shape = icon.AddComponent<UIShape>();
         shape.Component = UITheme.Active.Component("Icon");
         shape.sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/UI/Sprites/{sprite}.png");
-        shape.color = UIComponentFactory.Token("Accent");
+        shape.color = UIComponentFactory.Token(UIControlColors.IdleToken);
         shape.raycastTarget = false;
         ((RectTransform)icon.transform).sizeDelta = new Vector2(20f, 20f);
     }

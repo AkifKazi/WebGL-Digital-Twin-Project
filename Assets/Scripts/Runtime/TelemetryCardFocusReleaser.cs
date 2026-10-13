@@ -53,8 +53,9 @@ public sealed class TelemetryCardFocusReleaser : MonoBehaviour
 
     private void HandleEscape(InputAction.CallbackContext context)
     {
-        // An open modal (the settings) takes Esc for itself.
-        if (KeyboardNavigator.Scope != null)
+        // An open modal (the settings), or the window the keyboard is in (the
+        // Ask window), takes Esc for itself.
+        if (KeyboardNavigator.EscapeTaken)
             return;
         Dismiss();
     }

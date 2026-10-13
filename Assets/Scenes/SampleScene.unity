@@ -5807,8 +5807,6 @@ MonoBehaviour:
   closeIcon: {fileID: 21300000, guid: 2c7882d0f80c948fbb89cb43d4e8e9f2, type: 3}
   quality: {fileID: 609988602}
   scaleApplyDelay: 0.6
-  selectedTextColor: {r: 0, g: 0.92, b: 1, a: 1}
-  idleTextColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!4 &91008475
 Transform:
   m_ObjectHideFlags: 0
@@ -6199,7 +6197,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -6209,7 +6207,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -6269,12 +6267,6 @@ MonoBehaviour:
   exteriorLabel: {fileID: 840753303}
   sectionLabel: {fileID: 136560297}
   xrayLabel: {fileID: 986448560}
-  selectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-  inactiveSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
-  selectedTextColor: {r: 0, g: 0.9047619, b: 1, a: 1}
-  selectedIconColor: {r: 0.21176471, g: 0.92941177, b: 1, a: 1}
-  inactiveTextColor: {r: 1, g: 1, b: 1, a: 1}
-  inactiveIconColor: {r: 1, g: 1, b: 1, a: 1}
   exteriorText: EXTERIOR
   sectionText: INTERIOR
   xrayText: X-RAY
@@ -6326,6 +6318,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e97d87242d1ef4bc6896f8faf199981e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderLineObstacle
+  everyLayout: 0
 --- !u!1 &123994323
 GameObject:
   m_ObjectHideFlags: 0
@@ -6464,11 +6457,10 @@ MonoBehaviour:
     grid: {r: 1, g: 1, b: 1, a: 0.1}
     surface: {r: 0.02, g: 0.04, b: 0.05, a: 1}
     fillLineArea: 0
-    hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
     labelSize: 15
     valueSize: 30
-  sheetScale: 2.4
-  sideMargin: 8
+  contentWidth: 540
+  maxHeightShare: 0.6666667
   closeSize: 44
   closeHitPadding: 10
   transitionSeconds: 0.28
@@ -6695,10 +6687,6 @@ MonoBehaviour:
   controller: {fileID: 1718394152}
   telemetryButton: {fileID: 1851354316}
   serviceButton: {fileID: 1642326245}
-  selectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
-  selectedTextColor: {r: 0, g: 0.9047619, b: 1, a: 1}
-  idleTextColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &136778678
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6745,7 +6733,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -6755,7 +6743,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -6779,6 +6767,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e97d87242d1ef4bc6896f8faf199981e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderLineObstacle
+  everyLayout: 0
 --- !u!1 &151344283
 GameObject:
   m_ObjectHideFlags: 0
@@ -7158,10 +7147,6 @@ MonoBehaviour:
   sdButton: {fileID: 1248301504}
   hdButton: {fileID: 1222363814}
   controlRoot: {fileID: 163104243}
-  selectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
-  selectedTextColor: {r: 0, g: 0.9217392, b: 1, a: 1}
-  idleTextColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &163104246
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7230,7 +7215,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -7240,7 +7225,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -7264,6 +7249,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e97d87242d1ef4bc6896f8faf199981e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderLineObstacle
+  everyLayout: 0
 --- !u!1 &164985807
 GameObject:
   m_ObjectHideFlags: 0
@@ -10137,8 +10123,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 185435283}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!114 &185435280
 MonoBehaviour:
@@ -10207,7 +10192,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -10218,7 +10203,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -10252,7 +10237,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -10262,8 +10247,8 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
-  state: 0
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
+  state: 3
   style: {fileID: 0}
   variant: 
 --- !u!222 &185435284
@@ -13374,7 +13359,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0, g: 0.81111133, b: 1, a: 1}
@@ -13385,9 +13370,9 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-    m_SelectedSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
-    m_DisabledSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
+    m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
     m_NormalTrigger: Normal
     m_HighlightedTrigger: Highlighted
@@ -13419,7 +13404,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -13429,7 +13414,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -13476,8 +13461,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 241085637}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &255038687
 GameObject:
@@ -13654,7 +13638,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -13665,7 +13649,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -13699,7 +13683,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -13709,8 +13693,8 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
-  state: 0
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
+  state: 3
   style: {fileID: 0}
   variant: 
 --- !u!222 &261023885
@@ -13756,8 +13740,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 261023884}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &279131961
 GameObject:
@@ -13917,10 +13900,6 @@ MonoBehaviour:
   sdButton: {fileID: 1569865541}
   hdButton: {fileID: 1611668912}
   controlRoot: {fileID: 281793458}
-  selectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
-  selectedTextColor: {r: 0, g: 0.9047619, b: 1, a: 1}
-  idleTextColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &281793461
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13989,7 +13968,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -13999,7 +13978,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -14023,6 +14002,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e97d87242d1ef4bc6896f8faf199981e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderLineObstacle
+  everyLayout: 0
 --- !u!1 &284512196
 GameObject:
   m_ObjectHideFlags: 0
@@ -14210,7 +14190,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -14220,7 +14200,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -14301,8 +14281,6 @@ MonoBehaviour:
   zoomInButton: {fileID: 0}
   zoomOutIcon: {fileID: 0}
   zoomInIcon: {fileID: 0}
-  enabledIconColor: {r: 1, g: 1, b: 1, a: 1}
-  disabledIconColor: {r: 0.48, g: 0.52, b: 0.55, a: 1}
 --- !u!114 &315722040
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14315,6 +14293,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e97d87242d1ef4bc6896f8faf199981e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderLineObstacle
+  everyLayout: 0
 --- !u!1 &327905811
 GameObject:
   m_ObjectHideFlags: 0
@@ -14633,8 +14612,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 2109000025}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &337818787
 GameObject:
@@ -15076,7 +15054,6 @@ MonoBehaviour:
     grid: {r: 1, g: 1, b: 1, a: 0.1}
     surface: {r: 0.02, g: 0.04, b: 0.05, a: 1}
     fillLineArea: 0
-    hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
     labelSize: 15
     valueSize: 30
   railGap: 16
@@ -16075,8 +16052,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverSprite
   target: {fileID: 2110000025}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &495228706
 GameObject:
@@ -16244,6 +16220,59 @@ MonoBehaviour:
   m_LayoutPriority: 1
   m_MaxWidth: -1
   m_MaxHeight: -1
+--- !u!1 &501111944
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 501111945}
+  - component: {fileID: 501111946}
+  m_Layer: 0
+  m_Name: Ask Twin
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &501111945
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 501111944}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1275352285}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &501111946
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 501111944}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 220debef013964e5598ae584a6b62ca9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AskTwinWindow
+  askIcon: {fileID: 21300000, guid: b5cc6e2f0d27b42619c008b538268637, type: 3}
+  closeIcon: {fileID: 21300000, guid: 2c7882d0f80c948fbb89cb43d4e8e9f2, type: 3}
+  sendIcon: {fileID: 21300000, guid: 785c3db61cae14f86807320b54edd36d, type: 3}
+  assistant: {fileID: 776786039}
+  windowWidth: 560
+  windowHeight: 700
+  margin: 16
+  defaultLeft: 0.17
+  tabContentWidth: 540
 --- !u!1 &508125765
 GameObject:
   m_ObjectHideFlags: 0
@@ -17570,6 +17599,7 @@ GameObject:
   - component: {fileID: 776786036}
   - component: {fileID: 776786037}
   - component: {fileID: 776786038}
+  - component: {fileID: 776786039}
   m_Layer: 0
   m_Name: Digital Twin Runtime
   m_TagString: Untagged
@@ -17913,6 +17943,24 @@ MonoBehaviour:
   operatingHoursPerDay: 16
   dueSoonHours: 200
   dueSoonShare: 0.2
+--- !u!114 &776786039
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 776786029}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff716781bc47e4b0ab1282bbda75fc51, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TwinAssistant
+  registry: {fileID: 0}
+  schedule: {fileID: 0}
+  aiTable: {fileID: 0}
+  pageAnswers: 0
+  pageTimeoutSeconds: 20
+  localAnswerDelay: 0.6
 --- !u!1 &786300540
 GameObject:
   m_ObjectHideFlags: 0
@@ -17988,6 +18036,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e97d87242d1ef4bc6896f8faf199981e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderLineObstacle
+  everyLayout: 0
 --- !u!114 &798649017
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18001,8 +18050,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 2109000045}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &804658785
 GameObject:
@@ -18668,7 +18716,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0, g: 0.81111133, b: 1, a: 1}
@@ -18679,9 +18727,9 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-    m_SelectedSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
-    m_DisabledSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
+    m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
     m_NormalTrigger: Normal
     m_HighlightedTrigger: Highlighted
@@ -18713,7 +18761,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -18723,7 +18771,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -18770,8 +18818,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 875962071}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &876782786
 GameObject:
@@ -18835,7 +18882,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -18846,7 +18893,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -18880,7 +18927,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -18890,8 +18937,8 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
-  state: 0
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
+  state: 3
   style: {fileID: 0}
   variant: 
 --- !u!222 &876782791
@@ -18963,8 +19010,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 876782790}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &881476181
 GameObject:
@@ -19365,7 +19411,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -19376,7 +19422,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -19410,7 +19456,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -19420,8 +19466,8 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
-  state: 0
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
+  state: 3
   style: {fileID: 0}
   variant: 
 --- !u!222 &896462806
@@ -19467,8 +19513,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 896462805}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &906542321
 GameObject:
@@ -27393,7 +27438,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -27404,7 +27449,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -27438,7 +27483,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -27448,8 +27493,8 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
-  state: 0
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
+  state: 3
   style: {fileID: 0}
   variant: 
 --- !u!222 &951971101
@@ -27495,8 +27540,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 951971100}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &956236831
 GameObject:
@@ -28561,8 +28605,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverSprite
   target: {fileID: 2110000045}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &1096086369
 GameObject:
@@ -29220,8 +29263,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 1222363815}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!114 &1222363812
 MonoBehaviour:
@@ -29290,7 +29332,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -29301,7 +29343,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -29335,7 +29377,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -29345,7 +29387,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -29770,8 +29812,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 1248301505}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!114 &1248301502
 MonoBehaviour:
@@ -29840,7 +29881,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -29851,7 +29892,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -29885,7 +29926,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -29895,7 +29936,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -30064,6 +30105,7 @@ Transform:
   - {fileID: 776786032}
   - {fileID: 2022577881}
   - {fileID: 91008475}
+  - {fileID: 501111945}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1279948503
@@ -30416,7 +30458,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -30426,7 +30468,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -30455,8 +30497,6 @@ MonoBehaviour:
   zoomInButton: {fileID: 0}
   zoomOutIcon: {fileID: 0}
   zoomInIcon: {fileID: 0}
-  enabledIconColor: {r: 1, g: 1, b: 1, a: 1}
-  disabledIconColor: {r: 0.48, g: 0.52, b: 0.55, a: 1}
 --- !u!114 &1331346105
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -30491,6 +30531,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e97d87242d1ef4bc6896f8faf199981e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderLineObstacle
+  everyLayout: 0
 --- !u!1 &1333651720
 GameObject:
   m_ObjectHideFlags: 0
@@ -30697,7 +30738,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0, g: 0.81111133, b: 1, a: 1}
@@ -30708,9 +30749,9 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-    m_SelectedSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
-    m_DisabledSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
+    m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
     m_NormalTrigger: Normal
     m_HighlightedTrigger: Highlighted
@@ -30742,7 +30783,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -30752,7 +30793,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -30799,8 +30840,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 1354334915}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &1381650564
 GameObject:
@@ -31651,8 +31691,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 1569865542}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!114 &1569865539
 MonoBehaviour:
@@ -31721,7 +31760,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -31732,7 +31771,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -31766,7 +31805,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -31776,7 +31815,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -34619,8 +34658,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 1611668913}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!114 &1611668910
 MonoBehaviour:
@@ -34689,7 +34727,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -34700,7 +34738,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -34734,7 +34772,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -34744,7 +34782,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -35032,8 +35070,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 1642326246}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!114 &1642326243
 MonoBehaviour:
@@ -35102,7 +35139,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -35113,7 +35150,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -35147,7 +35184,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -35157,8 +35194,8 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
-  state: 0
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
+  state: 3
   style: {fileID: 0}
   variant: 
 --- !u!222 &1642326247
@@ -38429,6 +38466,7 @@ MonoBehaviour:
   maximumSpeed: 1500
   maximumCardsPerRail: 32
   preserveCardOrder: 1
+  connectorClearance: 10
   showDebugLogs: 0
 --- !u!224 &1758534718
 RectTransform:
@@ -38504,8 +38542,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 1763203831}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!114 &1763203828
 MonoBehaviour:
@@ -38574,7 +38611,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -38585,7 +38622,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -38619,7 +38656,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -38629,8 +38666,8 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
-  state: 0
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
+  state: 3
   style: {fileID: 0}
   variant: 
 --- !u!222 &1763203832
@@ -38716,6 +38753,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e97d87242d1ef4bc6896f8faf199981e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderLineObstacle
+  everyLayout: 0
 --- !u!1 &1796654639
 GameObject:
   m_ObjectHideFlags: 0
@@ -39056,6 +39094,7 @@ MonoBehaviour:
   maximumSpeed: 1500
   maximumCardsPerRail: 32
   preserveCardOrder: 1
+  connectorClearance: 10
   showDebugLogs: 0
 --- !u!1 &1847012895
 GameObject:
@@ -39200,8 +39239,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 1851354317}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!114 &1851354314
 MonoBehaviour:
@@ -39270,7 +39308,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -39281,7 +39319,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -39315,7 +39353,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -39325,8 +39363,8 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
-  state: 0
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
+  state: 3
   style: {fileID: 0}
   variant: 
 --- !u!222 &1851354318
@@ -39637,7 +39675,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0, g: 0.81111133, b: 1, a: 1}
@@ -39648,9 +39686,9 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-    m_SelectedSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
-    m_DisabledSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
+    m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
     m_NormalTrigger: Normal
     m_HighlightedTrigger: Highlighted
@@ -39682,7 +39720,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -39692,7 +39730,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -39739,8 +39777,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 1875655990}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &1876776499
 GameObject:
@@ -40017,7 +40054,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -40028,7 +40065,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -40062,7 +40099,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -40072,8 +40109,8 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
-  state: 0
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
+  state: 3
   style: {fileID: 0}
   variant: 
 --- !u!222 &1891400247
@@ -40123,8 +40160,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 1891400246}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &1918860324
 GameObject:
@@ -40222,12 +40258,6 @@ MonoBehaviour:
   exteriorLabel: {fileID: 2007935466}
   sectionLabel: {fileID: 1057985544}
   xrayLabel: {fileID: 164985810}
-  selectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-  inactiveSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
-  selectedTextColor: {r: 0, g: 0.9217392, b: 1, a: 1}
-  selectedIconColor: {r: 0.21176471, g: 0.92941177, b: 1, a: 1}
-  inactiveTextColor: {r: 1, g: 1, b: 1, a: 1}
-  inactiveIconColor: {r: 1, g: 1, b: 1, a: 1}
   exteriorText: FULL BODY
   sectionText: CROSS SECTION
   xrayText: X-RAY
@@ -40283,7 +40313,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -40293,7 +40323,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -40317,6 +40347,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e97d87242d1ef4bc6896f8faf199981e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderLineObstacle
+  everyLayout: 0
 --- !u!1 &1928211985
 GameObject:
   m_ObjectHideFlags: 0
@@ -40780,10 +40811,6 @@ MonoBehaviour:
   controller: {fileID: 230403789}
   telemetryButton: {fileID: 1763203830}
   serviceButton: {fileID: 185435282}
-  selectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
-  selectedTextColor: {r: 0, g: 0.9217392, b: 1, a: 1}
-  idleTextColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &2003696824
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -40830,7 +40857,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -40840,7 +40867,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -40864,6 +40891,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e97d87242d1ef4bc6896f8faf199981e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderLineObstacle
+  everyLayout: 0
 --- !u!1 &2007935464
 GameObject:
   m_ObjectHideFlags: 0
@@ -41426,13 +41454,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 414fbbf81edc2406da95d5556e9f9e4c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TelemetryLayoutSettings
-  desktopColumns: 0
-  desktopRows: 0
+  desktopColumns: 5
+  desktopRows: 5
   desktopDetailPanel: 1
-  mobileColumns: 0
-  mobileRows: 0
+  mobileColumns: 5
+  mobileRows: 5
   mobileDetailPanel: 1
   autoModelShare: 0.4
+  minimumModelShare: 0.3
   detailRailWidth: 1.5
   detailRailHeight: 470
 --- !u!1 &2050666127
@@ -41822,8 +41851,6 @@ MonoBehaviour:
   nextButton: {fileID: 2109000035}
   nextCanvasGroup: {fileID: 2109000037}
   nextIcon: {fileID: 2109000041}
-  enabledIconColor: {r: 1, g: 1, b: 1, a: 1}
-  disabledIconColor: {r: 0.48, g: 0.52, b: 0.55, a: 1}
 --- !u!1 &2109000011
 GameObject:
   m_ObjectHideFlags: 0
@@ -41895,7 +41922,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -41905,7 +41932,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -41928,7 +41955,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 1, g: 1, b: 1, a: 1}
@@ -41939,8 +41966,8 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-    m_SelectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
     m_NormalTrigger: Normal
@@ -42132,7 +42159,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -42142,7 +42169,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -42217,7 +42244,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -42227,7 +42254,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -42250,7 +42277,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 1, g: 1, b: 1, a: 1}
@@ -42261,8 +42288,8 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-    m_SelectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
     m_NormalTrigger: Normal
@@ -42454,7 +42481,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -42464,7 +42491,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -42581,8 +42608,6 @@ MonoBehaviour:
   nextButton: {fileID: 2110000035}
   nextCanvasGroup: {fileID: 2110000037}
   nextIcon: {fileID: 2110000041}
-  enabledIconColor: {r: 1, g: 1, b: 1, a: 1}
-  disabledIconColor: {r: 0.48, g: 0.52, b: 0.55, a: 1}
 --- !u!225 &2110000006
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -42615,7 +42640,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -42625,7 +42650,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -42649,6 +42674,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e97d87242d1ef4bc6896f8faf199981e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderLineObstacle
+  everyLayout: 0
 --- !u!1 &2110000011
 GameObject:
   m_ObjectHideFlags: 0
@@ -42719,7 +42745,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -42729,7 +42755,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -42752,7 +42778,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 1, g: 1, b: 1, a: 1}
@@ -42763,8 +42789,8 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-    m_SelectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
     m_NormalTrigger: Normal
@@ -42956,7 +42982,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -42966,7 +42992,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -43040,7 +43066,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: f67931c9d4b45405e9f797192ec7619c, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -43050,7 +43076,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: 4095f6e5c07954864a24f6c91361a32b, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -43073,7 +43099,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 1, g: 1, b: 1, a: 1}
@@ -43084,8 +43110,8 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
-    m_SelectedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
     m_NormalTrigger: Normal
@@ -43277,7 +43303,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -43287,7 +43313,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
   state: 0
   style: {fileID: 0}
   variant: 
@@ -43459,7 +43485,7 @@ MonoBehaviour:
     m_SelectOnDown: {fileID: 0}
     m_SelectOnLeft: {fileID: 0}
     m_SelectOnRight: {fileID: 0}
-  m_Transition: 2
+  m_Transition: 0
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
@@ -43470,7 +43496,7 @@ MonoBehaviour:
     m_FadeDuration: 0.1
   m_SpriteState:
     m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+    m_PressedSprite: {fileID: 0}
     m_SelectedSprite: {fileID: 0}
     m_DisabledSprite: {fileID: 0}
   m_AnimationTriggers:
@@ -43504,7 +43530,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 54aed98b1fd3f4210b613770dea04e54, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -43514,8 +43540,8 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
-  component: {fileID: 0}
-  state: 0
+  component: {fileID: 11400000, guid: ba7a4f53170c5405e9f97847a23db45c, type: 2}
+  state: 3
   style: {fileID: 0}
   variant: 
 --- !u!222 &2119497030
@@ -43539,8 +43565,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIHoverWash
   target: {fileID: 2119497029}
-  hoverSprite: {fileID: 21300000, guid: fc515260dc628448db52ddefbe55353f, type: 3}
-  idleSprite: {fileID: 21300000, guid: 66b1fbd9b403c464fb8e3c84476b70a6, type: 3}
+  onlyWhileHovered: 0
   selectedIndicator: {fileID: 0}
 --- !u!1 &2135264320
 GameObject:

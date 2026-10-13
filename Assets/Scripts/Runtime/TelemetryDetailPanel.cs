@@ -78,12 +78,9 @@ public sealed class TelemetryDetailPanel : MonoBehaviour, ICardDetailLink
     [Tooltip("Space between the pin and close buttons.")]
     [SerializeField, Min(0f)] private float headerButtonSpacing = 6f;
 
+    // Range labels and the pin and close icons take the design system's
+    // control colours (UIControlColors).
     [Header("Colours")]
-    [SerializeField] private Color rangeSelected = new(0.918f, 0.992f, 1f, 1f);
-    [SerializeField] private Color rangeIdle = new(0.408f, 0.651f, 0.686f, 1f);
-    [SerializeField] private Color rangeUnavailable = new(0.408f, 0.651f, 0.686f, 0.3f);
-    [SerializeField] private Color pinIdle = new(0.212f, 0.929f, 1f, 1f);
-    [SerializeField] private Color pinActive = new(0.04f, 0.1f, 0.13f, 1f);
     [Tooltip("The pointer towards the card. One colour whatever the card's alarm state, " +
              "matching the panel frame.")]
     [SerializeField] private Color pointerColor = new(0.08f, 0.9f, 1f, 1f);
@@ -173,7 +170,12 @@ public sealed class TelemetryDetailPanel : MonoBehaviour, ICardDetailLink
         if (pinButton != null)
             pinButton.onClick.AddListener(() => PinToggled?.Invoke(this));
         if (closeButton != null)
+        {
             closeButton.onClick.AddListener(() => CloseRequested?.Invoke(this));
+            if (closeButton.transform.Find("Icon") is Transform closeIcon &&
+                closeIcon.TryGetComponent(out Graphic closeGraphic))
+                closeGraphic.color = UIControlColors.Idle;
+        }
 
         SetPinned(false);
         SetAlpha(0f);
@@ -182,14 +184,23 @@ public sealed class TelemetryDetailPanel : MonoBehaviour, ICardDetailLink
 
     /// <summary>
     /// Makes the panel a bottom sheet: the pin and the pointer go, the card
-    /// keeps its own leader line, and the close button grows to
+    /// keeps its own leader line, the close button grows to
     /// <paramref name="closeSize"/> with its touch area reaching
-    /// <paramref name="closeHitPadding"/> further on every side.
+    /// <paramref name="closeHitPadding"/> further on every side, and the
+    /// panel's frame and glow go: the sheet's owner draws its fill, edge to
+    /// edge. The frame still takes the pointer, so taps stay on the sheet.
     /// </summary>
     public void UseAsSheet(float closeSize, float closeHitPadding)
     {
         IsSheet = true;
         headerLaidOutFor = float.NaN;
+        // The frame is the panel's Background (see TelemetryDetailPanelSetup).
+        if (transform.Find("Background") is Transform background && background.TryGetComponent(out Graphic frame))
+        {
+            Color clear = frame.color;
+            clear.a = 0f;
+            frame.color = clear;
+        }
         if (pinButton != null)
             pinButton.gameObject.SetActive(false);
         if (pointer != null)
@@ -307,7 +318,7 @@ public sealed class TelemetryDetailPanel : MonoBehaviour, ICardDetailLink
         if (pinBackground != null)
             pinBackground.enabled = pinned;
         if (pinIcon != null)
-            pinIcon.color = pinned ? pinActive : pinIdle;
+            pinIcon.color = UIControlColors.For(pinned);
     }
 
     public void SelectRange(TelemetryHistoryRange range)
@@ -538,7 +549,7 @@ public sealed class TelemetryDetailPanel : MonoBehaviour, ICardDetailLink
             bool selected = i == (int)Range;
             bool available = rangeAvailable[i];
             if (i < rangeLabels.Length && rangeLabels[i] != null)
-                rangeLabels[i].color = selected ? rangeSelected : available ? rangeIdle : rangeUnavailable;
+                rangeLabels[i].color = UIControlColors.For(selected, available || selected);
             if (i < rangeUnderlines.Length && rangeUnderlines[i] != null)
                 rangeUnderlines[i].enabled = selected;
             if (i < rangeButtons.Length && rangeButtons[i] != null)

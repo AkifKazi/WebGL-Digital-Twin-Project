@@ -45,6 +45,18 @@ mergeInto(LibraryManager.library, {
     }
   },
 
+  // Any other announcement to the page, such as a question for the Ask
+  // window's assistant: a window event carrying the JSON as its detail.
+  DigitalTwin_PublishEvent: function (eventNamePtr, jsonPtr) {
+    var eventName = UTF8ToString(eventNamePtr);
+    var json = UTF8ToString(jsonPtr);
+    try {
+      window.dispatchEvent(new CustomEvent(eventName, { detail: json }));
+    } catch (error) {
+      console.warn("Digital twin: could not publish " + eventName, error);
+    }
+  },
+
   // Wheel and trackpad scrolling for the lists, in the canvas's own pixels,
   // exactly as the browser reports it (see UIWheelScroll). Pinch-zoom
   // gestures arrive as wheel events with ctrlKey and are left alone.

@@ -736,13 +736,12 @@ public static class DigitalTwinProjectValidator
                 result.Warnings.Add($"Control '{path}' has no hover state (UI Hover Sprite).");
                 continue;
             }
-            if (new SerializedObject(hover).FindProperty("hoverSprite").objectReferenceValue == null)
-                result.Errors.Add($"Control '{path}' has a hover state with no hover sprite.");
-
-            SpriteState state = button.spriteState;
-            if (button.transition == Selectable.Transition.SpriteSwap &&
-                state.highlightedSprite != null && state.highlightedSprite == state.pressedSprite)
-                result.Errors.Add($"Control '{path}' shows its pressed sprite on hover.");
+            // Its looks come from its shape's component (hover and pressed are
+            // the component's); a sprite swap would fight them.
+            if (button.targetGraphic is not UIShape shape || shape.Component == null)
+                result.Errors.Add($"Control '{path}' is not a design-system shape with a component, so it has no hover look.");
+            if (button.transition == Selectable.Transition.SpriteSwap)
+                result.Errors.Add($"Control '{path}' still swaps sprites; its component gives its looks.");
         }
     }
 
@@ -754,15 +753,12 @@ public static class DigitalTwinProjectValidator
         if (button == null)
             return;
 
-        Image image = button.targetGraphic as Image;
-        string normalPath = image != null ? AssetDatabase.GetAssetPath(image.sprite) : string.Empty;
-        string pressedPath = AssetDatabase.GetAssetPath(button.spriteState.pressedSprite);
-        if (button.transition != Selectable.Transition.SpriteSwap ||
-            normalPath != "Assets/UI/Sprites/Solid UI Fill.png" ||
-            pressedPath != "Assets/UI/Sprites/Compact Button Background.png")
+        // A Segment at rest, lit by its own hover and pressed looks.
+        if (button.targetGraphic is not UIShape shape || shape.Component == null ||
+            shape.Component.name != "Segment" || button.transition == Selectable.Transition.SpriteSwap)
         {
             result.Errors.Add(
-                $"The {direction}-page button must use the solid/compact interaction sprites.");
+                $"The {direction}-page button must be a Segment shape with no sprite swap.");
         }
     }
 

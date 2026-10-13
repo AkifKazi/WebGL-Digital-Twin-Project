@@ -105,12 +105,15 @@ public sealed class TelemetryKeyFiguresGraph : TelemetryGraphView
 
         RectTransform highlightRect = CreateRect("Highlight", column.Link);
         Stretch(highlightRect);
-        Image highlight = highlightRect.gameObject.AddComponent<UIShape>();
+        // The other controls' hover look (a hovered Segment); without the
+        // theme, a faint fill in the normal colour.
+        UIShape highlight = highlightRect.gameObject.AddComponent<UIShape>();
         highlight.raycastTarget = false;
-        if (Style.hoverSprite != null)
+        UIComponentStyle segment = UITheme.Active != null ? UITheme.Active.Component("Segment") : null;
+        if (segment != null)
         {
-            highlight.sprite = Style.hoverSprite;
-            highlight.type = Image.Type.Sliced;
+            highlight.Component = segment;
+            highlight.State = UIState.Hover;
         }
         else
         {

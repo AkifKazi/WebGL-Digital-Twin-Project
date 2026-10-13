@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// The portrait layout's Service view. The Telemetry / Service switch sits
@@ -48,10 +49,36 @@ public sealed class PortraitServiceView : MonoBehaviour
 
     public TelemetryVisibility Visibility => visibility;
 
+    /// <summary>The opaque fill behind the switch and the panel; the Ask tab borrows its look.</summary>
+    public RectTransform Backdrop => backdrop;
+
+    // The backdrop's own colour, for a scene without a portrait layout.
+    private static readonly Color FallbackFill = new(0.031f, 0.086f, 0.118f, 1f);
+
+    /// <summary>
+    /// Gives <paramref name="to"/> the backdrop's look: the opaque fill a
+    /// phone's pages share (the Service and Ask tabs, the telemetry sheet,
+    /// the settings), so they read as one surface.
+    /// </summary>
+    public static void CopyBackdropLook(Image to)
+    {
+        PortraitServiceView view = FindAnyObjectByType<PortraitServiceView>(FindObjectsInactive.Include);
+        if (view == null || view.backdrop == null || !view.backdrop.TryGetComponent(out Image look))
+        {
+            to.color = FallbackFill;
+            return;
+        }
+        UIShape.CopyLook(look, to);
+    }
+
     private void OnEnable()
     {
         ServicePartLink.Requested += HandlePartRequested;
         placedBlend = -1f;
+        // The backdrop is the fill here; the panel's own edge would draw a
+        // line under the switch, above the panel's header and its rule.
+        if (servicePanel != null && servicePanel.TryGetComponent(out ServicePanelView view))
+            view.SetFrameShown(false);
     }
 
     private void OnDisable()

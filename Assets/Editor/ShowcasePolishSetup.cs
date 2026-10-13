@@ -102,7 +102,7 @@ public static class ShowcasePolishSetup
             int padding = sourceStack.padding.horizontal;
             float width = QualitySegmentWidth * 2f + sourceStack.spacing + padding;
 
-            CopyImage(sourceImage, Ensure<Image>(control.gameObject));
+            CopyImage(sourceImage, Ensure<UIShape>(control.gameObject));
             HorizontalLayoutGroup stack = Ensure<HorizontalLayoutGroup>(control.gameObject);
             stack.padding = new RectOffset(sourceStack.padding.left, sourceStack.padding.right,
                 sourceStack.padding.top, sourceStack.padding.bottom);
@@ -122,21 +122,14 @@ public static class ShowcasePolishSetup
             size.flexibleHeight = 0f;
             control.sizeDelta = new Vector2(width, ControlHeight);
 
-            SerializedObject sourceData = new(viewMode);
-            Sprite selected = (Sprite)sourceData.FindProperty("selectedSprite").objectReferenceValue;
-            Sprite idle = (Sprite)sourceData.FindProperty("inactiveSprite").objectReferenceValue;
-            Button sd = CloneSegment(template, control, "SD Button", "SD", idle);
-            Button hd = CloneSegment(template, control, "HD Button", "HD", idle);
+            Button sd = CloneSegment(template, control, "SD Button", "SD");
+            Button hd = CloneSegment(template, control, "HD Button", "HD");
 
             SerializedObject toggle = new(Ensure<QualityToggleControl>(control.gameObject));
             toggle.FindProperty("quality").objectReferenceValue = quality;
             toggle.FindProperty("sdButton").objectReferenceValue = sd;
             toggle.FindProperty("hdButton").objectReferenceValue = hd;
             toggle.FindProperty("controlRoot").objectReferenceValue = control.gameObject;
-            toggle.FindProperty("selectedSprite").objectReferenceValue = selected;
-            toggle.FindProperty("idleSprite").objectReferenceValue = idle;
-            toggle.FindProperty("selectedTextColor").colorValue = sourceData.FindProperty("selectedTextColor").colorValue;
-            toggle.FindProperty("idleTextColor").colorValue = sourceData.FindProperty("inactiveTextColor").colorValue;
             toggle.ApplyModifiedPropertiesWithoutUndo();
 
             built++;
@@ -159,8 +152,8 @@ public static class ShowcasePolishSetup
         return null;
     }
 
-    /// <summary>A text-only segment cloned from the view-mode control: same sprites, hover and type.</summary>
-    private static Button CloneSegment(Transform template, Transform parent, string name, string text, Sprite idle)
+    /// <summary>A text-only segment cloned from the view-mode control: same shape, hover and type.</summary>
+    private static Button CloneSegment(Transform template, Transform parent, string name, string text)
     {
         GameObject segment = UnityEngine.Object.Instantiate(template.gameObject, parent, false);
         segment.name = name;
@@ -182,27 +175,16 @@ public static class ShowcasePolishSetup
         Button button = segment.GetComponent<Button>();
         // Drop anything wired to the view-mode control.
         button.onClick = new Button.ButtonClickedEvent();
-        if (button.targetGraphic is Image face)
-            face.sprite = idle;
-
-        // The hover sprite only ever replaces the idle one, whichever segment
-        // was selected when the template was cloned.
-        if (segment.TryGetComponent(out UIHoverSprite hover))
-        {
-            SerializedObject hoverState = new(hover);
-            hoverState.FindProperty("idleSprite").objectReferenceValue = idle;
-            hoverState.ApplyModifiedPropertiesWithoutUndo();
-        }
+        // At rest, whichever segment was chosen when the template was cloned;
+        // the toggle shows the chosen one.
+        UIShape.ShowChosen(button.targetGraphic, false);
 
         return button;
     }
 
     private static void CopyImage(Image from, Image to)
     {
-        to.sprite = from.sprite;
-        to.type = from.type;
-        to.color = from.color;
-        to.pixelsPerUnitMultiplier = from.pixelsPerUnitMultiplier;
+        UIShape.CopyLook(from, to);
         to.fillCenter = from.fillCenter;
         to.material = from.material;
         to.raycastTarget = from.raycastTarget;

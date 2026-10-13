@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -88,11 +87,6 @@ public class ResponsiveLayoutShell : MonoBehaviour
     private int bottomControlsBasePaddingLeft;
     private int bottomControlsBasePaddingRight;
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-    [DllImport("__Internal")]
-    private static extern int DigitalTwin_IsMobileBrowser();
-#endif
-
     private void Start()
     {
         RefreshLayout(true);
@@ -110,16 +104,22 @@ public class ResponsiveLayoutShell : MonoBehaviour
     }
 
     /// <summary>
-    /// The viewer's interface scale. The settings panel only sets it once the
-    /// slider has rested, so the layout is rebuilt once, as after a resize.
+    /// The viewer's interface scale and card rails. The settings panel only
+    /// sets the scale once the slider has rested, so the layout is rebuilt
+    /// once, as after a resize; a new rail count rebuilds the rails.
     /// </summary>
     private void HandleViewerSettingsChanged()
     {
-        if (initialized && !Mathf.Approximately(appliedInterfaceScale, DigitalTwinSettings.InterfaceScale))
+        if (!initialized)
+            return;
+        if (!Mathf.Approximately(appliedInterfaceScale, DigitalTwinSettings.InterfaceScale))
             RefreshLayout(false);
+        if (appliedRailsPerSide != DigitalTwinSettings.RailsPerSide)
+            HandleTelemetrySettingsChanged();
     }
 
     private float appliedInterfaceScale = 1f;
+    private int appliedRailsPerSide;
 
     private void Update()
     {
@@ -282,11 +282,7 @@ public class ResponsiveLayoutShell : MonoBehaviour
         if (deviceOverride == ResponsiveDeviceOverride.Mobile)
             return true;
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-        return DigitalTwin_IsMobileBrowser() != 0;
-#else
-        return Application.isMobilePlatform || SystemInfo.deviceType == DeviceType.Handheld;
-#endif
+        return DeviceKind.IsMobile;
     }
 
     private void ApplyCanvasSettings()
@@ -369,6 +365,7 @@ public class ResponsiveLayoutShell : MonoBehaviour
     {
         lastMobile = mobile;
         lastVerticalDesktop = verticalDesktop;
+        appliedRailsPerSide = DigitalTwinSettings.RailsPerSide;
         FindTelemetry();
 
         TelemetryLayoutProfile wide = Resolve(mobile, verticalDesktop);
@@ -387,7 +384,8 @@ public class ResponsiveLayoutShell : MonoBehaviour
         ? telemetrySettings.Resolve(mobile, rows)
         : new TelemetryLayoutProfile(rows, TelemetryRailCount.Auto, true);
 
-    // Changed in the inspector while playing: the rails follow at once.
+    // Changed in the inspector while playing, or the viewer's rail count in
+    // the settings: the rails follow at once.
     private void HandleTelemetrySettingsChanged()
     {
         if (!initialized)

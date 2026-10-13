@@ -15,9 +15,11 @@ The project supports:
 - configuration-driven adoption of additional machine types;
 - a CSV language table for all on-screen copy (`Assets/StreamingAssets/Localization/ui_text.csv`), editable after a build;
 - an AI data table joining telemetry and maintenance, with time-windowed figures, published to the host page.
+- an Ask window: a movable, non-blocking conversation about the machine, answered from its live figures or by a language model behind the host page.
 
 See [Language table](Assets/Documentation/DigitalTwinIntegration.md#language-table) and
-[AI data table](Assets/Documentation/DigitalTwinIntegration.md#ai-data-table) for their formats and page API.
+[AI data table](Assets/Documentation/DigitalTwinIntegration.md#ai-data-table) for their formats and page API, and
+[Twin assistant](Assets/Documentation/DigitalTwinIntegration.md#twin-assistant-ask-window) for connecting a language model to the Ask window.
 
 For a non-technical walkthrough, read [`Assets/Documentation/USER_GUIDE.md`](Assets/Documentation/USER_GUIDE.md).
 

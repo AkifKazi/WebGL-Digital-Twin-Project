@@ -25,7 +25,6 @@ public static class ServiceModeSetup
     private const string ScenePath = "Assets/Scenes/SampleScene.unity";
     private const string LabelFontPath = "Assets/UI/Fonts/Rajdhani-Medium SDF.asset";
     private const string ValueFontPath = "Assets/UI/Fonts/Rajdhani-SemiBold SDF.asset";
-    private const string HoverSpritePath = "Assets/UI/Sprites/Button Hover Background.png";
     private const string RunBarShaderPath = "Assets/Materials/UI/ServiceRunBar.shader";
     private const string RunBarMaterialPath = "Assets/Materials/UI/Service Run Bar.mat";
 
@@ -309,26 +308,21 @@ public static class ServiceModeSetup
     /// <summary>
     /// The portrait telemetry sheet: a layer over the cards and under the
     /// service panel, set up like the wide layout's detail panels (the same
-    /// prefab, graphs, figures and providers). Both layouts' Time To Service
-    /// figures get the other controls' hover look.
+    /// prefab, graphs, figures and providers). The Time To Service figure
+    /// takes the other controls' hover look (a hovered Segment) on its own.
     /// </summary>
     private static void BuildTelemetrySheet(Transform portrait, Transform baseLayout, Transform topBar, Transform bottomRail,
         TelemetryVisibility visibility, TMP_FontAsset font)
     {
         TelemetryDetailPanelController wide = UnityEngine.Object.FindAnyObjectByType<TelemetryDetailPanelController>(FindObjectsInactive.Include)
             ?? throw new InvalidOperationException("The wide layout's Telemetry Detail Panel Controller was not found.");
-        Sprite hover = Load<Sprite>(HoverSpritePath);
-
-        SerializedObject wideData = new(wide);
-        wideData.FindProperty("graphStyle.hoverSprite").objectReferenceValue = hover;
-        wideData.ApplyModifiedPropertiesWithoutUndo();
-
         RemoveChild(portrait, "Telemetry Sheet Layer");
         RectTransform layer = NewRect("Telemetry Sheet Layer", portrait);
         Stretch(layer);
         layer.SetSiblingIndex(baseLayout.GetSiblingIndex() + 1);
 
         PortraitTelemetrySheetController sheet = layer.gameObject.AddComponent<PortraitTelemetrySheetController>();
+        SerializedObject wideData = new(wide);
         SerializedObject data = new(sheet);
         foreach (string shared in new[]
                  {
@@ -435,20 +429,17 @@ public static class ServiceModeSetup
         Button telemetry = CloneSegment(template, root, "Telemetry Button", "TELEMETRY", segmentWidth);
         Button service = CloneSegment(template, root, "Service Button", "SERVICE", segmentWidth);
 
+        // Its segments are Segment shapes cloned from the view-mode control's,
+        // shown chosen or at rest by state: no sprites to hand over.
         DigitalTwinModeSwitch modeSwitch = root.gameObject.AddComponent<DigitalTwinModeSwitch>();
-        SerializedObject sourceData = new(viewMode);
         SerializedObject data = new(modeSwitch);
         data.FindProperty("controller").objectReferenceValue = controller;
         data.FindProperty("telemetryButton").objectReferenceValue = telemetry;
         data.FindProperty("serviceButton").objectReferenceValue = service;
-        data.FindProperty("selectedSprite").objectReferenceValue = sourceData.FindProperty("selectedSprite").objectReferenceValue;
-        data.FindProperty("idleSprite").objectReferenceValue = sourceData.FindProperty("inactiveSprite").objectReferenceValue;
-        data.FindProperty("selectedTextColor").colorValue = sourceData.FindProperty("selectedTextColor").colorValue;
-        data.FindProperty("idleTextColor").colorValue = sourceData.FindProperty("inactiveTextColor").colorValue;
         data.ApplyModifiedPropertiesWithoutUndo();
     }
 
-    /// <summary>A segment cloned from the view-mode control: same sprites, hover and type.</summary>
+    /// <summary>A segment cloned from the view-mode control: same shape, hover and type.</summary>
     private static Button CloneSegment(Transform template, Transform parent, string name, string text, float width)
     {
         GameObject segment = UnityEngine.Object.Instantiate(template.gameObject, parent, false);

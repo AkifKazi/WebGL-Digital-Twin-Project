@@ -279,11 +279,12 @@ public static class ProceduralUISkinCapture
     private static void ExpectHover(GameObject target, string what)
     {
         UIHoverSprite hover = target != null ? target.GetComponent<UIHoverSprite>() : null;
-        Image image = hover != null ? new SerializedObject(hover).FindProperty("target").objectReferenceValue as Image : null;
-        UIShapeStyle shown = (image as UIShape)?.ShownStyle;
+        UIShape shape = hover != null ? hover.Target as UIShape : null;
+        UIShapeStyle shown = shape != null ? shape.ShownStyle : null;
         Expect(hover != null && hover.IsShowingHover && shown != null && shown.name.Contains("Hover"),
-            $"{what} shows the hover look (showing {hover?.IsShowingHover}, style {(shown != null ? shown.name : "none")}, " +
-            $"sprite {image?.sprite?.name}, override {image?.overrideSprite?.name})");
+            $"{what} shows the hover look (showing {(hover != null && hover.IsShowingHover)}, " +
+            $"style {(shown != null ? shown.name : "none")}, " +
+            $"component {(shape != null && shape.Component != null ? shape.Component.name : "none")})");
     }
 
     private static void Enter(GameObject target)

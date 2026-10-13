@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.InteropServices;
 using UnityEngine;
 
 /// <summary>
@@ -46,11 +45,6 @@ public sealed class AdaptiveQualityController : MonoBehaviour
     private bool mobileBrowser;
     private bool highQuality;
 
-#if UNITY_WEBGL && !UNITY_EDITOR
-    [DllImport("__Internal")]
-    private static extern int DigitalTwin_IsMobileBrowser();
-#endif
-
     /// <summary>True on a desktop browser, where HD can be offered.</summary>
     public bool IsDesktop => !mobileBrowser;
 
@@ -69,7 +63,7 @@ public sealed class AdaptiveQualityController : MonoBehaviour
         }
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-        mobileBrowser = lockMobileBrowserToLowQuality && DigitalTwin_IsMobileBrowser() != 0;
+        mobileBrowser = lockMobileBrowserToLowQuality && DeviceKind.IsMobile;
         Application.targetFrameRate = mobileBrowser ? mobileBrowserTargetFrameRate : -1;
 #endif
 

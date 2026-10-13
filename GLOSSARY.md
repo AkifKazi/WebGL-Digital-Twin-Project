@@ -27,3 +27,9 @@ Domain terms for the digital twin, as the code and the docs use them.
 **Card focus** — which card is focused, and which cards have their detail open. Only one card is ever focused. The first press on a card focuses it: the part is marked on the model and the other cards and their lines dim (alarm cards never do). The next press opens its detail. In the wide layout a click opens the detail at once, while a tap only focuses, unless a panel is already open, which then moves to the tapped card; the portrait sheet always waits for the second press. A click on the scene, Esc, or closing the panel releases the focus. `CardFocus` holds the one card focus for the whole twin, and its rules live in the plain `CardFocusState`. The detail panels and the sheet are its *detail presenters*.
 
 **Detail presenter** — what opens a card's detail in one layout: the wide layout's panels, or the portrait layout's sheet. Card focus asks the one that owns a pressed card what the press does.
+
+**Ask window** — the conversation with the twin assistant, opened from **ASK** beside the Telemetry / Service switch. It floats over both layouts without blocking them: the viewer drags it anywhere between the top and bottom controls, and leader lines fade under it. On a phone held upright it is a third tab of the switch (TELEMETRY | SERVICE | ASK) that takes the screen below it, as Service does; an answer's readings and services lead to their own tabs.
+
+**Twin assistant** — what answers the Ask window: the twin's own rules over its live figures, or a language model behind the hosting page. It advises only; an answer's readings and parts open as a viewer's own press would.
+
+**Message** — what the viewer sent in the Ask window: a speech bubble on the right, its tail pointing right. A design-system component with a tail. The assistant's replies are plain text, not bubbles.

@@ -12,7 +12,8 @@ using UnityEngine.UI;
 /// Batch play test of how strong leader lines are drawn and where alarm cards
 /// sit, in the wide layout at 1920x1080, in Cross Section:
 ///
-/// - Warning and critical cards are in the innermost rail shown on their side.
+/// - Warning and critical cards are in the innermost rail shown on their side
+///   (with four card rails chosen in the settings, so there are inner rails).
 /// - Clicking each card in turn (as a mouse does, which opens its detail
 ///   panel), the clicked card's line is at full strength unless it runs
 ///   across translucent UI (another card or a control). A line that turns
@@ -88,6 +89,8 @@ public static class LeaderLineOpacityPlayTest
         {
             case 0:
                 PlayModeWindow.SetCustomRenderingResolution(1920, 1080, "Leader line opacity test");
+                // The default is one rail a side; inner rails need the viewer to ask for more.
+                DigitalTwinSettings.RailsPerSide = 2;
                 rails = StatRailManagers.Wide();
                 Object.FindAnyObjectByType<ViewModeSegmentedControl>().SelectSection();
                 Next(4.5f);
@@ -232,7 +235,9 @@ public static class LeaderLineOpacityPlayTest
         RectTransform zoom = (RectTransform)Object.FindObjectsByType<ZoomControlAvailabilityView>()
             .First(view => view.isActiveAndEnabled).transform;
         pulledLine = Object.FindObjectsByType<StatLeaderLineView>()
-            .First(line => line.Card != null && line.Card.RailSide == StatRailSide.Left && !IsAlarm(line.Card));
+            // One whose line is clear of other UI at home, so clearing the zoom clears it.
+            .First(line => line.Card != null && line.Card.RailSide == StatRailSide.Left && !IsAlarm(line.Card) &&
+                           !line.IsCrossingUi);
         Camera camera = Camera.main;
         pulledHome = pulledLine.Card.WorldAnchor.position;
         Vector2 zoomCentre = RectTransformUtility.WorldToScreenPoint(null, zoom.TransformPoint(zoom.rect.center));
@@ -276,6 +281,7 @@ public static class LeaderLineOpacityPlayTest
 
     private static void Finish(string result)
     {
+        DigitalTwinSettings.ResetToDefaults();
         EditorApplication.update -= Tick;
         RenderPipelineManager.endContextRendering -= OnFrameRendered;
         SessionState.EraseBool(ActiveKey);

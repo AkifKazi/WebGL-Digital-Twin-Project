@@ -35,7 +35,11 @@ public class StatLeaderLineView : MonoBehaviour
     [SerializeField] private Color defaultColor = Color.cyan;
 
     [Header("Focus Presentation")]
-    [SerializeField, Range(0f, 1f)] private float restingLineOpacity = 0.0125f;
+    [Tooltip("Resting line opacity while a secondary (inner) rail holds cards. A line that runs " +
+             "across another card already fades on its own (Reversed Lines below), so this need not " +
+             "be lower than the empty-rails value: lower, the phone's lines, which always have inner " +
+             "rows, all but vanish.")]
+    [SerializeField, Range(0f, 1f)] private float restingLineOpacity = 0.2f;
     [Tooltip("Resting line opacity used when no secondary rail contains a card.")]
     [SerializeField, Range(0f, 1f)] private float emptySecondaryRailsRestingOpacity = 0.2f;
     [SerializeField, Range(0f, 1f)] private float restingAnchorOpacity = 0.4f;
@@ -116,6 +120,35 @@ public class StatLeaderLineView : MonoBehaviour
     private float directionTransitionStartedAt;
     private bool crossingUi;
     private Vector2 lastBendPoint;
+
+    // Each card's line, so the rails can keep a focused card's line clear of
+    // the cards on the rails inside it (see TryGetPath).
+    private static readonly Dictionary<PerformanceStatCardView, StatLeaderLineView> ByCard = new();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetForPlayMode() => ByCard.Clear();
+
+    /// <summary>
+    /// Where <paramref name="lineCard"/>'s line is drawn now, in world space:
+    /// the card's end, the bend and the sensor, in <paramref name="path"/>
+    /// (three points). False while the card has no line drawn.
+    /// </summary>
+    public static bool TryGetPath(PerformanceStatCardView lineCard, Vector3[] path)
+    {
+        if (lineCard == null || !ByCard.TryGetValue(lineCard, out StatLeaderLineView line) || line == null ||
+            !line.isActiveAndEnabled || !line.geometryValid || line.lineLayer == null)
+            return false;
+        path[0] = line.lineLayer.TransformPoint(line.lastCardPoint);
+        path[1] = line.lineLayer.TransformPoint(line.lastBendPoint);
+        path[2] = line.lineLayer.TransformPoint(line.lastSensorPoint);
+        return true;
+    }
+
+    private void Unregister()
+    {
+        if (card != null && ByCard.TryGetValue(card, out StatLeaderLineView line) && line == this)
+            ByCard.Remove(card);
+    }
     private Vector2 lastCardPoint;
     private Vector2 lastSensorPoint;
     private bool geometryValid;
@@ -201,8 +234,11 @@ public class StatLeaderLineView : MonoBehaviour
         Canvas newCanvas,
         RectTransform newLineLayer)
     {
+        Unregister();
         source = newSource;
         card = newCard;
+        if (card != null)
+            ByCard[card] = this;
         worldCamera = newWorldCamera;
         canvas = newCanvas;
         lineLayer = newLineLayer;
@@ -231,6 +267,7 @@ public class StatLeaderLineView : MonoBehaviour
 
     public void Unbind()
     {
+        Unregister();
         source = null;
         card = null;
         cardsToAvoid = null;
@@ -1074,6 +1111,7 @@ public class StatLeaderLineView : MonoBehaviour
 
     private void OnDestroy()
     {
+        Unregister();
         CardFocus.Changed -= HandleFocusChanged;
         DestroyRuntimeMaterial(horizontalMaterialInstance);
         DestroyRuntimeMaterial(angledMaterialInstance);

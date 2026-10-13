@@ -189,10 +189,7 @@ public static class ConnectionHealthUISetup
         layout.flexibleWidth = 1f;
         layout.flexibleHeight = 1f;
 
-        Image background = cellObject.AddComponent<Image>();
-        background.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(
-            "Assets/UI/Sprites/Panel Background.png");
-        background.type = Image.Type.Sliced;
+        Image background = UIRoleShape.Add(cellObject, "Panel");
         background.color = new Color(1f, 1f, 1f, 0.88f);
         background.raycastTarget = false;
 
@@ -254,7 +251,7 @@ public static class ConnectionHealthUISetup
             dot = CreateImage(
                 "Gateway status",
                 block,
-                AssetDatabase.LoadAssetAtPath<Sprite>("Assets/UI/Sprites/Solid UI Fill.png"),
+                null,
                 Cyan);
             RectTransform dotRect = dot.rectTransform;
             dotRect.anchorMin = new Vector2(1f, 0.29f);
@@ -299,10 +296,7 @@ public static class ConnectionHealthUISetup
         layout.flexibleHeight = 1f;
         layout.minWidth = compact ? 0f : 180f;
 
-        Image background = cellObject.AddComponent<Image>();
-        background.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(
-            "Assets/UI/Sprites/Panel Background.png");
-        background.type = Image.Type.Sliced;
+        Image background = UIRoleShape.Add(cellObject, "Panel");
         background.color = new Color(1f, 1f, 1f, 0.88f);
         background.raycastTarget = false;
 
@@ -335,7 +329,7 @@ public static class ConnectionHealthUISetup
             dot = CreateImage(
                 "Gateway status",
                 cell,
-                AssetDatabase.LoadAssetAtPath<Sprite>("Assets/UI/Sprites/Solid UI Fill.png"),
+                null,
                 Cyan);
             RectTransform dotRect = dot.rectTransform;
             dotRect.anchorMin = new Vector2(1f, 0.5f);

@@ -26,6 +26,9 @@ public enum UITone
 /// state: a hovered button lights from its bottom edge, a hovered warning card
 /// brightens a little, a selected or disabled one stays as it is. Touch never
 /// hovers: a finger has no hover, and one left after a tap reads as stuck.
+///
+/// Its label, a <see cref="UITextStyle"/> in the Button style, takes the
+/// control colours for the state (<see cref="UIControlColors"/>).
 /// </summary>
 // Runs in edit mode too, so a control shows its state while it is authored.
 [ExecuteAlways]
@@ -192,6 +195,12 @@ public sealed class UIControlState : MonoBehaviour,
                 continue;
             shape.State = state;
             shape.SetOwnerPointer(hover, press);
+        }
+        // Its label, in the Button text style, takes the control colours for the state.
+        foreach (UITextStyle text in GetComponentsInChildren<UITextStyle>(true))
+        {
+            if (text.GetComponentInParent<UIControlState>(true) == this)
+                text.Apply();
         }
     }
 }
