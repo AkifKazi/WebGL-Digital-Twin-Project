@@ -95,7 +95,7 @@
     <div class="unity">
       <div>
         <h4>Where it lives</h4>
-        <p><code>Assets/UI/Design System/</code> holds the tokens and a folder per component with one style per state. <code>Assets/Resources/UI Theme.asset</code> lists them. <code>Assets/Documentation/UI_DESIGN_SYSTEM.md</code> explains the rest.</p>
+        <p><code>Assets/UI/Design System/</code> holds the tokens and a folder per component with one style per state. <code>Assets/Resources/UI Theme.asset</code> lists them. Every shape names its component and state; only icons are sprites. <code>USER_GUIDE.md</code> (UI design system) says when and how to change them.</p>
       </div>
       <div>
         <h4>Build new UI</h4>
@@ -103,7 +103,7 @@
       </div>
       <div>
         <h4>Refresh this site</h4>
-        <p>After a token, component or style changes, run <code>python3 Tools/DesignSystemSite/export_design_system.py</code> and commit <code>docs/design-system/data.js</code>.</p>
+        <p>After a token, component or style changes, run <code>python3 Tools/DesignSystemSite/export_design_system.py</code> and commit <code>docs/design-system/data.js</code>. Refresh the fallback image, <code>catalog.png</code>, with <code>UIDesignSystemCatalog.BuildAndCapture</code>.</p>
       </div>
     </div>
   </section>

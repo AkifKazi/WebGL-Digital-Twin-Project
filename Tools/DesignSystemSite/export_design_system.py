@@ -26,7 +26,7 @@ STATE_FIELDS = ["idle", "hover", "pressed", "selected", "selectedHover", "disabl
                 "warning", "warningHover", "critical", "criticalHover", "unavailable"]
 GROUP_ORDER = ["Containers", "Controls", "Telemetry", "Conversation", "Marks"]
 ICONS = ["Arrow Left Icon", "Arrow Right Icon", "Ask Icon", "Close Icon", "Configure Icon", "Cross Section Icon",
-         "Full Model Icon", "HD Icon", "Pin Icon", "XRay Icon", "Zoom In Icon", "Zoom Out Icon"]
+         "Full Model Icon", "Pin Icon", "XRay Icon", "Zoom In Icon", "Zoom Out Icon"]
 
 
 # ---- Unity YAML reader --------------------------------------------------------------

@@ -53,5 +53,5 @@ crashlytics-build.properties
 *.blend1
 *.blend2
 
-# Assets retired from the project, kept locally for review (not uploaded)
-old assets/
+# Local agent tooling
+skills-lock.json

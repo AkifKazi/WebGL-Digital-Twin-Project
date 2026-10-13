@@ -21,7 +21,8 @@ using UnityEngine.UI;
 public static class UIDesignSystemCatalog
 {
     public const string ScenePath = UIDesignSystemDefaults.Folder + "/UI Design System Catalog.unity";
-    public const string ImagePath = "Assets/Documentation/Images/UI Design System.png";
+    // The design-system site's fallback image, outside Assets: it is documentation, not a build asset.
+    public const string ImagePath = "docs/design-system/catalog.png";
     private const int Width = 1920;
     private const int MaxHeight = 4200;
     private static readonly Color Backdrop = new(0.23f, 0.27f, 0.29f, 1f);
@@ -353,7 +354,6 @@ public static class UIDesignSystemCatalog
         Directory.CreateDirectory("Logs/ProceduralUISkin");
         File.WriteAllBytes("Logs/ProceduralUISkin/00_design_system.png", png);
         Object.DestroyImmediate(image);
-        AssetDatabase.ImportAsset(ImagePath);
         Debug.Log($"UI_DESIGN_SYSTEM catalog saved: {ScenePath}, {ImagePath} ({Width}x{height})");
     }
 }

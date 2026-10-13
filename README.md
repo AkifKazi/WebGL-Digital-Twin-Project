@@ -1,139 +1,91 @@
-# Modular Unity WebGL Digital Twin
+# Digital Twin
 
-An interactive Unity WebGL digital-twin prototype for industrial and construction equipment. The current reference asset is a hopper/conveyor system, but the telemetry, alarm, responsive presentation, connection-health, and data-ingestion layers are designed to be reused with other machine prefabs.
+A Unity WebGL digital twin of a vibratory feeder (hopper, separator, conveyor). Live or simulated
+sensor readings appear on cards joined to the machine by leader lines, with alarms, a Service view,
+cross-section and X-ray views, an Ask assistant, and layouts for desktops and phones.
 
-The project supports:
+- **Live demo:** <https://akifkazi.github.io/digital-twin-demo/> (built files: [digital-twin-demo](https://github.com/AkifKazi/digital-twin-demo))
+- **Source:** this repo, [digital-twin-project](https://github.com/AkifKazi/digital-twin-project)
+- **How to configure and extend it:** [USER_GUIDE.md](USER_GUIDE.md)
 
-- responsive wide and portrait telemetry rails;
-- one sensor per card with world-space leader lines;
-- Good, Uncertain, Bad, and Stale data states;
-- automatic warning and critical thresholds;
-- simulation and live JSON input;
-- connection-health and last-update reporting;
-- duplicate and out-of-order sample rejection;
-- desktop and mobile WebGL interaction.
-- configuration-driven adoption of additional machine types;
-- a CSV language table for all on-screen copy (`Assets/StreamingAssets/Localization/ui_text.csv`), editable after a build;
-- an AI data table joining telemetry and maintenance, with time-windowed figures, published to the host page.
-- an Ask window: a movable, non-blocking conversation about the machine, answered from its live figures or by a language model behind the host page.
+It is a visualisation prototype, not a control system: the process model, tags and limits are
+demonstration values. Replace them with approved engineering data before calling it operational.
 
-See [Language table](Assets/Documentation/DigitalTwinIntegration.md#language-table) and
-[AI data table](Assets/Documentation/DigitalTwinIntegration.md#ai-data-table) for their formats and page API, and
-[Twin assistant](Assets/Documentation/DigitalTwinIntegration.md#twin-assistant-ask-window) for connecting a language model to the Ask window.
+## Quick start
 
-For a non-technical walkthrough, read [`Assets/Documentation/USER_GUIDE.md`](Assets/Documentation/USER_GUIDE.md).
+1. Install Unity **6000.6.3f1** (the version in `ProjectSettings/ProjectVersion.txt`) via Unity Hub,
+   then *Add project from disk*. The first open rebuilds `Library` and takes some minutes.
+2. Open `Assets/Scenes/SampleScene.unity` and press Play. Drag to orbit, scroll or pinch to zoom,
+   click a card for its history, Tab for the keyboard, the gear for viewer settings.
+3. Before a build or demo: **Tools > Digital Twin > Validate Project** must report zero errors.
 
-The UI design system has an interactive reference site: open [`docs/design-system/index.html`](docs/design-system/index.html) in a browser (see its [README](docs/design-system/README.md)).
+## How it fits together
 
-## Project status
-
-The project is a working visualization prototype, not a plant-control system. The hopper process model and engineering limits are demonstration values. A production deployment must use approved tag mappings, limits, security, and machine data.
-
-## Requirements and quick start
-
-1. Install **Unity 6000.4.8f1** through Unity Hub.
-2. Clone or download the repository.
-3. In Unity Hub, select **Add > Add project from disk** and choose this folder.
-4. Open `Assets/Scenes/SampleScene.unity`.
-5. Allow Unity to restore packages and rebuild the excluded `Library` cache.
-6. Enter Play mode.
-
-Use **FULL BODY** and **CROSS SECTION** to change views. Drag to orbit and scroll or pinch to zoom.
-
-## Architecture and module boundary
-
-The runtime is split conceptually into three areas:
-
-- **Reusable platform:** telemetry contracts, source discovery, registry, data quality, alarms, cards, leader lines, responsive layouts, connection health, camera interaction, and JSON ingestion.
-- **Machine definition:** model prefab, sensor anchors, IDs, labels, units, thresholds, and display priorities.
-- **Machine-specific behavior:** the hopper simulator, material flow, conveyor behavior, separator vibration, and cross-section implementation.
-
-`TelemetryOperatingModeController` depends on the generic `ITelemetrySimulationProvider` contract rather than the hopper class. `HopperProcessSimulator` is one implementation and can be replaced by a simulator for another type of equipment.
-
-`DigitalTwinSceneSetup` is machine-agnostic. It reads the single
-`DigitalTwinMachineConfiguration` marked **Default** and materializes that machine's
-sensors, hierarchy categories, engineering limits, and anchor positions.
-The current feeder-specific simulator and particle setup live in
-`VibratoryFeederSceneConfigurator`, outside the central setup script.
-
-`TelemetryRegistry` and the two layouts' `StatRailManager` components (wide and portrait) use the same source-selection rule. The default **Scene Discovery** mode automatically finds `PerformanceStatSource` components created from the selected machine configuration. **Explicit List** remains available when a scene needs strict manual control.
-
-See [`Assets/Documentation/ARCHITECTURE.md`](Assets/Documentation/ARCHITECTURE.md) for ownership and extension rules.
-
-## Add-machine demo workflow
-
-This is the intended authoring demonstration; it does not add a second production machine to the repository.
-
-1. Import an optimized construction-machine model and create a root prefab.
-2. Create a `DigitalTwinMachineConfiguration` asset.
-3. Add sensor IDs, labels, units, formats, alarm limits, categories, anchor positions, priorities, and stale timeouts to that asset.
-4. Mark exactly one machine configuration as **Default**.
-5. Run **Tools > Digital Twin > Set Up Sensors And Flow Controls** to materialize the configured anchors.
-6. Place the model and sensor anchors, then assign the full/cross-section model references manually.
-7. Leave source selection on **Scene Discovery** so the registry and both layouts use the generated sensors automatically.
-8. Add an optional machine-specific editor configurator and simulator only for genuine physical behavior.
-9. Send test readings using the canonical JSON contract.
-10. Run **Tools > Digital Twin > Validate Project** before building.
-
-The reusable UI and live-data code should not require machine-specific edits. Only the model, sensor configuration, physical animation, and optional simulator should change.
-
-The site environment is imported without embedded textures. `Construction Site.fbx` is
-approximately 200 KB, and project validation enforces the mentor-agreed 10 MB maximum for
-the environment FBX.
-
-See [`Assets/Documentation/ADDING_A_MACHINE.md`](Assets/Documentation/ADDING_A_MACHINE.md) for the detailed checklist.
-
-## Live data and API integration
-
-Unity consumes a vendor-neutral reading instead of a PLC- or manufacturer-specific payload:
-
-```json
-{
-  "schemaVersion": 1,
-  "sensorId": "VIB-01.MOTOR.TEMP",
-  "value": 66.4,
-  "quality": 0,
-  "sourceTimestampUnixMs": 1786464000000,
-  "statusCode": 0,
-  "sequenceNumber": 1842,
-  "providerId": "site-a-edge-01"
-}
+```text
+Plant sensors -> edge gateway (auth, tag mapping) -> HTTPS/WSS -> host page
+  -> unityInstance.SendMessage("Digital Twin Runtime", "PushJson" | "PushBatchJson", json)
+  -> TelemetryJsonIngestor -> TelemetryRegistry -> PerformanceStatSource -> cards, lines, panels
 ```
 
-Quality values are `0 = Good`, `1 = Uncertain`, `2 = Bad`, and `3 = Stale`.
+Three layers, kept apart so another machine can replace the feeder without touching the UI or the
+data path:
 
-For WebGL, the hosting page should connect to an authenticated HTTPS or secure WebSocket gateway and forward normalized payloads with:
+| Layer | What changes per machine | Main types |
+| --- | --- | --- |
+| Reusable platform | nothing | `TelemetryJsonIngestor`, `TelemetryRegistry`, `PerformanceStatSource`, `StatRailManager`, `StatLeaderLineManager`, `TelemetryVisibility`, `CardFocus`, the UI design system |
+| Machine definition | everything here | `DigitalTwinMachineConfiguration` asset (`Assets/Machine Configurations`), model prefab, sensor anchors |
+| Machine behaviour | only real physics | `HopperProcessSimulator`, `VibratoryFeederSceneConfigurator`, `MachineViewModeController`, particle flow |
 
-```javascript
-unityInstance.SendMessage("Digital Twin Runtime", "PushJson", JSON.stringify(reading));
-```
+**Rules that keep it modular** (break one and the next machine needs code changes):
 
-Versioned batches use `schemaVersion: 1`, a `readings` array, and `PushBatchJson`. Legacy batches without a version remain accepted as schema version 0.
+- No machine tag, ID or simulator type in generic runtime classes or `DigitalTwinSceneSetup`.
+- Providers submit `TelemetryReading`s through `ITelemetryReadingSink`; they never touch UI.
+  Cards and layouts never parse payloads.
+- Card focus lives only in `CardFocus`; telemetry fades only through a layout's
+  `TelemetryVisibility`; generic code reads the machine's view only through `IInspectionView`.
+- Simulation stays visibly separate from live data; the first live reading switches to Live mode.
+- Reject unknown, non-finite, duplicate and out-of-order readings before they change state.
+- New authoring requirement → add a check to the project validator.
 
-Do not connect a public browser directly to a PLC or plant-floor OPC UA server. Authentication, authorization, protocol conversion, rate limiting, tag mapping, and historical storage belong at the edge/backend boundary.
+## Terms
 
-Full contract and transport guidance: [`Assets/Documentation/DigitalTwinIntegration.md`](Assets/Documentation/DigitalTwinIntegration.md).
+- **Layout:** the *wide* layout (desktop, phone held sideways) or the *portrait* layout (phone held
+  upright). `ResponsiveLayoutShell` shows one at a time.
+- **Card / rail:** one card per sensor, on rails beside the model (columns) or above and below it
+  (rows). Each layout's `StatRailManager` owns its rails; extra cards go to further pages.
+- **Detail rail / sheet:** where a card's history panel opens: a rail of its own on wide screens,
+  a sheet from the bottom on a phone held upright.
+- **Leader line:** card-to-sensor line. Alarm lines always show; others while their card is
+  focused. Lines fade over translucent UI marked `LeaderLineObstacle`.
+- **View:** Telemetry or Service. **Inspection view:** Full Model, Cross Section or X-Ray
+  (Full Model hides telemetry).
+- **Card focus:** first press focuses a card, the next opens its detail (a click opens at once on a
+  desktop). One focused card at a time, in `CardFocus`.
+- **Ask window / twin assistant:** the conversation about the machine, answered by the twin's
+  own rules or a language model behind the host page. Advice only.
 
-## Repository contents
+## Repository map
 
-- `Assets/Scripts/Runtime/` — reusable runtime plus machine-specific runtime components.
-- `Assets/Editor/` — setup, authoring, validation, and build tools.
-- `Assets/Documentation/` — user, architecture, machine-adoption, API, and deployment guidance.
-- `Assets/Scenes/` — production sample scene.
-- `Assets/Models/`, `Materials/`, and `Prefabs/` — authored visual assets.
-- `Packages/` — reproducible Unity dependencies.
-- `ProjectSettings/` — Unity and platform configuration.
+| Path | Contents |
+| --- | --- |
+| `Assets/Scripts/Runtime` | runtime code, one class per file, file named for the class |
+| `Assets/Editor` | setup tools, the validator, play tests; `Assets/Editor/Tests` edit-mode tests |
+| `Assets/Machine Configurations` | machine definitions |
+| `Assets/UI/Design System`, `Assets/Resources/UI Theme.asset` | the UI design system |
+| `Assets/StreamingAssets/Localization/ui_text.csv` | every on-screen string, editable after a build |
+| `Assets/WebGLTemplates/DigitalTwin` | the page template (safe areas, page API bridge) |
+| `Assets/LoadTest`, `Tools/LoadTest` | load-test harness and its one-command runner |
+| `docs/design-system` | interactive design-system reference (open `index.html`) |
+| `Tools/DesignSystemSite` | exporter that keeps that site in step with Unity |
 
-Generated builds, caches, profiler captures, recovery archives, and private project references are excluded from source control.
+Not in git: `Library`, `Builds`, `Logs`, `Temp`, `UserSettings`, `ProjectArchive`,
+`ProjectReferences`, `ProjectSamples`.
 
-## Validation and WebGL builds
+## Things that will bite you
 
-Before a demo or deployment:
-
-1. Save the scene.
-2. Run **Tools > Digital Twin > Validate Project**.
-3. Confirm that validation reports zero errors.
-4. Exercise simulation, live input, stale data, cross-section mode, card focus, and responsive layouts.
-5. Create a non-development WebGL build using the project workflow.
-
-The generated `Builds/` directory is intentionally not stored on the source branch.
+- Building rewrites `Assets/Settings/Build Profiles/Web.asset`; revert it unless you meant to change it.
+- After a setup tool rebuilds a UI prefab, rerun **Tools > Digital Twin > UI Skin > Apply Procedural Skin**.
+- After changing the design system, rerun `python3 Tools/DesignSystemSite/export_design_system.py`.
+- Close Unity before the load-test kit, and keep the laptop on mains power (on battery Chrome caps at 30 fps).
+- Rename or move the project folder only with Unity closed, then re-add it in Unity Hub.
+- Builds go to the demo repo, never this one.

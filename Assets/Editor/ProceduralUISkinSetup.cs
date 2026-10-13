@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Moves the UI from sliced sprites to the design system's procedural shapes
-/// (see UIShape and Assets/Documentation/UI_DESIGN_SYSTEM.md).
+/// (see UIShape, and the UI design system section of USER_GUIDE.md).
 ///
 /// Creates or updates the design system's assets (UIDesignSystemDefaults),
 /// then turns every Image in SampleScene and the UI prefabs into a UIShape and

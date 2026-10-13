@@ -12,8 +12,8 @@ PlayerSettings:
   targetDevice: 2
   useOnDemandResources: 0
   accelerometerFrequency: 60
-  companyName: KAZI
-  productName: WebGL
+  companyName: Akif Kazi
+  productName: Digital Twin
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -164,9 +164,9 @@ PlayerSettings:
   androidMaxAspectRatio: 2.4
   androidMinAspectRatio: 1
   applicationIdentifier:
-    Android: com.UnityTechnologies.com.unity.template.urpblank
-    Standalone: com.Unity-Technologies.com.unity.template.urp-blank
-    iPhone: com.Unity-Technologies.com.unity.template.urp-blank
+    Android: com.akifkazi.digitaltwin
+    Standalone: com.akifkazi.digitaltwin
+    iPhone: com.akifkazi.digitaltwin
   buildNumber:
     Standalone: 0
     VisionOS: 0
@@ -849,14 +849,14 @@ PlayerSettings:
   editorAssembliesCompatibilityLevel: 1
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: webgl trial 1
+  metroPackageName: DigitalTwin
   metroPackageVersion: 
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: webgl trial 1
+  metroApplicationDescription: Digital Twin
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
@@ -931,7 +931,7 @@ PlayerSettings:
   cloudProjectId: 3e73e3eb-c4ce-4984-86d9-e6428879b99c
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: webgl trial 1
+  projectName: Digital Twin
   organizationId: akif_kazi
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0

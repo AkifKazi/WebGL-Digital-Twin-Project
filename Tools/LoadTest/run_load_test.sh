@@ -11,7 +11,7 @@
 # Needs: Unity (version from ProjectSettings/ProjectVersion.txt, installed
 # through Unity Hub), Google Chrome, python3. The project must not be open in
 # the Unity editor. Results go to Tools/LoadTest/results/<timestamp>/, with
-# summary.md as the readable report. See README.md for what each number means.
+# summary.md as the readable report. See USER_GUIDE.md (section 11) for the options.
 set -u
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 KIT="$ROOT/Tools/LoadTest"
